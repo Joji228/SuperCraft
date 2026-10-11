@@ -109,10 +109,10 @@ export class Game {
     this.rig = new CameraRig(this.camera, this.world, this.settings);
     this.scene.add(this.camera); // so the first-person arms (children of the camera) render
     this.fpArms = new FirstPersonArms(this.camera);
-    this.applySkin(this.settings.skin);
     this.particles = new Particles(this.scene, 7000);
     this.effects = new Effects(this.particles);
     this.flightFX = new FlightFX(this.scene, this.particles, this.world);
+    this.applySkin(this.settings.skin);
     this.player.onSonicBoom = () => this.sonicBoom();
     this.meters = new Meters();
     this.player.allowed = (name) => this.allowed(name);
@@ -169,6 +169,7 @@ export class Game {
     const sk = skinById(id);
     this.hero.applySkin(sk);
     this.fpArms.applySkin(sk);
+    this.flightFX?.setPalette(sk.suit, sk.accent, sk.belt);
   }
 
   setTimeOfDay(t) {

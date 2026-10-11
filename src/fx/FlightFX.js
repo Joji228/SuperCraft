@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { B } from '../world/Blocks.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
+const WHITE = new THREE.Color(0xffffff);
+const TMP_C = new THREE.Color();
 
 export class FlightFX {
   constructor(scene, particles, world) {
@@ -11,6 +13,7 @@ export class FlightFX {
     this.world = world;
     this.emitAcc = 0;
     this.sprayAcc = 0;
+    this.palette = [0x2457c9, 0xc8202a, 0xf2c230];
     this.dir = new THREE.Vector3();
     this.right = new THREE.Vector3();
     this.center = new THREE.Vector3();
@@ -96,8 +99,8 @@ export class FlightFX {
       const hs = Math.hypot(player.vel.x, player.vel.z);
       if (hs > 14) {
         const k = Math.min(1, (hs - 14) / 20);
-        this.runAcc = (this.runAcc || 0) + hs * 22 * k * dt;
-        const n = Math.min(140, Math.floor(this.runAcc));
+        this.runAcc = (this.runAcc || 0) + hs * 13 * k * dt;
+        const n = Math.min(90, Math.floor(this.runAcc));
         this.runAcc -= n;
         const hx = player.vel.x / hs, hz = player.vel.z / hs;
         for (let i = 0; i < n; i++) {
@@ -109,15 +112,16 @@ export class FlightFX {
             y: player.pos.y + h,
             z: player.pos.z - hz * back + (Math.random() - 0.5) * 0.5,
             vx: (Math.random() - 0.5) * 0.6, vy: (Math.random() - 0.3) * 0.6, vz: (Math.random() - 0.5) * 0.6,
-            life: 0.7 + Math.random() * 0.6,
-            size: 0.4 + Math.random() * 0.35, grow: 2.2,
-            alpha: k,
-            r: 1, g: 0.55 + hot * 0.4, b: 0.05 + hot * 0.35,
+            life: 0.55 + Math.random() * 0.45,
+            size: 0.32 + Math.random() * 0.25, grow: 2,
+            alpha: 0.8 * k,
+            // the costume's own colours (suit, gloves/boots and belt), brightened to glow
+            ...this.trailColor(hot),
             drag: 2,
           });
         }
         // little lightning crackles flicking off the body
-        if (Math.random() < dt * 30 * k) {
+        if (Math.random() < dt * 18 * k) {
           const c = this.center;
           for (let i = 0; i < 6; i++) {
             const a = Math.random() * Math.PI * 2;
@@ -205,10 +209,30 @@ export class FlightFX {
     }
   }
 
+  /** Costume colours for the super-speed trail: [suit, accent, belt]. */
+  setPalette(suit, accent, belt) {
+    this.palette = [suit, accent, belt];
+  }
+
+  trailColor(t) {
+    const pal = this.palette;
+    const c = this.glowColor(pal[t < 0.55 ? 0 : t < 0.85 ? 2 : 1]);
+    return { r: c.r, g: c.g, b: c.b };
+  }
+
+  /** A costume colour lifted so even dark suits glow visibly. */
+  glowColor(hex) {
+    const c = TMP_C.setHex(hex);
+    const hsl = {};
+    c.getHSL(hsl);
+    c.setHSL(hsl.h, Math.max(hsl.s, 0.55), Math.max(0.55, Math.min(0.75, hsl.l + 0.15)));
+    return c;
+  }
+
   /** Jagged lightning bolts crackling along the super-speed trail. */
   updateBolts(dt, player) {
     if (!this.bolts) {
-      const segs = 8 * 7; // 8 bolts x 7 segments
+      const segs = 5 * 7; // 5 bolts x 7 segments
       this.boltPos = new Float32Array(segs * 2 * 3);
       const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.BufferAttribute(this.boltPos, 3));
@@ -225,11 +249,13 @@ export class FlightFX {
     this.boltTimer -= dt;
     if (this.boltTimer > 0) return;
     this.boltTimer = 0.045; // re-strike the bolts every few frames
-    this.bolts.material.color.setHex(Math.random() < 0.5 ? 0xfff09a : 0xffb030);
+    const pal = this.palette;
+    this.bolts.material.color.copy(this.glowColor(Math.random() < 0.6 ? pal[0] : pal[2])).lerp(WHITE, 0.2);
+    this.bolts.material.opacity = 0.7;
     const hx = player.vel.x / hs, hz = player.vel.z / hs;
     const sx = -hz, sz = hx; // sideways
     let o = 0;
-    for (let b = 0; b < 8; b++) {
+    for (let b = 0; b < 5; b++) {
       let back = Math.random() * 0.6;
       let side = (Math.random() - 0.5) * 0.8;
       let h = 0.3 + Math.random() * 1.5;
