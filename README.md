@@ -41,7 +41,8 @@ shortcuts like Ctrl+W, so Ctrl plus a movement key can close the tab.
 ## Run locally
 
 The game uses ES modules, so it has to be served over HTTP (opening
-`index.html` directly from disk won't work). From the project folder:
+`index.html` directly from disk won't work). On Windows, just double-click
+`play.bat`: it starts the server and opens the game. Or, from the project folder:
 
 ```
 python -m http.server 8000
