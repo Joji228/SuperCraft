@@ -35,6 +35,10 @@ export class FreeRoam {
     g.scene.add(group);
     this.circle = group;
     this.circleGlow = glow;
+    // the boss fight becomes available after a minute and a half of patrolling
+    this.circle.visible = false;
+    this.circleReady = false;
+    this.roamTime = 0;
   }
 
   summonTyrant() {
@@ -113,7 +117,15 @@ export class FreeRoam {
     this.director.update(dt);
     // the Iron Tyrant summoning circle
     const p = g.player.pos;
-    if (!this.tyrant) {
+    this.roamTime += dt;
+    if (!this.circleReady) {
+      if (this.roamTime >= 90) {
+        this.circleReady = true;
+        this.circle.visible = true;
+        g.hud.toast('BOSS FIGHT AVAILABLE! Go to the red circle at the plaza and press T to face the Iron Tyrant', 'alert', 7);
+        g.audio.play('alert');
+      }
+    } else if (!this.tyrant) {
       this.circleGlow.material.opacity = 0.14 + Math.sin(performance.now() / 300) * 0.08;
       const inside = Math.hypot(p.x - this.circlePos.x, p.z - this.circlePos.z) < 3.2 && Math.abs(p.y - this.circlePos.y) < 4;
       g.hud.setPrompt(inside ? 'Press <b>T</b> to summon the <b>Iron Tyrant</b>' : null);
@@ -132,7 +144,7 @@ export class FreeRoam {
 
   markers() {
     const out = this.director.markers();
-    if (!this.tyrant && this.circlePos) out.push({ x: this.circlePos.x, z: this.circlePos.z, color: '#ff3a2a', shape: 'ring', size: 5, edge: false });
+    if (this.circleReady && !this.tyrant && this.circlePos) out.push({ x: this.circlePos.x, z: this.circlePos.z, color: '#ff3a2a', shape: 'ring', size: 5, edge: false });
     return out;
   }
 
