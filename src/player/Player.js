@@ -1,5 +1,6 @@
 // Hero movement: walking, jumping and flight, with voxel collision.
-import { SX, SZ } from '../world/World.js';
+import { SX, SZ, SEA } from '../world/World.js';
+import { B } from '../world/Blocks.js';
 import { Body } from '../physics/Body.js';
 import { clamp, dampAngle } from '../util/math.js';
 
@@ -111,12 +112,18 @@ export class Player extends Body {
 
     this.move(dt);
 
-    // land when holding descend on the ground
-    if (this.flying && this.onGround && input.isDown('descend')) this.flying = false;
+    // land when holding descend on the ground (but never on water)
+    const below = this.world.get(Math.floor(this.pos.x), Math.floor(this.pos.y - 0.5), Math.floor(this.pos.z));
+    if (this.flying && this.onGround && input.isDown('descend') && below !== B.WATER) this.flying = false;
+    // touching the water: Aegis can't stand on it, so he hovers over it instead
+    if (!this.flying && this.onGround && below === B.WATER) {
+      this.flying = true;
+      this.vel.y = 3;
+    }
 
     // world bounds
-    this.pos.x = clamp(this.pos.x, 1, SX - 1);
-    this.pos.z = clamp(this.pos.z, 1, SZ - 1);
+    this.pos.x = clamp(this.pos.x, 1 - SEA, SX + SEA - 1);
+    this.pos.z = clamp(this.pos.z, 1 - SEA, SZ + SEA - 1);
     if (this.pos.y > MOVE.maxAltitude) {
       this.pos.y = MOVE.maxAltitude;
       this.vel.y = Math.min(this.vel.y, 0);

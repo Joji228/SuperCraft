@@ -114,6 +114,16 @@ class Objective {
       case 'protect':
         this.progress = 1;
         break;
+      case 'rescue': {
+        // done once nobody is left to rescue (some may have been lost on the way)
+        const left = g.entities.count((e) => e.tags.has(d.tag) && !e.saved && (e.alive || e.kind === 'car'));
+        if (left === 0) this.progress = this.total;
+        break;
+      }
+      case 'destroy':
+        // safety net: if every target is gone, the objective is complete
+        if (g.entities.count((e) => e.tags.has(d.tag) && e.alive) === 0) this.progress = this.total;
+        break;
       case 'custom': {
         const r = d.check(this.run.ctx, dt);
         this.progress = r.progress ?? (r.done ? 1 : 0);

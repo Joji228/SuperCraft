@@ -53,7 +53,7 @@ export function meshChunk(world, cx, cz) {
 
   const get = (x, y, z) => {
     if (y >= SY) return B.AIR;
-    if (x < 0 || z < 0 || y < 0 || x >= SX || z >= SZ) return B.STONE;
+    if (x < 0 || z < 0 || y < 0 || x >= SX || z >= SZ) return world.get(x, y, z);
     return data[x + SX * (z + SZ * y)];
   };
   const opaque = (x, y, z) => OPAQUE[get(x, y, z)];

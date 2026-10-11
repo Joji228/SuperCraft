@@ -5,6 +5,8 @@ export const SX = 512;
 export const SZ = 512;
 export const SY = 128;
 export const CS = 32; // chunk size in x/z
+// open sea beyond the voxel map that you can fly over (metres on each side)
+export const SEA = 1100;
 export const CX = SX / CS;
 export const CZ = SZ / CS;
 
@@ -20,10 +22,14 @@ export class World {
     return x >= 0 && z >= 0 && y >= 0 && x < SX && z < SZ && y < SY;
   }
 
-  /** Outside the map counts as stone (an invisible wall); above the map is air. */
+  /** Outside the voxel map is open sea (sand floor, water up to sea level, air above). */
   get(x, y, z) {
     if (y >= SY) return B.AIR;
-    if (x < 0 || z < 0 || y < 0 || x >= SX || z >= SZ) return B.STONE;
+    if (y < 0) return B.STONE;
+    if (x < 0 || z < 0 || x >= SX || z >= SZ) {
+      if (x < -SEA || z < -SEA || x >= SX + SEA || z >= SZ + SEA) return B.STONE; // edge of the world
+      return y < 3 ? B.STONE : y === 3 ? B.SAND : y <= 10 ? B.WATER : B.AIR;
+    }
     return this.data[x + SX * (z + SZ * y)];
   }
 

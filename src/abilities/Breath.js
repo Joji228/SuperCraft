@@ -37,7 +37,10 @@ export class Breath {
     const p = g.player;
     p.aimTimer = 0.3;
     const dir = aim.dir;
-    this.mouth.set(p.pos.x, p.pos.y + (p.flying ? 1.45 : 1.6), p.pos.z).addScaledVector(dir, 0.45);
+    // from the hero's mouth (the head moves a lot when flying)
+    g.hero.head.getWorldPosition(this.mouth);
+    this.mouth.y += p.flying ? 0.1 : 0.12;
+    this.mouth.addScaledVector(dir, 0.5);
 
     // frosty particles streaming forward
     const parts = g.particles;

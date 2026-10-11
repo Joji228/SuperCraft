@@ -327,3 +327,23 @@ export function createAtlas() {
   tex.anisotropy = 4;
   return tex;
 }
+
+/** A single tile as its own repeating texture (used for the open sea around the map). */
+export function tileTexture(name) {
+  const index = TILE_NAMES.indexOf(name);
+  const p = painter(1000 + index * 7919);
+  PAINTERS[name](p);
+  const canvas = document.createElement('canvas');
+  canvas.width = S;
+  canvas.height = S;
+  const img = canvas.getContext('2d').createImageData(S, S);
+  img.data.set(p.px);
+  canvas.getContext('2d').putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestMipmapLinearFilter;
+  tex.anisotropy = 4;
+  return tex;
+}

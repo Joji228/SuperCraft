@@ -63,14 +63,12 @@ export class Laser {
     const p = g.player;
     p.aimTimer = 0.3;
 
-    // eyes: just in front of the head, spread along the camera's right vector
-    const yaw = g.rig.yaw;
-    this.right.set(Math.cos(yaw), 0, -Math.sin(yaw));
-    const head = this.tmp.set(p.pos.x, p.pos.y + (p.flying ? 1.55 : 1.72), p.pos.z).addScaledVector(aim.dir, 0.3);
+    // beams start at the hero model's actual eyes (correct even when flying horizontally)
+    const eyes = g.hero.eyes.children;
     const target = aim.point;
     for (let i = 0; i < 2; i++) {
       const b = this.beams[i];
-      this.eye.copy(head).addScaledVector(this.right, i ? 0.1 : -0.1);
+      eyes[i].getWorldPosition(this.eye);
       const len = this.eye.distanceTo(target);
       b.position.copy(this.eye);
       b.lookAt(target);

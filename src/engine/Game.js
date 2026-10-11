@@ -12,6 +12,7 @@ import { createAtlas } from '../world/Textures.js';
 import { B } from '../world/Blocks.js';
 import { ChunkRenderer } from '../world/ChunkRenderer.js';
 import { Sky } from '../world/Sky.js';
+import { createOcean } from '../world/Ocean.js';
 import { Fires } from '../world/Fires.js';
 import { Zones } from '../world/Zones.js';
 import { Player } from '../player/Player.js';
@@ -98,6 +99,7 @@ export class Game {
     console.info(`[SuperCraft] city generated in ${tGen.toFixed(0)} ms, meshed in ${(performance.now() - t0 - tGen).toFixed(0)} ms`);
 
     this.sky = new Sky(this.scene);
+    this.ocean = createOcean(this.scene);
     this.player = new Player(this.world);
     this.hero = new HeroModel();
     this.hero.setVisible(false);
