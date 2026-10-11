@@ -18,7 +18,7 @@ const CONTROLS = [
   ['G', 'Pick up / drop people, objects and cars'],
   ['Middle mouse', 'Lock on to the target nearest the crosshair (again to release)'],
   ['T', 'Free Roam: summon the Iron Tyrant from the red plaza circle'],
-  ['V', 'Third / first person'],
+  ['V', 'Camera: close / medium / far / first person'],
   ['Esc', 'Pause'],
   ['F3', 'Debug info (FPS)'],
 ];
@@ -296,7 +296,7 @@ export class Menus {
          <label class="check"><input type="checkbox" id="shadows" ${s.shadows ? 'checked' : ''}> Shadows</label>
          <label class="check"><input type="checkbox" id="invertY" ${s.invertY ? 'checked' : ''}> Invert mouse Y</label>
          <label class="check"><input type="checkbox" id="dayNight" ${s.dayNight ? 'checked' : ''}> Day/night cycle</label>
-         <label class="check"><input type="checkbox" id="firstPerson" ${s.firstPerson ? 'checked' : ''}> First-person camera</label>
+         <label>Camera (V cycles) <select id="cameraMode">${['Close', 'Medium', 'Far', 'First person'].map((l, i) => `<option value="${i}" ${s.cameraMode === i ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
        </div>
        <div class="testing">
          <span class="kicker">Testing</span>
@@ -319,6 +319,7 @@ export class Menus {
       q('vol-val').textContent = Math.round(s.volume * 100);
     });
     q('renderDistance').addEventListener('change', (e) => s.set('renderDistance', parseInt(e.target.value, 10)));
-    for (const id of ['shadows', 'invertY', 'dayNight', 'firstPerson', 'unlockAll']) q(id).addEventListener('change', (e) => s.set(id, e.target.checked));
+    q('cameraMode').addEventListener('change', (e) => s.set('cameraMode', parseInt(e.target.value, 10)));
+    for (const id of ['shadows', 'invertY', 'dayNight', 'unlockAll']) q(id).addEventListener('change', (e) => s.set(id, e.target.checked));
   }
 }

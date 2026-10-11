@@ -66,15 +66,23 @@ export class Laser {
     // beams start at the hero model's actual eyes (correct even when flying horizontally)
     const eyes = g.hero.eyes.children;
     const target = aim.point;
+    const fp = g.settings.firstPerson;
+    if (fp) this.right.set(Math.cos(g.rig.yaw), 0, -Math.sin(g.rig.yaw));
     for (let i = 0; i < 2; i++) {
       const b = this.beams[i];
-      eyes[i].getWorldPosition(this.eye);
+      if (fp) {
+        // first person: from just under the view, either side of the crosshair
+        g.camera.getWorldPosition(this.eye);
+        this.eye.addScaledVector(aim.dir, 0.6).addScaledVector(this.right, i ? 0.09 : -0.09);
+        this.eye.y -= 0.12;
+      } else eyes[i].getWorldPosition(this.eye);
       const len = this.eye.distanceTo(target);
       b.position.copy(this.eye);
       b.lookAt(target);
       const flick = 1 + Math.sin(g.time * 60 + i) * 0.15;
-      b.children[1].scale.set(0.13 * flick, 0.13 * flick, len);
-      b.children[0].scale.z = len;
+      const w = fp ? 0.05 : 0.13; // thinner up close in first person
+      b.children[1].scale.set(w * flick, w * flick, len);
+      b.children[0].scale.set(fp ? 0.015 : 0.035, fp ? 0.015 : 0.035, len);
       b.visible = true;
     }
     this.light.position.copy(target).addScaledVector(aim.dir, -0.4);

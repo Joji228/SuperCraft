@@ -43,7 +43,7 @@ five-mission campaign.
 | G | Pick up / drop people, objects and even cars |
 | Middle mouse (wheel click) | Lock on to the enemy nearest the crosshair / release |
 | T | In Free Roam, inside the red plaza circle: summon the Iron Tyrant |
-| V | Switch third / first person |
+| V | Camera: close / medium / far / first person |
 | Esc | Pause |
 | F3 | Debug info (FPS, draw calls) |
 

@@ -51,10 +51,12 @@ export class CameraRig {
     if (this.firstPerson) {
       cam.position.copy(this.focus);
     } else {
-      const want = player.flying ? 7 + boost * 2 : 6.5;
+      // V cycles close / medium / far third-person views (then first person)
+      const base = [4.2, 5.6, 7.4][this.settings.cameraMode] ?? 4.2;
+      const want = player.flying ? base + 0.8 + boost * 2 : base;
       this.dist = damp(this.dist, want, 4, dt);
       const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
-      const shoulder = 0.75;
+      const shoulder = 0.55 + 0.1 * (this.settings.cameraMode || 0);
       const back = f.clone().multiplyScalar(-this.dist).addScaledVector(right, shoulder);
       back.y += 0.7;
       const len = back.length();

@@ -38,9 +38,15 @@ export class Breath {
     p.aimTimer = 0.3;
     const dir = aim.dir;
     // from the hero's mouth (the head moves a lot when flying)
-    g.hero.head.getWorldPosition(this.mouth);
-    this.mouth.y += p.flying ? 0.1 : 0.12;
-    this.mouth.addScaledVector(dir, 0.5);
+    if (g.settings.firstPerson) {
+      g.camera.getWorldPosition(this.mouth);
+      this.mouth.y -= 0.25;
+      this.mouth.addScaledVector(dir, 0.6);
+    } else {
+      g.hero.head.getWorldPosition(this.mouth);
+      this.mouth.y += p.flying ? 0.1 : 0.12;
+      this.mouth.addScaledVector(dir, 0.5);
+    }
 
     // frosty particles streaming forward
     const parts = g.particles;

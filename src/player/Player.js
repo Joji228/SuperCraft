@@ -132,7 +132,9 @@ export class Player extends Body {
     // body facing
     const hs = Math.hypot(this.vel.x, this.vel.z);
     this.aimTimer = Math.max(0, this.aimTimer - dt);
-    if (this.aimTimer > 0) {
+    if (this.firstPerson) {
+      this.yaw = camYaw + Math.PI;
+    } else if (this.aimTimer > 0) {
       // using a power: face where the camera aims
       this.yaw = dampAngle(this.yaw, camYaw + Math.PI, 30, dt);
     } else if (this.flying && hs > 2) {

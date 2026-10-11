@@ -18,6 +18,7 @@ import { Zones } from '../world/Zones.js';
 import { Player } from '../player/Player.js';
 import { HeroModel } from '../player/HeroModel.js';
 import { CameraRig } from '../player/CameraRig.js';
+import { FirstPersonArms } from '../player/FirstPersonArms.js';
 import { Meters } from '../abilities/Meters.js';
 import { Abilities } from '../abilities/Abilities.js';
 import { Entities } from '../entities/Entities.js';
@@ -105,6 +106,8 @@ export class Game {
     this.hero.setVisible(false);
     this.scene.add(this.hero.root);
     this.rig = new CameraRig(this.camera, this.world, this.settings);
+    this.scene.add(this.camera); // so the first-person arms (children of the camera) render
+    this.fpArms = new FirstPersonArms(this.camera);
     this.particles = new Particles(this.scene, 7000);
     this.effects = new Effects(this.particles);
     this.flightFX = new FlightFX(this.scene, this.particles, this.world);
@@ -378,6 +381,7 @@ export class Game {
   }
 
   quitToMenu() {
+    this.fpArms.group.visible = false;
     this.mode?.end();
     this.mode = null;
     this.resetSession();
@@ -432,7 +436,11 @@ export class Game {
     document.body.classList.toggle('unlocked', !input.locked);
     const [dx, dy] = input.consumeMouse();
     if (!this.cutscene) this.rig.look(dx, dy);
-    if (input.pressed('camera')) this.settings.set('firstPerson', !this.settings.firstPerson);
+    if (input.pressed('camera')) {
+      const m = (this.settings.cameraMode + 1) % 4;
+      this.settings.set('cameraMode', m);
+      this.hud.toast(['Camera: close', 'Camera: medium', 'Camera: far', 'Camera: first person'][m], 'info', 1);
+    }
     if (input.pressed('debug')) this.hud.toggleDebug();
     if (input.pressed('pause') && !input.locked) {
       input.endFrame();
@@ -455,6 +463,7 @@ export class Game {
       if (this.koTimer <= 0) this.koThen?.();
     }
     const canAct = !ko && !this.cutscene;
+    p.firstPerson = this.settings.firstPerson;
     p.update(dt, canAct ? input : NO_INPUT, this.rig.yaw, this.rig.pitch);
     if (p.boosting) this.meters.drainSpeed(dt);
     this.abilities.update(dt, input, canAct);
@@ -495,6 +504,16 @@ export class Game {
 
     if (this.cutscene) this.updateCutscene(realDt);
     else this.rig.update(realDt, p);
+    this.fpArms.update(realDt, {
+      visible: this.settings.firstPerson && !this.cutscene && this.state === 'playing',
+      speed: p.vel.length(),
+      onGround: p.onGround,
+      flying: p.flying,
+      punchT: this.hero.punchT,
+      punchCombo: this.hero.punchCombo,
+      carrying: !!held,
+      breath: this.abilities.breath.active,
+    });
     this.flightFX.update(dt, p);
     if (this.flightFX.shake) {
       this.rig.shake = Math.max(this.rig.shake, this.flightFX.shake);

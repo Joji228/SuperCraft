@@ -15,7 +15,7 @@ const DEFAULTS = {
   dayNight: false,
   volume: 0.56,
   fov: 75,
-  firstPerson: false,
+  cameraMode: 0, // 0 close, 1 medium, 2 far, 3 first person (V cycles)
   unlockAll: false, // testing: every campaign mission playable
 };
 
@@ -24,8 +24,15 @@ export class Settings {
     const saved = load('settings', {});
     // the default volume was lowered from 0.8; move players still on the old default
     if (saved.volume === 0.8) saved.volume = DEFAULTS.volume;
+    // older saves had a first-person on/off switch
+    if (saved.firstPerson && saved.cameraMode == null) saved.cameraMode = 3;
+    delete saved.firstPerson;
     Object.assign(this, DEFAULTS, saved);
     this.listeners = [];
+  }
+
+  get firstPerson() {
+    return this.cameraMode === 3;
   }
 
   set(key, value) {

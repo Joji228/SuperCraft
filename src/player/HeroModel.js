@@ -249,10 +249,6 @@ export class HeroModel {
     const fast = s.mode === 'fly' ? Math.min(1, s.hSpeed / 20) : 0;
     this.bank = damp(this.bank, Math.max(-0.9, Math.min(0.9, -yawRate * 0.18)) * fast, 6, dt);
     this.rollCd = Math.max(0, this.rollCd - dt);
-    if (s.mode === 'fly' && s.hSpeed > 30 && Math.abs(yawRate) > 2.6 && this.rollCd <= 0 && this.roll === 0) {
-      this.roll = Math.PI * 2 * Math.sign(-yawRate);
-      this.rollCd = 2.5;
-    }
     let spin = 0;
     if (this.roll !== 0) {
       const step = Math.sign(this.roll) * Math.min(Math.abs(this.roll), dt * 11);
