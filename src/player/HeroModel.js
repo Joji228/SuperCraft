@@ -126,10 +126,29 @@ export class HeroModel {
     this.cape.add(part(0.62, 0.06, 0.06, gold, 0, -1.15, 0));
     this.pivot.add(this.cape);
 
+    // glowing eyes for the laser
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff5a3a });
+    this.eyes = new THREE.Group();
+    for (const x of [-0.12, 0.12]) {
+      const e = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.07, 0.04), eyeMat);
+      e.position.set(x, 0.29, 0.26);
+      this.eyes.add(e);
+    }
+    this.eyes.visible = false;
+    this.head.add(this.eyes);
+
+    this.punchT = 9;
+    this.punchCombo = 1;
     this.walkPhase = 0;
     this.tilt = 0;
     this.yaw = 0;
     this.time = 0;
+  }
+
+  /** Start a punch animation; alternates arms, third hit is a big uppercut. */
+  punch(combo) {
+    this.punchT = 0;
+    this.punchCombo = combo;
   }
 
   setVisible(v) {
@@ -191,6 +210,24 @@ export class HeroModel {
       }
     }
 
+    // carrying: arms up holding the load
+    if (s.carrying) {
+      armL = armR = s.carryHeavy ? -2.9 : -1.2;
+      armSpread = s.carryHeavy ? 0.25 : 0.1;
+    }
+    // punches snap an arm forward, overriding the pose for a moment
+    this.punchT += dt;
+    let punchArm = null;
+    if (this.punchT < 0.24) {
+      const k = Math.sin((this.punchT / 0.24) * Math.PI);
+      const reach = this.punchCombo === 3 ? -2.6 : -1.6;
+      punchArm = this.punchCombo === 2 ? 'L' : 'R';
+      if (punchArm === 'L') armL = reach * k;
+      else armR = reach * k;
+      if (s.mode !== 'fly') tiltTarget = 0.2 * k;
+    }
+    this.eyes.visible = !!s.laser;
+
     this.tilt = damp(this.tilt, tiltTarget, 8, dt);
     this.root.rotation.set(0, this.yaw, 0);
     this.pivot.rotation.set(this.tilt, 0, 0);
@@ -198,8 +235,8 @@ export class HeroModel {
     this.head.rotation.x = damp(this.head.rotation.x, -Math.min(this.tilt, 1.4) * 0.6, 10, dt);
 
     const L = 14;
-    this.armL.rotation.x = damp(this.armL.rotation.x, armL, L, dt);
-    this.armR.rotation.x = damp(this.armR.rotation.x, armR, L, dt);
+    this.armL.rotation.x = damp(this.armL.rotation.x, armL, punchArm === 'L' ? 60 : L, dt);
+    this.armR.rotation.x = damp(this.armR.rotation.x, armR, punchArm === 'R' ? 60 : L, dt);
     this.armL.rotation.z = damp(this.armL.rotation.z, armSpread, L, dt);
     this.armR.rotation.z = damp(this.armR.rotation.z, -armSpread, L, dt);
     this.legL.rotation.x = damp(this.legL.rotation.x, legL, L, dt);

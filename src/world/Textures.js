@@ -270,6 +270,20 @@ const PAINTERS = {
       p.set(x, y, p.rng.pick(colors));
     }
   },
+  ice: (p) => {
+    p.fill([170, 220, 250], 8);
+    for (let i = 0; i < 5; i++) p.set(3 + i, 10 - i, [235, 248, 255]);
+    for (let i = 0; i < 3; i++) p.set(9 + i, 5 - i, [235, 248, 255]);
+    for (let i = 0; i < S; i++) {
+      p.shade(i, 0, 0.88);
+      p.shade(0, i, 0.88);
+    }
+  },
+  scorch: (p) => {
+    p.fill([46, 40, 38], 10);
+    p.speckle([90, 50, 30], 8);
+    p.speckle([20, 18, 18], 10);
+  },
   metal_roof: (p) => {
     p.fill([150, 156, 164], 4);
     for (let x = 0; x < S; x += 4) for (let y = 0; y < S; y++) p.shade(x, y, 0.75);

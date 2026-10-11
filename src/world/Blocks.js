@@ -8,7 +8,7 @@ export const TILE_NAMES = [
   'metal', 'roof', 'water', 'leaves', 'log_side', 'log_top', 'planks',
   'panel_white', 'panel_red', 'panel_orange', 'panel_yellow', 'panel_teal', 'panel_purple',
   'interior', 'lamp', 'door', 'red_light', 'hazard',
-  'container_blue', 'container_red', 'container_green', 'paint_white', 'flowers', 'metal_roof',
+  'container_blue', 'container_red', 'container_green', 'paint_white', 'flowers', 'metal_roof', 'ice', 'scorch',
 ];
 
 export const T = {};
@@ -66,7 +66,16 @@ const DEFS = [
   ['PAINT_WHITE', 'paint_white', 'concrete', 'concrete', true, true],
   ['FLOWERS', 'flowers', 'grass_side', 'dirt', true, true],
   ['METAL_ROOF', 'metal_roof', 'metal', 'metal', true, true],
+  ['ICE', 'ice', 'ice', 'ice', true, true],
+  ['SCORCH', 'scorch', 'scorch', 'scorch', true, true],
 ];
+
+/** Blocks a punch can smash. */
+export const PUNCH_BREAKABLE = new Set();
+/** Blocks the laser can melt (anything above street level except these). */
+export const LASER_PROOF = new Set();
+/** Blocks that catch fire when lasered. */
+export const FLAMMABLE = new Set();
 
 export const B = {};
 export const BLOCK_COUNT = DEFS.length;
@@ -85,3 +94,8 @@ DEFS.forEach(([name, top, side, bottom, solid, opaque], id) => {
   SOLID[id] = solid ? 1 : 0;
   OPAQUE[id] = opaque ? 1 : 0;
 });
+
+for (const n of ['GLASS_BLUE', 'GLASS_TEAL', 'GLASS_GOLD', 'GLASS_LIT', 'GLASS_DARK', 'DOOR', 'LEAVES', 'LAMP', 'PLANKS', 'HAZARD', 'LOG', 'ICE', 'RED_LIGHT', 'FLOWERS'])
+  PUNCH_BREAKABLE.add(B[n]);
+for (const n of ['STONE', 'WATER', 'AIR']) LASER_PROOF.add(B[n]);
+for (const n of ['LEAVES', 'LOG', 'PLANKS', 'FLOWERS', 'GRASS', 'INTERIOR']) FLAMMABLE.add(B[n]);
