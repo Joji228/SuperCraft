@@ -144,9 +144,9 @@ export class FlightFX {
       ring.mesh.material.opacity = 0.65 * (1 - k) * (1 - k);
     }
 
-    // ---- vapour cone: flash on the boom, faint while supersonic ----
-    this.coneFlash = Math.max(0, this.coneFlash - dt * 2.2);
-    const coneAlpha = Math.max(this.coneFlash * 0.55, player.supersonic ? 0.09 + Math.random() * 0.04 : 0);
+    // ---- vapour cone: only flashes at the boom and fades out in about half a second ----
+    this.coneFlash = Math.max(0, this.coneFlash - dt * 2);
+    const coneAlpha = this.coneFlash * this.coneFlash * 0.55;
     this.cone.visible = coneAlpha > 0.005 && player.flying;
     if (this.cone.visible) {
       this.cone.material.opacity = coneAlpha;

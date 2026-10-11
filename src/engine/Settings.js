@@ -13,14 +13,17 @@ const DEFAULTS = {
   renderDistance: 176,
   shadows: true,
   dayNight: false,
-  volume: 0.8,
+  volume: 0.56,
   fov: 75,
   firstPerson: false,
 };
 
 export class Settings {
   constructor() {
-    Object.assign(this, DEFAULTS, load('settings', {}));
+    const saved = load('settings', {});
+    // the default volume was lowered from 0.8; move players still on the old default
+    if (saved.volume === 0.8) saved.volume = DEFAULTS.volume;
+    Object.assign(this, DEFAULTS, saved);
     this.listeners = [];
   }
 
