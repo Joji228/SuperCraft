@@ -521,7 +521,7 @@ export class Game {
     this.minimap.range = this.abilities.senses.active ? 170 : 90;
     this.minimap.draw(p.pos.x, p.pos.z, this.rig.yaw, mk);
     const boss = this.entities.nearest(p.pos, 150, (e) => e.boss && e.alive);
-    this.hud.setBoss(boss ? boss.bossName : null, boss ? boss.health / boss.maxHealth : 0);
+    this.hud.setBoss(boss ? boss.bossName : null, boss ? boss.health / boss.maxHealth : 0, boss?.shieldBar?.() ?? null);
     this.hud.update(realDt, this, {
       fps: this.loop.fps,
       chunks: this.chunks.visibleCount,

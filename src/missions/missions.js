@@ -406,7 +406,7 @@ export const MISSIONS = [
           const t = add(c, new IronTyrant(g, a.x, G, a.z - 13, a), 'tyrant');
           t.yaw = 0;
           for (let i = 0; i < 3; i++) add(c, new Thug(g, a.x + (i - 1) * 6, G, a.z + 6, { weapon: i === 1 ? 'bat' : 'gun' }), 'minion').alert();
-          for (let i = 0; i < 3; i++) add(c, new Drone(g, a.x + (i - 1) * 8, G + 14, a.z - 6, { style: 'sentinel' }), 'minion');
+          for (let i = 0; i < 2; i++) add(c, new Drone(g, a.x + (i ? 8 : -8), G + 14, a.z - 6, { style: 'sentinel' }), 'minion');
           crowd(c, c.a.center, 12, 40);
           c.data.down = false;
           c.data.off = g.events.on('tyrantDown', () => (c.data.down = true));

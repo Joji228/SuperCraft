@@ -129,8 +129,8 @@ export class Drone extends Entity {
     const eye = tmpA.set(this.pos.x, this.pos.y + 0.25, this.pos.z);
     const aimAt = focus === p.pos ? heroChest(g, tmpB) : tmpB.set(focus.x, focus.y + 1, focus.z);
     if (this.cooldown <= 0 && eye.distanceTo(aimAt) < 45 && canSee(g.world, eye, aimAt)) {
-      this.cooldown = 1.4 + Math.random() * 1.2;
-      g.projectiles.fire(this.style === 'sentinel' ? 'plasma' : 'bolt', eye, aimAt, this, 0.03);
+      this.cooldown = this.style === 'sentinel' ? 2.8 + Math.random() * 1.6 : 1.8 + Math.random() * 1.4;
+      g.projectiles.fire(this.style === 'sentinel' ? 'plasma' : 'bolt', eye, aimAt, this, 0.06);
       g.audio.play('zap', this.pos);
       g.addDanger(focus, 12, 1.5);
     }

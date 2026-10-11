@@ -1,6 +1,6 @@
 // The Iron Tyrant: a giant walking mech, final boss of the campaign.
 // Phase 1: stomps, plasma cannon, missile volleys.
-// Phase 2: energy shield. Freeze it with super breath, then punch it to shatter it.
+// Phase 2: energy shield. Freeze it with super breath, then drain its shield bar with any attack.
 // Phase 3: core exposed (laser does double damage), sweeping beam, reinforcements.
 import * as THREE from 'three';
 import { Entity } from '../entities/Entity.js';
@@ -9,6 +9,7 @@ import { Thug } from './Thug.js';
 import { toward, heroChest } from './AI.js';
 import { CITY } from '../world/CityGenerator.js';
 import { B } from '../world/Blocks.js';
+import { tileTexture } from '../world/Textures.js';
 
 /** Icy shield textures: frosted, then with more and more cracks. */
 function iceTexture(cracks, seed) {
@@ -119,8 +120,20 @@ export class IronTyrant extends Entity {
     );
     this.shieldMesh.visible = false;
     game.scene.add(this.shieldMesh);
-    this.iceTextures = [0, 1, 2].map((n) => iceTexture(n, 1234 + n * 77));
+    // frozen look: chunky pixel-art ice blocks wrapped round the bubble, with cracks drawn over it
+    this.iceTile = tileTexture('ice');
+    this.iceTile.repeat.set(14, 7);
+    this.crackTex = iceTexture(2, 4321);
     this.shieldFrozen = 0; // seconds the frozen shield stays frozen
+    this.shieldHP = 0; // the blue bar under the boss bar while frozen
+    this.shieldMax = 110;
+    // second shell for cracks over the ice
+    this.crackMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(7.6, 24, 16),
+      new THREE.MeshBasicMaterial({ map: this.crackTex, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }),
+    );
+    this.crackMesh.visible = false;
+    game.scene.add(this.crackMesh);
 
     // sweeping beam
     const beamGeo = new THREE.BoxGeometry(1, 1, 1).translate(0, 0, 0.5);
@@ -139,7 +152,13 @@ export class IronTyrant extends Entity {
   remove() {
     super.remove();
     this.game.scene.remove(this.shieldMesh);
+    this.game.scene.remove(this.crackMesh);
     this.game.scene.remove(this.beam);
+  }
+
+  /** Fraction for the blue shield bar (only while the shield is frozen). */
+  shieldBar() {
+    return this.shieldUp && this.shieldFrozen > 0 ? this.shieldHP / this.shieldMax : null;
   }
 
   get shieldUp() {
@@ -155,15 +174,22 @@ export class IronTyrant extends Entity {
   damage(amount, opts = {}) {
     const g = this.game;
     if (this.shieldUp) {
-      if (opts.type === 'punch' && this.shieldFrozen > 0) {
-        this.shieldCracks++;
-        g.audio.play('glass', this.pos);
-        g.effects.iceBurst(this.shieldMesh.position.clone().lerp(g.player.pos, 0.85), 30);
-        g.rig.shake = Math.max(g.rig.shake, 0.4);
-        g.hitStop(0.08);
-        if (this.shieldCracks < 3) g.hud.toast('Crack! ' + (3 - this.shieldCracks) + ' more', 'good', 1.2);
-        if (this.shieldCracks >= 3) {
-          this.shieldDown = 12;
+      if (this.shieldFrozen > 0) {
+        // any attack chips the frozen shield; punches and thrown things hit hardest
+        const mult = opts.type === 'punch' || opts.type === 'impact' ? 1.6 : 1;
+        this.shieldHP -= amount * mult;
+        if (opts.type !== 'laser' || Math.random() < 0.15) {
+          g.audio.play('glass', this.pos);
+          g.effects.iceBurst(this.shieldMesh.position.clone().lerp(g.player.pos, 0.85), opts.type === 'laser' ? 6 : 24);
+        }
+        if (opts.type === 'punch') {
+          g.rig.shake = Math.max(g.rig.shake, 0.35);
+          g.hitStop(0.06);
+        }
+        g.markers.damageNumber(this.shieldMesh.position.clone().lerp(g.player.pos, 0.8), amount * mult, '#7de8ff');
+        if (this.shieldHP <= 0) {
+          this.shieldHP = 0;
+          this.shieldDown = 15;
           this.shieldCracks = 0;
           this.shieldIce = 0;
           this.shieldFrozen = 0;
@@ -175,7 +201,7 @@ export class IronTyrant extends Entity {
         g.audio.play('shieldHit', this.pos);
         if (!this.hintCd || this.age > this.hintCd) {
           this.hintCd = this.age + 8;
-          g.hud.toast('Freeze the shield with super breath (hold Q), then punch it!', 'warn', 4);
+          g.hud.toast('Freeze the shield with super breath (hold Q), then hit it!', 'warn', 4);
         }
       }
       return 0;
@@ -187,12 +213,12 @@ export class IronTyrant extends Entity {
 
   onBreath(dt) {
     if (!this.shieldUp || this.shieldFrozen > 0) return;
-    this.shieldIce = Math.min(1, this.shieldIce + dt * 0.8);
+    this.shieldIce = Math.min(1, this.shieldIce + dt * 1.1);
     if (this.shieldIce >= 1) {
-      this.shieldFrozen = 8;
-      this.shieldCracks = 0;
+      this.shieldFrozen = 12;
+      this.shieldHP = this.shieldMax;
       const g = this.game;
-      g.hud.toast('Shield FROZEN! Punch it 3 times!', 'good', 3);
+      g.hud.toast('Shield FROZEN! Smash it before it thaws!', 'good', 3);
       g.audio.play('freeze');
       g.effects.iceBurst(this.shieldMesh.position, 50);
     }
@@ -202,6 +228,7 @@ export class IronTyrant extends Entity {
     this.state = 'dying';
     this.deathTime = 0;
     this.shieldMesh.visible = false;
+    this.crackMesh.visible = false;
     this.beam.visible = false;
     this.game.audio.stopLoop('laser');
   }
@@ -235,8 +262,8 @@ export class IronTyrant extends Entity {
       this.shield = true;
       g.hud.toast('The Iron Tyrant raises an energy shield!', 'warn', 4);
       g.audio.play('alert');
-      for (let i = 0; i < 4; i++) {
-        const d = new Drone(g, this.pos.x + (i - 1.5) * 4, this.pos.y + 12, this.pos.z, { health: 30, style: 'sentinel' });
+      for (let i = 0; i < 2; i++) {
+        const d = new Drone(g, this.pos.x + (i - 0.5) * 6, this.pos.y + 12, this.pos.z, { health: 30, style: 'sentinel' });
         d.tags.add('tyrant');
         g.entities.add(d);
       }
@@ -246,8 +273,8 @@ export class IronTyrant extends Entity {
       this.shieldDown = 0;
       g.hud.toast('Its core is exposed! Burn it with your laser!', 'good', 5);
       g.audio.play('alert');
-      for (let i = 0; i < 4; i++) {
-        const a = (i / 4) * Math.PI * 2;
+      for (let i = 0; i < 2; i++) {
+        const a = (i / 2) * Math.PI * 2;
         const t = new Thug(g, this.pos.x + Math.cos(a) * 9, CITY.G + 1, this.pos.z + Math.sin(a) * 9, { weapon: i % 2 ? 'gun' : 'bat' });
         t.unstick();
         t.alert();
@@ -291,24 +318,31 @@ export class IronTyrant extends Entity {
     const shieldUp = this.shieldUp;
     this.shieldMesh.visible = shieldUp;
     this.shieldMesh.position.set(this.pos.x, this.pos.y + 5.5, this.pos.z);
+    this.crackMesh.position.copy(this.shieldMesh.position);
+    this.crackMesh.visible = false;
     if (shieldUp) {
       const mat = this.shieldMesh.material;
       if (this.shieldFrozen > 0) {
         this.shieldFrozen -= dt;
         if (this.shieldFrozen <= 0) {
           this.shieldIce = 0;
-          this.shieldCracks = 0;
           g.hud.toast('The shield thawed. Freeze it again!', 'warn');
         }
-        mat.map = this.iceTextures[Math.min(2, this.shieldCracks)];
+        // solid, pale ice that cracks up as the shield bar drains
+        mat.map = this.iceTile;
         mat.color.setRGB(1, 1, 1);
-        mat.opacity = 0.8;
+        mat.opacity = 0.92;
+        this.crackMesh.visible = true;
+        this.crackMesh.material.opacity = 0.25 + (1 - this.shieldHP / this.shieldMax) * 0.75;
+        // flash a warning as it starts to thaw
+        if (this.shieldFrozen < 3 && Math.sin(this.age * 14) > 0) mat.color.setRGB(0.6, 0.85, 1);
       } else {
         this.shieldIce = Math.max(0, this.shieldIce - dt * 0.05);
         const ice = this.shieldIce;
-        mat.map = ice > 0.05 ? this.iceTextures[0] : null;
-        mat.color.setRGB(0.38 + ice * 0.62, 0.82 + ice * 0.18, 1);
-        mat.opacity = 0.22 + ice * 0.45 + Math.sin(this.age * 6) * 0.03;
+        // energy shield: see-through blue, frosting over while you breathe on it
+        mat.map = null;
+        mat.color.setRGB(0.25 + ice * 0.75, 0.75 + ice * 0.25, 1);
+        mat.opacity = 0.22 + ice * 0.5 + Math.sin(this.age * 6) * 0.03;
         if (ice > 0) g.markers.setPin('tyrant-ice', this.shieldMesh.position.clone().setY(this.pos.y + 14), 'Freezing ' + Math.round(ice * 100) + '%', 'sense');
       }
       if (mat.map !== this.lastMap) {

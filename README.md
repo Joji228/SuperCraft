@@ -60,7 +60,8 @@ Tips:
 
 The game uses ES modules, so it has to be served over HTTP (opening
 `index.html` directly from disk won't work). On Windows, just double-click
-`play.bat`: it starts the server and opens the game. Or, from the project folder:
+`play.bat`: it starts a no-cache server on port 8080 and opens the game, so a normal
+refresh always picks up the latest version. Or, from the project folder:
 
 ```
 python -m http.server 8000

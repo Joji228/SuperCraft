@@ -19,7 +19,7 @@ export class HUD {
         <div class="hud-debug hidden" id="hud-debug"></div>
       </div>
       <div class="hud-topcenter">
-        <div class="boss hidden" id="hud-boss"><div class="boss-name" id="hud-boss-name"></div><div class="boss-bar"><div class="boss-fill" id="hud-boss-fill"></div></div></div>
+        <div class="boss hidden" id="hud-boss"><div class="boss-name" id="hud-boss-name"></div><div class="boss-bar"><div class="boss-fill" id="hud-boss-fill"></div></div><div class="shield-bar hidden" id="hud-shield"><div class="shield-fill" id="hud-shield-fill"></div><span>FROZEN SHIELD</span></div></div>
         <div class="toasts" id="hud-toasts"></div>
       </div>
       <div class="objectives hidden" id="hud-obj"><div class="obj-title" id="hud-obj-title"></div><div class="obj-timer" id="hud-obj-timer"></div><ul id="hud-obj-list"></ul></div>
@@ -70,6 +70,8 @@ export class HUD {
     this.bossEl = q('hud-boss');
     this.bossName = q('hud-boss-name');
     this.bossFill = q('hud-boss-fill');
+    this.shieldEl = q('hud-shield');
+    this.shieldFill = q('hud-shield-fill');
     this.objEl = q('hud-obj');
     this.objTitle = q('hud-obj-title');
     this.objTimer = q('hud-obj-timer');
@@ -160,7 +162,8 @@ export class HUD {
     this.ab.carry.classList.toggle('active', !!label);
   }
 
-  setBoss(name, frac = 1) {
+  /** shield: fraction for the blue frozen-shield bar, or null to hide it. */
+  setBoss(name, frac = 1, shield = null) {
     if (!name) {
       this.bossEl.classList.add('hidden');
       return;
@@ -168,6 +171,8 @@ export class HUD {
     this.bossEl.classList.remove('hidden');
     this.bossName.textContent = name;
     this.bossFill.style.width = `${Math.max(0, frac) * 100}%`;
+    this.shieldEl.classList.toggle('hidden', shield === null);
+    if (shield !== null) this.shieldFill.style.width = `${Math.max(0, shield) * 100}%`;
   }
 
   setStats(html) {

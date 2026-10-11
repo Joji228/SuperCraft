@@ -672,3 +672,28 @@ table.rating td:first-child {
     repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.14) 0 2px, transparent 2px 4px),
     radial-gradient(ellipse at center, rgba(40, 220, 200, 0.12) 25%, rgba(10, 80, 110, 0.65) 100%);
 }
+
+/* frozen-shield bar under the boss bar */
+.shield-bar {
+  position: relative;
+  height: 16px;
+  margin-top: 4px;
+  border: 3px solid #0d1830;
+  background: #0d2236;
+}
+
+.shield-fill {
+  height: 100%;
+  background: linear-gradient(#bff0ff, #2f9fe0);
+  transition: width 0.15s;
+}
+
+.shield-bar span {
+  position: absolute;
+  inset: 0;
+  font-size: 8px;
+  line-height: 16px;
+  text-align: center;
+  color: #0d1830;
+  text-shadow: none;
+}
