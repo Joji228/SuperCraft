@@ -7,8 +7,6 @@ Fly over a voxel city, break the sound barrier and save Brightport.
 
 <a href="https://joji228.github.io/SuperCraft/"><img src="docs/play-button.svg" alt="▶ Play SuperCraft now" width="420" height="96"></a>
 
-**[👉 joji228.github.io/SuperCraft](https://joji228.github.io/SuperCraft/)**
-
 <img src="docs/screenshots/hero.jpg" alt="Aegis hovering in front of the Brightport skyline" width="820">
 
 </div>
