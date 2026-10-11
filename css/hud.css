@@ -1013,3 +1013,35 @@ button.locked-mode {
 body.has-banner .objectives {
   display: none;
 }
+
+/* full-screen toggle, top right; hidden while actually playing */
+.fullscreen-btn {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 50;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 30px;
+  opacity: 0.55;
+  background: rgba(16, 28, 56, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  box-shadow: none;
+  text-shadow: none;
+}
+
+.fullscreen-btn:hover {
+  opacity: 1;
+  background: rgba(16, 28, 56, 0.85);
+  transform: none;
+}
+
+.fullscreen-btn.on {
+  border-color: var(--gold);
+}
+
+body.in-play .fullscreen-btn {
+  display: none;
+}

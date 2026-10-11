@@ -414,6 +414,7 @@ export class Game {
 
   frame(dt) {
     const cam = this.camera;
+    document.body.classList.toggle('in-play', this.state === 'playing');
     let focus;
 
     if (this.state === 'playing') {
