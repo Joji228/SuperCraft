@@ -76,7 +76,7 @@ See [docs/PLAN.md](docs/PLAN.md) for the file layout and the build phases.
 
 ## Status
 
-Phase 1 of 6 is done: the city, movement, the camera and flight.
+Phase 1 of 6 is done: the city, movement, the camera and flight (hold Shift while flying to break the sound barrier).
 
 ## License
 

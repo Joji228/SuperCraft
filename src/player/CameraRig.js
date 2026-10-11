@@ -15,6 +15,7 @@ export class CameraRig {
     this.dist = 5.5;
     this.focusY = null;
     this.shake = 0;
+    this.fovPunch = 0;
     this.focus = new THREE.Vector3();
   }
 
@@ -44,12 +45,13 @@ export class CameraRig {
 
     const f = this.forward();
     const boost = player.boostAmount;
-    cam.fov = damp(cam.fov, this.settings.fov + boost * 22, 6, dt);
+    this.fovPunch = Math.max(0, this.fovPunch - dt * 30);
+    cam.fov = damp(cam.fov, this.settings.fov + boost * 20 + this.fovPunch, this.fovPunch > 0 ? 14 : 6, dt);
 
     if (this.firstPerson) {
       cam.position.copy(this.focus);
     } else {
-      const want = player.flying ? 7.5 + boost * 3 : 6.5;
+      const want = player.flying ? 7 + boost * 2 : 6.5;
       this.dist = damp(this.dist, want, 4, dt);
       const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
       const shoulder = 0.75;

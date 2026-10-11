@@ -14,6 +14,9 @@ import { HeroModel } from '../player/HeroModel.js';
 import { CameraRig } from '../player/CameraRig.js';
 import { HUD } from '../ui/HUD.js';
 import { Menus } from '../ui/Menus.js';
+import { Particles } from '../fx/Particles.js';
+import { FlightFX } from '../fx/FlightFX.js';
+import { Audio } from '../audio/Audio.js';
 
 // a short timeout (not rAF) so loading also progresses in background tabs
 const nextFrame = () => new Promise((r) => setTimeout(r, 20));
@@ -34,6 +37,10 @@ export class Game {
       quitToMenu: () => this.quitToMenu(),
     });
     this.loop = new Loop((dt) => this.frame(dt));
+    this.audio = new Audio(this.settings);
+    // browsers only allow sound after a user gesture
+    window.addEventListener('pointerdown', () => this.audio.unlock());
+    window.addEventListener('keydown', () => this.audio.unlock());
     this.menuTime = 0;
 
     this.input.onLockChange = (locked) => {
@@ -66,6 +73,9 @@ export class Game {
     this.hero.setVisible(false);
     this.scene.add(this.hero.root);
     this.rig = new CameraRig(this.camera, this.world, this.settings);
+    this.particles = new Particles(this.scene);
+    this.flightFX = new FlightFX(this.scene, this.particles);
+    this.player.onSonicBoom = () => this.sonicBoom();
 
     for (const k of ['renderDistance', 'shadows', 'dayNight']) this.applySetting(k, this.settings[k]);
 
@@ -96,7 +106,16 @@ export class Game {
     }
   }
 
+  sonicBoom() {
+    this.flightFX.sonicBoom(this.player);
+    this.rig.shake = 1;
+    this.rig.fovPunch = 14;
+    this.hud.flash(0.45);
+    this.audio.sonicBoom();
+  }
+
   startFreeRoam() {
+    this.flightFX.clear();
     const s = spawnPoint();
     this.player.spawn(s.x, s.y, s.z, s.yaw);
     this.rig.yaw = s.yaw;
@@ -132,6 +151,7 @@ export class Game {
     this.input.unlock();
     this.hud.show(false);
     this.hero.setVisible(false);
+    this.flightFX.clear();
     this.menus.showMain();
   }
 
@@ -165,6 +185,8 @@ export class Game {
         boost: p.boosting,
       });
       this.rig.update(dt, p);
+      this.flightFX.update(dt, p);
+      this.particles.update(dt, cam, this.renderer.domElement.height);
       focus = p.pos;
       this.hud.update(dt, p, {
         fps: this.loop.fps,

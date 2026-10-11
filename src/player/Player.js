@@ -13,8 +13,10 @@ export const MOVE = {
   run: 13,
   jump: 12.5,
   gravity: 32,
-  fly: 22,
+  fly: 26.5,
   boost: 62,
+  supersonic: 75, // after the sonic boom
+  boomDelay: 1.7, // seconds of boosting before breaking the sound barrier
   maxAltitude: 230,
 };
 
@@ -30,7 +32,10 @@ export class Player {
     this.inWater = false;
     this.lastJumpPress = -10;
     this.time = 0;
-    this.boostAmount = 0; // 0..1, for camera/FX
+    this.boostAmount = 0; // 0..~1.2, for camera/FX
+    this.boostTime = 0;
+    this.supersonic = false;
+    this.onSonicBoom = null;
   }
 
   spawn(x, y, z, yaw = 0) {
@@ -38,6 +43,8 @@ export class Player {
     this.vel.set(0, 0, 0);
     this.yaw = yaw + Math.PI; // model faces +Z; camera yaw 0 looks -Z
     this.flying = false;
+    this.supersonic = false;
+    this.boostTime = 0;
   }
 
   setFlying(on) {
@@ -78,7 +85,8 @@ export class Player {
       }
       const vert = (input.isDown('jump') ? 1 : 0) - (input.isDown('descend') ? 1 : 0);
       this.boosting = input.isDown('boost') && iz > 0;
-      const speed = this.boosting ? MOVE.boost : MOVE.fly;
+      this.updateSupersonic(dt);
+      const speed = this.supersonic ? MOVE.supersonic : this.boosting ? MOVE.boost : MOVE.fly;
       const tx = dx * speed;
       const ty = dy * speed + vert * MOVE.fly * 0.75;
       const tz = dz * speed;
@@ -88,6 +96,8 @@ export class Player {
       this.vel.z += (tz - this.vel.z) * k;
     } else {
       this.boosting = false;
+      this.supersonic = false;
+      this.boostTime = 0;
       const run = input.isDown('boost');
       const speed = this.inWater ? 4.5 : run ? MOVE.run : MOVE.walk;
       let wx = fx * iz + rx * ix;
@@ -140,8 +150,29 @@ export class Player {
       this.yaw = dampAngle(this.yaw, Math.atan2(this.vel.x, this.vel.z), 12, dt);
     }
 
-    const target = this.boosting ? Math.min(1, this.vel.length() / MOVE.boost) : 0;
+    const target = this.boosting ? Math.min(1.25, this.vel.length() / MOVE.boost) : 0;
     this.boostAmount += (target - this.boostAmount) * (1 - Math.exp(-6 * dt));
+  }
+
+  /** Hold boost long enough at full speed and Aegis breaks the sound barrier. */
+  updateSupersonic(dt) {
+    if (!this.boosting) {
+      this.boostTime = 0;
+      this.supersonic = false;
+      return;
+    }
+    this.boostTime += dt;
+    const speed = this.vel.length();
+    if (this.supersonic) {
+      // slammed into something: drop out of supersonic
+      if (speed < MOVE.boost * 0.55) {
+        this.supersonic = false;
+        this.boostTime = 0;
+      }
+    } else if (this.boostTime >= MOVE.boomDelay && speed >= MOVE.boost * 0.85) {
+      this.supersonic = true;
+      this.onSonicBoom?.();
+    }
   }
 
   get mode() {

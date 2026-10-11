@@ -308,6 +308,25 @@ table.controls td.key {
   color: var(--gold);
 }
 
+.mode-supersonic {
+  color: #ffffff;
+  background: rgba(31, 195, 181, 0.85);
+  animation: pulse 0.5s steps(2) infinite;
+}
+
+@keyframes pulse {
+  50% {
+    background: rgba(242, 182, 48, 0.85);
+  }
+}
+
+.hud-flash {
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  opacity: 0;
+}
+
 .mode-swimming {
   color: #7cc4ff;
 }

@@ -11,7 +11,7 @@ export class HUD {
       <div class="crosshair"></div>
       <div class="hud-status">
         <div class="hud-mode" id="hud-mode">ON FOOT</div>
-        <div class="hud-readout"><span id="hud-speed">0</span> KM/H &nbsp; ALT <span id="hud-alt">0</span> M</div>
+        <div class="hud-readout"><span id="hud-speed">0</span> <span id="hud-unit">KM/H</span> &nbsp; ALT <span id="hud-alt">0</span> M</div>
       </div>
       <div class="hud-hint" id="hud-hint">
         <b>WASD</b> move &nbsp; <b>SPACE</b> jump &nbsp; <b>F</b> fly<br>
@@ -20,10 +20,13 @@ export class HUD {
       </div>
       <div class="hud-debug hidden" id="hud-debug"></div>
       <div class="hud-click">Click to play</div>
+      <div class="hud-flash" id="hud-flash"></div>
     `;
     this.mode = root.querySelector('#hud-mode');
     this.speed = root.querySelector('#hud-speed');
     this.alt = root.querySelector('#hud-alt');
+    this.unit = root.querySelector('#hud-unit');
+    this.flashEl = root.querySelector('#hud-flash');
     this.hint = root.querySelector('#hud-hint');
     this.debugEl = root.querySelector('#hud-debug');
     this.hintTimer = 14;
@@ -48,13 +51,20 @@ export class HUD {
   }
 
   update(dt, player, info) {
-    const m = player.boosting ? 'BOOST' : player.flying ? 'FLYING' : player.inWater ? 'SWIMMING' : 'ON FOOT';
+    const m = player.supersonic ? 'SUPERSONIC' : player.boosting ? 'BOOST' : player.flying ? 'FLYING' : player.inWater ? 'SWIMMING' : 'ON FOOT';
     if (m !== this.lastMode) {
       this.mode.textContent = m;
       this.mode.className = 'hud-mode mode-' + m.toLowerCase().replace(' ', '-');
       this.lastMode = m;
     }
-    this.speed.textContent = Math.round(player.vel.length() * 3.6);
+    if (player.supersonic) {
+      // game-world speeds are scaled down; show the fantasy number once past the barrier
+      this.speed.textContent = 'MACH ' + (1 + Math.max(0, player.vel.length() - 62) / 130).toFixed(2);
+      this.unit.textContent = '';
+    } else {
+      this.speed.textContent = Math.round(player.vel.length() * 3.6);
+      this.unit.textContent = 'KM/H';
+    }
     this.alt.textContent = Math.max(0, Math.round(player.pos.y - CITY.G));
 
     if (this.hintTimer > 0) {
@@ -73,12 +83,21 @@ export class HUD {
     this.drawSpeedLines(player.boostAmount);
   }
 
+  flash(strength = 0.5) {
+    const el = this.flashEl;
+    el.style.transition = 'none';
+    el.style.opacity = String(strength);
+    void el.offsetWidth; // restart the fade
+    el.style.transition = 'opacity 0.6s ease-out';
+    el.style.opacity = '0';
+  }
+
   drawSpeedLines(amount) {
     const ctx = this.ctx;
     const w = this.fx.width, h = this.fx.height;
     ctx.clearRect(0, 0, w, h);
     if (amount < 0.25) return;
-    const a = (amount - 0.25) / 0.75;
+    const a = Math.min(1.3, (amount - 0.25) / 0.75);
     const cx = w / 2, cy = h / 2;
     const r0 = Math.min(w, h) * 0.32;
     const rMax = Math.hypot(w, h) / 2;
