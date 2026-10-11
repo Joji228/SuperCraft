@@ -1,12 +1,7 @@
 // Hero movement: walking, jumping and flight, with voxel collision.
-import * as THREE from 'three';
-import { B, SOLID } from '../world/Blocks.js';
 import { SX, SZ } from '../world/World.js';
+import { Body } from '../physics/Body.js';
 import { clamp, dampAngle } from '../util/math.js';
-
-const HALF_W = 0.38;
-const HEIGHT = 1.9;
-const EPS = 1e-4;
 
 export const MOVE = {
   walk: 7,
@@ -20,21 +15,19 @@ export const MOVE = {
   maxAltitude: 230,
 };
 
-export class Player {
+export class Player extends Body {
   constructor(world) {
-    this.world = world;
-    this.pos = new THREE.Vector3();
-    this.vel = new THREE.Vector3();
+    super(world, 0.38, 1.9);
     this.yaw = 0; // facing of the body
-    this.flying = false;
     this.boosting = false;
-    this.onGround = false;
     this.lastJumpPress = -10;
     this.time = 0;
     this.boostAmount = 0; // 0..~1.2, for camera/FX
     this.boostTime = 0;
     this.supersonic = false;
     this.onSonicBoom = null;
+    this.aimTimer = 0;
+    this.frozenInput = false;
   }
 
   spawn(x, y, z, yaw = 0) {
@@ -128,7 +121,11 @@ export class Player {
 
     // body facing
     const hs = Math.hypot(this.vel.x, this.vel.z);
-    if (this.flying && hs > 2) {
+    this.aimTimer = Math.max(0, this.aimTimer - dt);
+    if (this.aimTimer > 0) {
+      // using a power: face where the camera aims
+      this.yaw = dampAngle(this.yaw, camYaw + Math.PI, 30, dt);
+    } else if (this.flying && hs > 2) {
       this.yaw = dampAngle(this.yaw, Math.atan2(this.vel.x, this.vel.z), 22, dt);
     } else if (this.flying) {
       this.yaw = dampAngle(this.yaw, camYaw + Math.PI, 16, dt);
@@ -189,82 +186,5 @@ export class Player {
   get mode() {
     if (this.flying) return 'fly';
     return this.onGround ? 'ground' : 'air';
-  }
-
-  // ---------- collision ----------
-
-  /** Solid blocks and water both stop the hero (he skims over water, never sinks in). */
-  overlaps() {
-    const w = this.world;
-    const x0 = Math.floor(this.pos.x - HALF_W), x1 = Math.floor(this.pos.x + HALF_W - EPS);
-    const y0 = Math.floor(this.pos.y), y1 = Math.floor(this.pos.y + HEIGHT - EPS);
-    const z0 = Math.floor(this.pos.z - HALF_W), z1 = Math.floor(this.pos.z + HALF_W - EPS);
-    for (let y = y0; y <= y1; y++) {
-      for (let z = z0; z <= z1; z++) {
-        for (let x = x0; x <= x1; x++) {
-          const b = w.get(x, y, z);
-          if (SOLID[b] || b === B.WATER) return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  /** Move along one axis; snap back to the block face on collision. Returns true if blocked. */
-  moveAxis(axis, d) {
-    if (d === 0) return false;
-    this.pos[axis] += d;
-    if (!this.overlaps()) return false;
-    if (axis === 'y') {
-      this.pos.y = d > 0 ? Math.floor(this.pos.y + HEIGHT) - HEIGHT - EPS : Math.floor(this.pos.y) + 1;
-    } else {
-      this.pos[axis] = d > 0 ? Math.floor(this.pos[axis] + HALF_W) - HALF_W - EPS : Math.floor(this.pos[axis] - HALF_W) + 1 + HALF_W + EPS;
-    }
-    return true;
-  }
-
-  /** Horizontal move with a one-block auto step-up when walking. */
-  moveHorizontal(axis, d) {
-    const before = this.pos[axis];
-    if (!this.moveAxis(axis, d)) return;
-    if (this.flying || !this.onGround || this.vel.y > 0) {
-      this.vel[axis] = 0;
-      return;
-    }
-    // try stepping up one block
-    const saved = this.pos.clone();
-    this.pos[axis] = before;
-    this.pos.y += 1.01;
-    if (!this.overlaps() && !this.moveAxis(axis, d)) {
-      this.stepped = true;
-      return;
-    }
-    this.pos.copy(saved);
-    this.vel[axis] = 0;
-  }
-
-  move(dt) {
-    const dx = this.vel.x * dt, dy = this.vel.y * dt, dz = this.vel.z * dt;
-    const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy), Math.abs(dz)) / 0.4));
-    const wasGround = this.onGround;
-    this.onGround = false;
-    this.stepped = false;
-    for (let i = 0; i < steps; i++) {
-      if (this.moveAxis('y', dy / steps)) {
-        if (dy < 0) this.onGround = true;
-        this.vel.y = 0;
-      }
-      const g = this.onGround;
-      this.onGround = this.onGround || wasGround;
-      this.moveHorizontal('x', dx / steps);
-      this.moveHorizontal('z', dz / steps);
-      this.onGround = g;
-    }
-    // stay grounded while standing still (gravity keeps pushing into the floor)
-    if (!this.onGround && !this.flying && this.vel.y <= 0) {
-      this.pos.y -= 0.02;
-      if (this.overlaps()) this.onGround = true;
-      this.pos.y += 0.02;
-    }
   }
 }
