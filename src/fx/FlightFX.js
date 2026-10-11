@@ -91,6 +91,46 @@ export class FlightFX {
     const p = this.particles;
     const d = this.dir;
 
+    // ---- super-speed running trail: glowing streaks and crackling sparks ----
+    if (!player.flying && player.sprinting) {
+      const hs = Math.hypot(player.vel.x, player.vel.z);
+      if (hs > 14) {
+        const k = Math.min(1, (hs - 14) / 20);
+        this.runAcc = (this.runAcc || 0) + hs * 9 * k * dt;
+        const n = Math.min(60, Math.floor(this.runAcc));
+        this.runAcc -= n;
+        const hx = player.vel.x / hs, hz = player.vel.z / hs;
+        for (let i = 0; i < n; i++) {
+          const back = 0.3 + Math.random() * (hs * dt + 0.6);
+          const h = 0.2 + Math.random() * 1.7;
+          const hot = Math.random();
+          p.emit({
+            x: player.pos.x - hx * back + (Math.random() - 0.5) * 0.5,
+            y: player.pos.y + h,
+            z: player.pos.z - hz * back + (Math.random() - 0.5) * 0.5,
+            vx: (Math.random() - 0.5) * 0.6, vy: (Math.random() - 0.3) * 0.6, vz: (Math.random() - 0.5) * 0.6,
+            life: 0.5 + Math.random() * 0.45,
+            size: 0.3 + Math.random() * 0.25, grow: 1.8,
+            alpha: k,
+            r: 1, g: 0.55 + hot * 0.4, b: 0.05 + hot * 0.35,
+            drag: 2,
+          });
+        }
+        // little lightning crackles flicking off the body
+        if (Math.random() < dt * 12 * k) {
+          const c = this.center;
+          for (let i = 0; i < 6; i++) {
+            const a = Math.random() * Math.PI * 2;
+            p.emit({ x: c.x - hx, y: c.y + (Math.random() - 0.5), z: c.z - hz, vx: Math.cos(a) * 6, vy: (Math.random() - 0.5) * 6, vz: Math.sin(a) * 6, life: 0.18, size: 0.1, grow: 0.5, alpha: 1, r: 1, g: 0.95, b: 0.5, drag: 3 });
+          }
+        }
+        // dust kicked up from the feet
+        if (Math.random() < dt * 20 * k) {
+          p.emit({ x: player.pos.x - hx, y: player.pos.y + 0.1, z: player.pos.z - hz, vx: -hx * 3 + (Math.random() - 0.5) * 2, vy: 1 + Math.random(), vz: -hz * 3 + (Math.random() - 0.5) * 2, life: 0.6, size: 0.35, grow: 3, alpha: 0.35, r: 0.8, g: 0.76, b: 0.68, drag: 3 });
+        }
+      }
+    }
+
     // ---- air trail ----
     if (player.flying && speed > 14) {
       const sup = player.supersonic;

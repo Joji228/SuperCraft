@@ -33,7 +33,7 @@ five-mission campaign.
 | W A S D | Move |
 | Mouse | Look (click the game to capture the mouse) |
 | Space | Jump, double-tap in the air to take off |
-| Shift | Run on foot, boost while flying (uses the SPEED bar; hold ~2 s for a sonic boom) |
+| Shift | Super speed on foot, boost while flying (both use the SPEED bar; hold ~2 s in the air for a sonic boom) |
 | F | Toggle flight |
 | Space / C or Ctrl | Fly up / down (hold down on the ground to land) |
 | Left mouse | Punch (3-hit combo), or throw what you are carrying |

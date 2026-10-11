@@ -9,7 +9,7 @@ const CONTROLS = [
   ['W A S D', 'Move'],
   ['Mouse', 'Look'],
   ['Space', 'Jump (double-tap in the air to fly)'],
-  ['Shift', 'Run / boost while flying (hold to go supersonic)'],
+  ['Shift', 'Super speed on foot / boost while flying (hold to go supersonic)'],
   ['F', 'Toggle flight'],
   ['Space / C or Ctrl', 'Fly up / down (hold down on the ground to land)'],
   ['Left mouse', 'Punch (3-hit combo) / throw what you carry'],

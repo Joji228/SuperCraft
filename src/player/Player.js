@@ -7,6 +7,7 @@ import { clamp, dampAngle } from '../util/math.js';
 export const MOVE = {
   walk: 7,
   run: 13,
+  sprint: 36, // super speed on foot (Shift), uses the SPEED bar
   jump: 12.5,
   gravity: 32,
   fly: 26.5,
@@ -87,9 +88,12 @@ export class Player extends Body {
     } else {
       this.boosting = false;
       this.supersonic = false;
+      if (this.flying) this.sprinting = false;
       this.boostTime = 0;
-      const run = input.isDown('boost');
-      const speed = run ? MOVE.run : MOVE.walk;
+      // Shift on foot: super speed (if the SPEED bar allows), otherwise a normal run
+      const wantsRun = input.isDown('boost') && (ix || iz);
+      this.sprinting = wantsRun && this.onGround && this.allowed('boost') && this.canBoost(this.sprinting);
+      const speed = this.sprinting ? MOVE.sprint : wantsRun ? MOVE.run : MOVE.walk;
       let wx = fx * iz + rx * ix;
       let wz = fz * iz + rz * ix;
       const wl = Math.hypot(wx, wz);
@@ -97,7 +101,7 @@ export class Player extends Body {
         wx /= wl;
         wz /= wl;
       }
-      const accel = this.onGround ? 16 : 5;
+      const accel = this.sprinting ? 5 : this.onGround ? 16 : 5;
       const k = 1 - Math.exp(-accel * dt);
       this.vel.x += (wx * speed - this.vel.x) * k;
       this.vel.z += (wz * speed - this.vel.z) * k;
@@ -145,7 +149,7 @@ export class Player extends Body {
       this.yaw = dampAngle(this.yaw, Math.atan2(this.vel.x, this.vel.z), 24, dt);
     }
 
-    const target = this.boosting ? Math.min(1.25, this.vel.length() / MOVE.boost) : 0;
+    const target = this.boosting ? Math.min(1.25, this.vel.length() / MOVE.boost) : this.sprinting ? Math.min(0.75, Math.hypot(this.vel.x, this.vel.z) / MOVE.sprint * 0.75) : 0;
     this.boostAmount += (target - this.boostAmount) * (1 - Math.exp(-6 * dt));
   }
 

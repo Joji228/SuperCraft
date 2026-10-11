@@ -116,7 +116,7 @@ export class Game {
     this.player.onSonicBoom = () => this.sonicBoom();
     this.meters = new Meters();
     this.player.allowed = (name) => this.allowed(name);
-    this.player.canBoost = () => (this.player.boosting ? this.meters.speed > 0 : this.meters.speed > 12);
+    this.player.canBoost = (already) => (this.player.boosting || already ? this.meters.speed > 0 : this.meters.speed > 12);
     // a tall light beam over the current objective
     this.beacon = new THREE.Mesh(
       new THREE.CylinderGeometry(0.5, 0.9, 90, 12, 1, true).translate(0, 45, 0),
@@ -477,6 +477,7 @@ export class Game {
     p.firstPerson = this.settings.firstPerson;
     p.update(dt, canAct ? input : NO_INPUT, this.rig.yaw, this.rig.pitch);
     if (p.boosting) this.meters.drainSpeed(dt);
+    else if (p.sprinting) this.meters.drainSpeed(dt * 0.6); // running is cheaper than flying
     this.abilities.update(dt, input, canAct);
     this.meters.update(dt);
 
@@ -534,7 +535,7 @@ export class Game {
 
     // audio
     const speed = p.vel.length();
-    this.audio.setLoopLevel('wind', p.flying ? Math.min(1, Math.max(0, (speed - 6) / 60)) : 0, 0.15);
+    this.audio.setLoopLevel('wind', p.flying || p.sprinting ? Math.min(1, Math.max(0, (speed - 6) / 60)) : 0, 0.15);
     // quiet city in the background, fading as you climb above the rooftops
     const alt = Math.max(0, p.pos.y - CITY.G);
     const cityLevel = Math.max(0.15, 1 - alt / 140) * (this.mode?.population ? 1 : 0.5);
