@@ -3,8 +3,8 @@
 import * as THREE from 'three';
 import { B } from '../world/Blocks.js';
 
-const RANGE = 16;
-const COS_HALF = Math.cos(0.42);
+const RANGE = 23;
+const COS_HALF = Math.cos(0.58); // a wide cone
 const ENERGY_PER_SEC = 20;
 
 export class Breath {
@@ -44,9 +44,9 @@ export class Breath {
 
     // frosty particles streaming forward
     const parts = g.particles;
-    for (let i = 0; i < 6; i++) {
-      const s = 14 + Math.random() * 8;
-      const sx = (Math.random() - 0.5) * 0.5, sy = (Math.random() - 0.5) * 0.5, sz = (Math.random() - 0.5) * 0.5;
+    for (let i = 0; i < 9; i++) {
+      const s = 20 + Math.random() * 12;
+      const sx = (Math.random() - 0.5) * 0.9, sy = (Math.random() - 0.5) * 0.9, sz = (Math.random() - 0.5) * 0.9;
       parts.emit({
         x: this.mouth.x, y: this.mouth.y, z: this.mouth.z,
         vx: (dir.x + sx) * s + p.vel.x, vy: (dir.y + sy) * s + p.vel.y, vz: (dir.z + sz) * s + p.vel.z,
@@ -77,9 +77,9 @@ export class Breath {
       this.to.divideScalar(d);
       if (this.to.dot(dir) < COS_HALF) continue;
       const fall = 1 - d / RANGE;
-      if (e.canFreeze) e.chill(dt * 1.9 * (0.4 + fall));
+      if (e.canFreeze) e.chill(dt * 2.8 * (0.5 + fall));
       if (e.pushable && e.frozen <= 0) {
-        const f = (e.team === 'civ' ? 6 : 26) * fall * dt / Math.max(0.6, e.mass * 0.5);
+        const f = (e.team === 'civ' ? 6 : 38) * (0.3 + fall) * dt / Math.max(0.6, e.mass * 0.5);
         e.vel.addScaledVector(dir, f * 4);
         if (e.vel.y < 1 && fall > 0.6) e.vel.y += 6 * dt;
       }

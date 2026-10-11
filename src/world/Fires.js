@@ -67,7 +67,7 @@ export class Fires {
       if (d > range + f.size) continue;
       t.divideScalar(d || 1);
       if (t.dot(dir) < cosHalf - 0.08 * f.size) continue;
-      f.intensity -= dt * 1.1 * (1 - (d / (range + 2)) * 0.5);
+      f.intensity -= dt * 1.6 * (1 - (d / (range + 2)) * 0.4);
       if (Math.random() < 0.3) g.effects.steam(f.pos, 1);
     }
     this.cleanup();

@@ -5,6 +5,7 @@ import { Laser } from './Laser.js';
 import { Breath } from './Breath.js';
 import { Senses } from './Senses.js';
 import { Carry } from './Carry.js';
+import { LockOn } from './LockOn.js';
 
 const AIM_RANGE = 160;
 
@@ -16,6 +17,7 @@ export class Abilities {
     this.breath = new Breath(game);
     this.senses = new Senses(game);
     this.carry = new Carry(game);
+    this.lockOn = new LockOn(game);
     this.aim = { origin: new THREE.Vector3(), dir: new THREE.Vector3(), point: new THREE.Vector3(), entity: null, block: null, dist: AIM_RANGE };
   }
 
@@ -69,6 +71,8 @@ export class Abilities {
     }
     if (ok('carry') && input.pressed('carry')) this.carry.toggle(aim);
     if (ok('senses') && input.pressed('senses')) this.senses.toggle();
+    if (input.pressed('lock')) this.lockOn.toggle();
+    this.lockOn.update(dt);
     const busy = !!this.carry.held;
     this.laser.update(dt, ok('laser') && input.isDown('laser') && !busy, aim);
     this.breath.update(dt, ok('breath') && input.isDown('breath') && !this.laser.active, aim);
@@ -77,6 +81,7 @@ export class Abilities {
   }
 
   reset() {
+    this.lockOn.release();
     this.laser.hide();
     this.breath.stop();
     this.senses.set(false);

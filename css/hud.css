@@ -724,3 +724,88 @@ button.danger {
   background: #7a2020;
   box-shadow: inset -4px -4px 0 #4a1010, inset 4px 4px 0 #b04040;
 }
+
+/* lock-on marker: four red corner brackets that spin slowly */
+.lockon {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  --size: 60px;
+}
+
+.lockon-box {
+  width: var(--size);
+  height: var(--size);
+  --c: #ff4d4d;
+  background:
+    linear-gradient(var(--c), var(--c)) top left / 30% 3px no-repeat,
+    linear-gradient(var(--c), var(--c)) top left / 3px 30% no-repeat,
+    linear-gradient(var(--c), var(--c)) top right / 30% 3px no-repeat,
+    linear-gradient(var(--c), var(--c)) top right / 3px 30% no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom left / 30% 3px no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom left / 3px 30% no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom right / 30% 3px no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom right / 3px 30% no-repeat;
+  animation: lock-spin 3s linear infinite;
+  filter: drop-shadow(0 0 4px #ff4d4d);
+}
+
+@keyframes lock-spin {
+  to {
+    transform: rotate(90deg);
+  }
+}
+
+.lockon-label {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 4px);
+  transform: translateX(-50%);
+  font-size: 8px;
+  color: #ff8a7a;
+  white-space: nowrap;
+}
+
+/* guide arrow at the top of the screen */
+.guide {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 8px;
+  color: #ffb0a8;
+  opacity: 0.85;
+}
+
+.guide-arrow {
+  width: 22px;
+  height: 22px;
+  background: #ff4d4d;
+  clip-path: polygon(50% 0, 100% 70%, 62% 60%, 62% 100%, 38% 100%, 38% 60%, 0 70%);
+  transform: rotate(var(--rot, 0rad));
+  animation: guide-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes guide-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* context prompt above the ability bar */
+.prompt {
+  position: absolute;
+  left: 50%;
+  bottom: 110px;
+  transform: translateX(-50%);
+  font-size: 11px;
+  padding: 10px 14px;
+  background: rgba(60, 10, 10, 0.85);
+  border: 3px solid #ff3a2a;
+  white-space: nowrap;
+}
+
+.prompt b {
+  color: #ffd34d;
+  font-weight: normal;
+}

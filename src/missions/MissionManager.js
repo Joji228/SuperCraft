@@ -144,7 +144,11 @@ class Objective {
     const d = this.def;
     if (this.done || d.noPin) return null;
     if (d.type === 'reach' || (d.type === 'action' && d.at)) return d.at.clone().setY(d.at.y + 1.5);
-    if (d.type === 'find') return null; // super senses put their own marker and beam on it
+    if (d.type === 'find') return null;
+    if (d.type === 'custom' && d.tag) {
+      const e = g.entities.nearest(g.player.pos, 3000, (x) => x.tags.has(d.tag) && x.alive);
+      return e ? e.pos.clone().setY(e.pos.y + e.height + 1) : null;
+    } // super senses put their own marker and beam on it
     if (d.type === 'rings') return this.rings[this.progress]?.position.clone() || null;
     if (d.type === 'extinguish') {
       const n = g.fires.nearest(g.player.pos);
@@ -232,7 +236,8 @@ export class MissionRun {
     // pins
     this.objectives.forEach((o, i) => {
       const p = o.pin();
-      if (p) g.markers.setPin('obj' + i, p, o.def.pinLabel || '', o.def.type === 'defeat' ? 'boss' : 'objective');
+      const boss = o.def.type === 'defeat' || (o.def.type === 'custom' && o.def.tag);
+      if (p) g.markers.setPin('obj' + i, p, o.def.pinLabel || '', boss ? 'boss' : 'objective');
     });
 
     // HUD

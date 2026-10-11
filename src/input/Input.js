@@ -18,6 +18,8 @@ const BINDINGS = {
   breath: ['KeyQ'],
   senses: ['KeyE'],
   carry: ['KeyG'],
+  lock: ['Mouse1'], // middle mouse / wheel click
+  summon: ['KeyT'],
 };
 
 const CODE_TO_ACTIONS = {};
@@ -25,7 +27,7 @@ for (const [action, codes] of Object.entries(BINDINGS)) {
   for (const c of codes) (CODE_TO_ACTIONS[c] ||= []).push(action);
 }
 
-const BLOCKED_DEFAULTS = new Set(['Space', 'F3', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Backquote', 'KeyF', 'KeyC', 'KeyQ', 'KeyE', 'KeyG']);
+const BLOCKED_DEFAULTS = new Set(['Space', 'F3', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Backquote', 'KeyF', 'KeyC', 'KeyQ', 'KeyE', 'KeyG', 'KeyT']);
 
 export class Input {
   constructor(element) {
@@ -45,7 +47,9 @@ export class Input {
     });
     window.addEventListener('keyup', (e) => this.up(e.code));
     window.addEventListener('mousedown', (e) => {
-      if (this.locked) this.down('Mouse' + e.button);
+      if (!this.locked) return;
+      if (e.button === 1) e.preventDefault(); // no auto-scroll on wheel click
+      this.down('Mouse' + e.button);
     });
     window.addEventListener('mouseup', (e) => this.up('Mouse' + e.button));
     window.addEventListener('contextmenu', (e) => {

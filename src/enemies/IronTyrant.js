@@ -309,6 +309,32 @@ export class IronTyrant extends Entity {
       return;
     }
 
+    if (this.state === 'drop') {
+      // falling from the sky, then a huge landing
+      this.dropSpeed = (this.dropSpeed || 20) + 40 * dt;
+      this.pos.y -= this.dropSpeed * dt;
+      if (Math.random() < 0.8) g.effects.smoke(tmpA.set(this.pos.x + (Math.random() - 0.5) * 4, this.pos.y + 5, this.pos.z + (Math.random() - 0.5) * 4), 2, 1.2, 0.3);
+      if (this.pos.y <= CITY.G) {
+        this.pos.y = CITY.G;
+        this.state = 'walk';
+        this.attackCd = 2.5;
+        g.effects.shockwave(this.pos, 14);
+        g.effects.explosion(tmpA.set(this.pos.x, this.pos.y + 1, this.pos.z), 2);
+        g.audio.play('stomp');
+        g.audio.play('explosion', this.pos);
+        g.rig.shake = 1.2;
+        g.hud.flash(0.4);
+        this.crush(this.pos, 3);
+        const t0 = toward(this, g.player.pos);
+        if (t0.d < 12) {
+          g.hurtPlayer(12, this.pos, 'stomp');
+          g.player.vel.addScaledVector(t0.dir, 18).setY(10);
+        }
+        g.hud.toast('THE IRON TYRANT HAS LANDED!', 'alert', 3);
+      }
+      return;
+    }
+
     const frac = this.health / this.maxHealth;
     if (frac < 0.66 && this.phase === 1) this.setPhase(2);
     if (frac < 0.33 && this.phase === 2) this.setPhase(3);

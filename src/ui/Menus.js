@@ -16,6 +16,8 @@ const CONTROLS = [
   ['Q (hold)', 'Super breath: freeze, push, put out fires'],
   ['E', 'Super senses: see through walls'],
   ['G', 'Pick up / drop people, objects and cars'],
+  ['Middle mouse', 'Lock on to the target nearest the crosshair (again to release)'],
+  ['T', 'Free Roam: summon the Iron Tyrant from the red plaza circle'],
   ['V', 'Third / first person'],
   ['Esc', 'Pause'],
   ['F3', 'Debug info (FPS)'],

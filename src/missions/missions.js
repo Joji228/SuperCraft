@@ -412,7 +412,7 @@ export const MISSIONS = [
           c.data.off = g.events.on('tyrantDown', () => (c.data.down = true));
         },
         objectives: [
-          { type: 'custom', label: 'Defeat the Iron Tyrant', check: (c) => ({ done: c.data.down }) },
+          { type: 'custom', tag: 'tyrant', pinLabel: 'Iron Tyrant', label: 'Defeat the Iron Tyrant', check: (c) => ({ done: c.data.down }) },
           { type: 'protect', maxLost: 5, label: 'Protect the citizens' },
         ],
       },

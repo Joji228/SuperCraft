@@ -508,6 +508,8 @@ export class Game {
     // HUD
     cam.updateMatrixWorld();
     this.markers.update(realDt, p.pos);
+    this.abilities.lockOn.updateMarker();
+    this.hud.setGuide(this.guideTarget(), this.rig.yaw, p.pos);
     const mk = [...(this.mode?.markers?.() || [])];
     for (const e of this.entities.list) {
       if (e.removed || !e.alive) continue;
@@ -531,6 +533,15 @@ export class Game {
       particles: this.particles.count,
     });
     return p.pos;
+  }
+
+  /** What the red guide arrow at the top of the screen points at: the main objective. */
+  guideTarget() {
+    if (this.cutscene) return null;
+    const t = this.mode?.beaconPos?.();
+    if (t) return t;
+    const boss = this.entities.nearest(this.player.pos, 800, (e) => e.boss && e.alive);
+    return boss ? boss.pos : null;
   }
 
   /** Light pillar over the mode's main target (objective, event or sensed target). */

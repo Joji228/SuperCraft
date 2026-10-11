@@ -5,7 +5,7 @@ import { B, SOLID, LASER_PROOF, FLAMMABLE } from '../world/Blocks.js';
 import { CITY } from '../world/CityGenerator.js';
 
 const DPS = 60;
-const HEAT_PER_SEC = 30;
+const HEAT_PER_SEC = 26; // about 3.8 s of continuous fire before overheating
 const MELT_TIME = 0.32;
 
 export class Laser {

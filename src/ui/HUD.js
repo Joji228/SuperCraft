@@ -20,6 +20,7 @@ export class HUD {
       </div>
       <div class="hud-topcenter">
         <div class="boss hidden" id="hud-boss"><div class="boss-name" id="hud-boss-name"></div><div class="boss-bar"><div class="boss-fill" id="hud-boss-fill"></div></div><div class="shield-bar hidden" id="hud-shield"><div class="shield-fill" id="hud-shield-fill"></div><span>FROZEN SHIELD</span></div></div>
+        <div class="guide hidden" id="hud-guide"><div class="guide-arrow"></div><span id="hud-guide-dist"></span></div>
         <div class="toasts" id="hud-toasts"></div>
       </div>
       <div class="objectives hidden" id="hud-obj"><div class="obj-title" id="hud-obj-title"></div><div class="obj-timer" id="hud-obj-timer"></div><ul id="hud-obj-list"></ul></div>
@@ -32,6 +33,7 @@ export class HUD {
         <div class="hud-readout"><span id="hud-speed">0</span> <span id="hud-unit">KM/H</span> &nbsp; ALT <span id="hud-alt">0</span> M</div>
       </div>
       <div class="carry hidden" id="hud-carry"></div>
+      <div class="prompt hidden" id="hud-prompt"></div>
       <div class="abilities">
         <div class="ab" id="ab-boost"><b>SHIFT</b>Boost</div>
         <div class="ab" id="ab-punch"><b>LMB</b>Punch</div>
@@ -77,6 +79,9 @@ export class HUD {
     this.objTimer = q('hud-obj-timer');
     this.objList = q('hud-obj-list');
     this.carryEl = q('hud-carry');
+    this.promptEl = q('hud-prompt');
+    this.guideEl = q('hud-guide');
+    this.guideDist = q('hud-guide-dist');
     this.statsEl = q('hud-stats');
     this.minimapCanvas = q('hud-minimap');
     this.ab = {
@@ -119,6 +124,8 @@ export class HUD {
     this.setCarry(null);
     this.setSenses(false);
     this.setStats('');
+    this.setPrompt(null);
+    this.setGuide(null);
     this.hurt = 0;
   }
 
@@ -154,6 +161,28 @@ export class HUD {
   setSenses(on) {
     this.sensesEl.classList.toggle('on', on);
     this.ab.senses.classList.toggle('active', on);
+  }
+
+  /** Small red arrow under the boss bar pointing (relative to the camera) at the objective. */
+  setGuide(target, camYaw, from) {
+    if (!target) {
+      this.guideEl.classList.add('hidden');
+      return;
+    }
+    const dx = target.x - from.x, dz = target.z - from.z;
+    const d = Math.hypot(dx, dz);
+    // hide when you're basically there
+    this.guideEl.classList.toggle('hidden', d < 12);
+    let rel = Math.atan2(-dx, -dz) - camYaw;
+    rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+    this.guideEl.style.setProperty('--rot', `${-rel}rad`);
+    this.guideDist.textContent = Math.round(d) + ' m';
+  }
+
+  /** A context hint like "Press T to summon the Iron Tyrant". */
+  setPrompt(html) {
+    this.promptEl.classList.toggle('hidden', !html);
+    if (html && this.promptEl.innerHTML !== html) this.promptEl.innerHTML = html;
   }
 
   setCarry(label) {

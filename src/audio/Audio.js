@@ -276,12 +276,14 @@ const LOOPS = {
 
 const SOUNDS = {
   boom(a, d) {
-    a.noiseBurst({ dur: 0.18, type: 'highpass', freq: 1200, gain: 0.9, dest: d });
-    a.noiseBurst({ dur: 1.6, type: 'lowpass', freq: 1400, freqEnd: 70, gain: 1, attack: 0.02, dest: d });
-    a.tone({ dur: 0.7, freq: 90, freqEnd: 28, gain: 0.8, dest: d });
+    // a rushing swell into a deep, soft thump that rolls away (no harsh crack)
+    a.noiseBurst({ dur: 0.45, type: 'bandpass', freq: 300, freqEnd: 1100, q: 0.8, gain: 0.35, attack: 0.3, dest: d });
+    a.noiseBurst({ t: 0.32, dur: 2.2, type: 'lowpass', freq: 700, freqEnd: 45, gain: 0.8, attack: 0.04, dest: d });
+    a.tone({ t: 0.32, dur: 1.2, freq: 70, freqEnd: 30, gain: 0.6, attack: 0.03, dest: d });
+    a.tone({ t: 0.32, dur: 0.9, type: 'triangle', freq: 140, freqEnd: 60, gain: 0.12, attack: 0.03, dest: d });
   },
   whoosh(a, d) {
-    a.noiseBurst({ dur: 0.14, type: 'bandpass', freq: 600, freqEnd: 2400, q: 1.2, gain: 0.25, attack: 0.02, dest: d });
+    a.noiseBurst({ dur: 0.16, type: 'bandpass', freq: 500, freqEnd: 1600, q: 1, gain: 0.18, attack: 0.04, dest: d });
   },
   punchHit(a, d) {
     a.tone({ dur: 0.12, freq: 160, freqEnd: 60, gain: 0.7, dest: d });
@@ -332,11 +334,11 @@ const SOUNDS = {
     a.tone({ dur: 0.3, freq: 880, freqEnd: 220, gain: 0.12, dest: d });
   },
   gunshot(a, d) {
-    a.noiseBurst({ dur: 0.12, type: 'lowpass', freq: 3500, freqEnd: 400, gain: 0.55, dest: d });
+    a.noiseBurst({ dur: 0.14, type: 'lowpass', freq: 2400, freqEnd: 300, gain: 0.4, attack: 0.004, dest: d });
     a.tone({ dur: 0.06, type: 'square', freq: 140, freqEnd: 60, gain: 0.2, dest: d });
   },
   zap(a, d) {
-    a.tone({ dur: 0.18, type: 'sawtooth', freq: 1400, freqEnd: 300, gain: 0.12, dest: d });
+    a.tone({ dur: 0.2, type: 'triangle', freq: 1100, freqEnd: 260, gain: 0.1, attack: 0.01, dest: d });
   },
   explosion(a, d) {
     a.noiseBurst({ dur: 1.2, type: 'lowpass', freq: 1200, freqEnd: 60, gain: 1, attack: 0.01, dest: d });

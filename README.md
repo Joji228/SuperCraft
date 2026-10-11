@@ -41,6 +41,8 @@ five-mission campaign.
 | Q (hold) | Super breath: freezes enemies, pushes things, puts out fires, freezes water |
 | E | Super senses: see enemies, people in danger and objectives through walls |
 | G | Pick up / drop people, objects and even cars |
+| Middle mouse (wheel click) | Lock on to the enemy nearest the crosshair / release |
+| T | In Free Roam, inside the red plaza circle: summon the Iron Tyrant |
 | V | Switch third / first person |
 | Esc | Pause |
 | F3 | Debug info (FPS, draw calls) |
