@@ -18,12 +18,16 @@ Fly over a voxel city, break the sound barrier and save Brightport.
 - 🎬 **A five-mission campaign** ending in a fight with a giant mech, rated with up to three stars.
 - 🎨 **Five costumes**, and every texture and sound is made in code.
 
-<div align="center">
-<img src="docs/screenshots/sonic-boom.jpg" alt="Breaking the sound barrier" width="410">
-<img src="docs/screenshots/iron-tyrant.jpg" alt="Fighting the Iron Tyrant" width="410">
-<img src="docs/screenshots/tower-inferno.jpg" alt="Tower Inferno mission" width="410">
-<img src="docs/screenshots/costumes.jpg" alt="Choosing a costume" width="410">
-</div>
+<table>
+<tr>
+<td><img src="docs/screenshots/sonic-boom.jpg" alt="Breaking the sound barrier" width="400" height="225"></td>
+<td><img src="docs/screenshots/iron-tyrant.jpg" alt="Fighting the Iron Tyrant" width="400" height="225"></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/tower-inferno.jpg" alt="Tower Inferno mission" width="400" height="225"></td>
+<td><img src="docs/screenshots/costume-picker.jpg" alt="Choosing a costume" width="400" height="225"></td>
+</tr>
+</table>
 
 ## Controls
 
@@ -44,6 +48,6 @@ Fly over a voxel city, break the sound barrier and save Brightport.
 
 ## Run it locally
 
-Double-click `play.bat` on Windows, or run `python tools/serve.py 8080` and open http://localhost:8080.
+Run `python tools/serve.py 8080` in the project folder and open http://localhost:8080.
 
 <sub>Built with <a href="https://threejs.org">Three.js</a>. Aegis, Brightport and every villain are original creations. MIT licensed.</sub>
