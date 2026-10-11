@@ -5,7 +5,7 @@
 **A blocky superhero game you can play right in your browser.**
 Fly over a voxel city, break the sound barrier and save Brightport.
 
-<a href="https://joji228.github.io/SuperCraft/"><img src="https://img.shields.io/badge/%E2%96%B6%20%20PLAY%20NOW-FREE%20IN%20YOUR%20BROWSER-ff3d2e?style=for-the-badge&labelColor=f2b630" alt="Play SuperCraft now" height="100"></a>
+<a href="https://joji228.github.io/SuperCraft/"><img src="docs/play-button.svg" alt="▶ Play SuperCraft now" width="420" height="96"></a>
 
 **[👉 joji228.github.io/SuperCraft](https://joji228.github.io/SuperCraft/)**
 
