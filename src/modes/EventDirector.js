@@ -237,12 +237,14 @@ export class EventDirector {
     this.game = game;
     this.stats = stats;
     this.events = [];
-    this.timer = 12;
+    this.timer = 30; // first emergency fairly soon, then every 2-3 minutes
     this.maxActive = 2;
+    this.lastType = null;
   }
 
   pick() {
-    const ok = TYPES.filter((t) => !t.minDone || this.stats.events >= t.minDone);
+    // vary it: never the same kind of emergency twice in a row
+    const ok = TYPES.filter((t) => (!t.minDone || this.stats.events >= t.minDone) && t.cls !== this.lastType);
     const total = ok.reduce((s, t) => s + t.weight, 0);
     let r = Math.random() * total;
     for (const t of ok) if ((r -= t.weight) <= 0) return t.cls;
@@ -286,8 +288,12 @@ export class EventDirector {
     const g = this.game;
     this.timer -= dt;
     if (this.timer <= 0) {
-      this.timer = 25 + Math.random() * 25;
-      if (this.events.length < this.maxActive) this.spawn(this.pick());
+      this.timer = 120 + Math.random() * 60;
+      if (this.events.length < this.maxActive) {
+        const cls = this.pick();
+        if (this.spawn(cls)) this.lastType = cls;
+        else this.timer = 10; // no good spot this time: try again shortly
+      }
     }
     for (const ev of [...this.events]) {
       ev.update(dt);

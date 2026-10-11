@@ -155,9 +155,38 @@ export class Audio {
   }
 }
 
-const LOOP_GAIN = { wind: 0.5, laser: 0.22, breath: 0.35, senses: 0.12, fire: 0.3, siren: 0.07 };
+const LOOP_GAIN = { wind: 0.5, laser: 0.22, breath: 0.35, senses: 0.12, fire: 0.3, siren: 0.07, city: 0.16 };
 
 const LOOPS = {
+  // distant city hum: low traffic rumble with a slow swell
+  city(a, dest) {
+    const ctx = a.ctx;
+    const src = ctx.createBufferSource();
+    src.buffer = a.noise;
+    src.loop = true;
+    src.playbackRate.value = 0.5;
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = 320;
+    const swell = ctx.createGain();
+    swell.gain.value = 0.7;
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 0.07;
+    const lg = ctx.createGain();
+    lg.gain.value = 0.3;
+    lfo.connect(lg).connect(swell.gain);
+    const hum = ctx.createOscillator();
+    hum.type = 'sine';
+    hum.frequency.value = 58;
+    const hg = ctx.createGain();
+    hg.gain.value = 0.15;
+    src.connect(f).connect(swell).connect(dest);
+    hum.connect(hg).connect(dest);
+    src.start();
+    lfo.start();
+    hum.start();
+    return {};
+  },
   wind(a, dest) {
     const ctx = a.ctx;
     const src = ctx.createBufferSource();
@@ -357,6 +386,27 @@ const SOUNDS = {
   },
   scream(a, d) {
     a.tone({ dur: 0.5, type: 'sawtooth', freq: 900, freqEnd: 600, gain: 0.05, dest: d });
+  },
+  // a car driving past: engine hum and tyre noise that swell up and fade away
+  carPass(a, d) {
+    const ctx = a.ctx;
+    const at = ctx.currentTime;
+    const dur = 2.6;
+    const o = ctx.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(70 + Math.random() * 30, at);
+    o.frequency.linearRampToValueAtTime(55 + Math.random() * 20, at + dur); // slight doppler drop
+    const of = ctx.createBiquadFilter();
+    of.type = 'lowpass';
+    of.frequency.value = 260;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(0.09, at + dur * 0.45);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    o.connect(of).connect(g).connect(d);
+    o.start(at);
+    o.stop(at + dur + 0.05);
+    a.noiseBurst({ dur, type: 'bandpass', freq: 600, q: 0.6, gain: 0.05, attack: dur * 0.45, dest: d });
   },
   horn(a, d) {
     a.tone({ dur: 0.3, type: 'square', freq: 392, gain: 0.08, dest: d });

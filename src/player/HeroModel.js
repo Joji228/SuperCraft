@@ -138,6 +138,11 @@ export class HeroModel {
     this.head.add(this.eyes);
 
     this.punchT = 9;
+    this.prevYaw = 0;
+    this.bank = 0; // lean into turns
+    this.roll = 0; // barrel-roll spin (radians left to spin)
+    this.rollCd = 0;
+    this.bob = 0;
     this.punchCombo = 1;
     this.walkPhase = 0;
     this.tilt = 0;
@@ -173,6 +178,12 @@ export class HeroModel {
       // superhero pose: one fist forward, other arm tucked
       armR = -2.9 * move;
       armL = -0.25 * move;
+      if (s.supersonic) {
+        // breaking the sound barrier: both arms swept back along the body, streamlined
+        armR = 0.35;
+        armL = 0.35;
+        armSpread = 0.12;
+      }
       legL = 0.08 + Math.sin(this.time * 6) * 0.05 * move;
       legR = 0.02 - Math.sin(this.time * 6) * 0.05 * move;
       // the body tilt already makes the cape trail behind; just add flutter
@@ -230,7 +241,31 @@ export class HeroModel {
 
     this.tilt = damp(this.tilt, tiltTarget, 8, dt);
     this.root.rotation.set(0, this.yaw, 0);
-    this.pivot.rotation.set(this.tilt, 0, 0);
+
+    // turning: lean into the turn, and do a barrel roll on a hard turn at speed
+    let yawRate = (this.yaw - this.prevYaw) / Math.max(dt, 1e-4);
+    yawRate = Math.atan2(Math.sin(yawRate * dt), Math.cos(yawRate * dt)) / Math.max(dt, 1e-4);
+    this.prevYaw = this.yaw;
+    const fast = s.mode === 'fly' ? Math.min(1, s.hSpeed / 20) : 0;
+    this.bank = damp(this.bank, Math.max(-0.9, Math.min(0.9, -yawRate * 0.18)) * fast, 6, dt);
+    this.rollCd = Math.max(0, this.rollCd - dt);
+    if (s.mode === 'fly' && s.hSpeed > 30 && Math.abs(yawRate) > 2.6 && this.rollCd <= 0 && this.roll === 0) {
+      this.roll = Math.PI * 2 * Math.sign(-yawRate);
+      this.rollCd = 2.5;
+    }
+    let spin = 0;
+    if (this.roll !== 0) {
+      const step = Math.sign(this.roll) * Math.min(Math.abs(this.roll), dt * 11);
+      this.roll -= step;
+      if (Math.abs(this.roll) < 1e-3) this.roll = 0;
+      spin = this.roll;
+    }
+    // hovering: drift gently up and down
+    const hover = s.mode === 'fly' ? 1 - Math.min(1, s.speed / 6) : 0;
+    this.bob = damp(this.bob, Math.sin(this.time * 1.8) * 0.12 * hover, 6, dt);
+    this.pivot.position.y = 1.0 + this.bob;
+    // spin and bank around the body's own long axis (the flight direction when flying flat)
+    this.pivot.rotation.set(this.tilt, this.bank + spin, 0, 'XYZ');
     // head looks forward even when the body is horizontal
     this.head.rotation.x = damp(this.head.rotation.x, -Math.min(this.tilt, 1.4) * 0.6, 10, dt);
 

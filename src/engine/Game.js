@@ -487,6 +487,7 @@ export class Game {
       hSpeed: Math.hypot(p.vel.x, p.vel.z),
       vy: p.vel.y,
       boost: p.boosting,
+      supersonic: p.supersonic,
       carrying: !!held,
       carryHeavy: held?.carryHeavy,
       laser: this.abilities.laser.active,
@@ -504,6 +505,15 @@ export class Game {
     // audio
     const speed = p.vel.length();
     this.audio.setLoopLevel('wind', p.flying ? Math.min(1, Math.max(0, (speed - 6) / 60)) : 0, 0.15);
+    // quiet city in the background, fading as you climb above the rooftops
+    const alt = Math.max(0, p.pos.y - CITY.G);
+    const cityLevel = Math.max(0.15, 1 - alt / 140) * (this.mode?.population ? 1 : 0.5);
+    this.audio.setLoopLevel('city', cityLevel, 0.8);
+    this.carPassTimer = (this.carPassTimer ?? 4) - realDt;
+    if (this.carPassTimer <= 0) {
+      this.carPassTimer = 5 + Math.random() * 8;
+      if (alt < 40 && this.mode?.population) this.audio.play('carPass');
+    }
 
     // HUD
     cam.updateMatrixWorld();
