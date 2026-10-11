@@ -67,10 +67,18 @@ function blockLap(g) {
 }
 
 /** A short, straight speed run east down the same avenue. */
-function speedLine() {
-  // continues straight on from the last flight ring, east along the river and out to sea
-  const pts = [];
-  for (let i = 0; i < 5; i++) pts.push(V(378 + i * 38, 33, 280));
+function speedLine(g) {
+  // carries straight on from the last flight ring, then turns north and loops back west
+  // down the avenue to finish right beside the plaza: short, and you land where you started
+  const pts = [[372, 36, 280], [380, 40, 256], [380, 42, 226], [380, 42, 198], [352, 40, 180], [320, 37, 180], [288, 33, 180], [258, 28, 180]].map(([x, y, z]) => V(x, y, z));
+  for (const p of pts) {
+    for (let k = 0; k < 20; k++) {
+      let clear = true;
+      for (let dy = -4; dy <= 4 && clear; dy += 2) for (let dx = -4; dx <= 4 && clear; dx += 2) for (let dz = -4; dz <= 4 && clear; dz += 2) if (g.world.isSolid(Math.floor(p.x + dx), Math.floor(p.y + dy), Math.floor(p.z + dz))) clear = false;
+      if (clear) break;
+      p.y += 3;
+    }
+  }
   return pts;
 }
 
@@ -138,7 +146,7 @@ export const MISSIONS = [
       {
         unlock: ['boost'],
         toast: 'Hold Shift while flying forward to boost. Watch the SPEED bar!',
-        objectives: [{ type: 'rings', points: speedLine(), label: 'Boost through the speed rings (hold Shift)' }],
+        objectives: [(c) => ({ type: 'rings', points: speedLine(c.g), label: 'Boost through the speed rings (hold Shift)' })],
       },
       { objectives: [(c) => ({ type: 'action', action: 'land', at: c.a.plazaCenter, radius: 30, label: 'Fly back and land at the plaza (hold C)' })] },
       {
