@@ -119,14 +119,9 @@ export class Menus {
          <button data-action="settings">Settings</button>
          <button data-action="credits">Credits</button>
        </div>
-       <div class="testing">
-         <label class="check"><input type="checkbox" id="unlockAll" ${this.settings.unlockAll ? 'checked' : ''}> Unlock all missions (testing)</label>
-         <button data-action="resetAll" class="danger">Reset all progress</button>
-       </div>
        <p class="small foot">Click a mode to play &middot; Esc pauses</p>`,
       'screen main',
     );
-    this.root.querySelector('#unlockAll').addEventListener('change', (e) => this.settings.set('unlockAll', e.target.checked));
   }
 
   /** Testing helper: wipe campaign stars, Free Roam stats and settings. */
@@ -301,6 +296,11 @@ export class Menus {
          <label class="check"><input type="checkbox" id="dayNight" ${s.dayNight ? 'checked' : ''}> Day/night cycle</label>
          <label class="check"><input type="checkbox" id="firstPerson" ${s.firstPerson ? 'checked' : ''}> First-person camera</label>
        </div>
+       <div class="testing">
+         <span class="kicker">Testing</span>
+         <label class="check"><input type="checkbox" id="unlockAll" ${s.unlockAll ? 'checked' : ''}> Unlock all missions</label>
+         <button data-action="resetAll" class="danger">Reset all progress</button>
+       </div>
        <div class="menu"><button data-action="back">Back</button></div>`,
     );
     const q = (id) => this.root.querySelector('#' + id);
@@ -317,6 +317,6 @@ export class Menus {
       q('vol-val').textContent = Math.round(s.volume * 100);
     });
     q('renderDistance').addEventListener('change', (e) => s.set('renderDistance', parseInt(e.target.value, 10)));
-    for (const id of ['shadows', 'invertY', 'dayNight', 'firstPerson']) q(id).addEventListener('change', (e) => s.set(id, e.target.checked));
+    for (const id of ['shadows', 'invertY', 'dayNight', 'firstPerson', 'unlockAll']) q(id).addEventListener('change', (e) => s.set(id, e.target.checked));
   }
 }
