@@ -1,5 +1,7 @@
-// In-game overlay: crosshair, flight status, speed/altitude, debug info and speed lines.
+// In-game overlay: meters, crosshair + hit markers, objectives, toasts, boss bar,
+// ability bar, carry label, damage/senses overlays, speed lines and debug info.
 import { CITY } from '../world/CityGenerator.js';
+import { METERS } from '../abilities/Meters.js';
 
 export class HUD {
   constructor(root, fxCanvas) {
@@ -8,29 +10,81 @@ export class HUD {
     this.ctx = fxCanvas.getContext('2d');
     this.debug = false;
     root.innerHTML = `
-      <div class="crosshair"></div>
+      <div class="overlay-senses" id="hud-senses"></div>
+      <div class="overlay-hurt" id="hud-hurt"></div>
+      <div class="crosshair" id="hud-cross"><div class="hitmark" id="hud-hitmark"></div></div>
+      <div class="hud-topleft">
+        <canvas class="minimap" id="hud-minimap" width="176" height="176"></canvas>
+        <div class="hud-stats" id="hud-stats"></div>
+        <div class="hud-debug hidden" id="hud-debug"></div>
+      </div>
+      <div class="hud-topcenter">
+        <div class="boss hidden" id="hud-boss"><div class="boss-name" id="hud-boss-name"></div><div class="boss-bar"><div class="boss-fill" id="hud-boss-fill"></div></div></div>
+        <div class="toasts" id="hud-toasts"></div>
+      </div>
+      <div class="objectives hidden" id="hud-obj"><div class="obj-title" id="hud-obj-title"></div><div class="obj-timer" id="hud-obj-timer"></div><ul id="hud-obj-list"></ul></div>
       <div class="hud-status">
+        <div class="meter health"><span class="meter-label">HP</span><div class="meter-bar"><div class="meter-fill" id="hud-hp"></div></div></div>
+        <div class="meter energy"><span class="meter-label">EN</span><div class="meter-bar"><div class="meter-fill" id="hud-en"></div></div></div>
+        <div class="meter heat" id="hud-heat-row"><span class="meter-label">HEAT</span><div class="meter-bar"><div class="meter-fill" id="hud-heat"></div></div></div>
         <div class="hud-mode" id="hud-mode">ON FOOT</div>
         <div class="hud-readout"><span id="hud-speed">0</span> <span id="hud-unit">KM/H</span> &nbsp; ALT <span id="hud-alt">0</span> M</div>
       </div>
+      <div class="carry hidden" id="hud-carry"></div>
+      <div class="abilities">
+        <div class="ab" id="ab-punch"><b>LMB</b>Punch</div>
+        <div class="ab" id="ab-laser"><b>RMB</b>Laser</div>
+        <div class="ab" id="ab-breath"><b>Q</b>Breath</div>
+        <div class="ab" id="ab-senses"><b>E</b>Senses</div>
+        <div class="ab" id="ab-carry"><b>G</b>Carry</div>
+        <div class="ab" id="ab-fly"><b>F</b>Fly</div>
+      </div>
       <div class="hud-hint" id="hud-hint">
-        <b>WASD</b> move &nbsp; <b>SPACE</b> jump &nbsp; <b>F</b> fly<br>
-        Flying: <b>SPACE</b> up &nbsp; <b>C/CTRL</b> down &nbsp; <b>SHIFT</b> boost<br>
+        <b>WASD</b> move &nbsp; <b>SPACE</b> jump &nbsp; <b>F</b> fly &nbsp; <b>SHIFT</b> boost<br>
+        Flying: <b>SPACE</b> up &nbsp; <b>C/CTRL</b> down<br>
         <b>V</b> camera &nbsp; <b>ESC</b> pause &nbsp; <b>F3</b> debug
       </div>
-      <div class="hud-debug hidden" id="hud-debug"></div>
       <div class="hud-click">Click to play</div>
       <div class="hud-flash" id="hud-flash"></div>
     `;
-    this.mode = root.querySelector('#hud-mode');
-    this.speed = root.querySelector('#hud-speed');
-    this.alt = root.querySelector('#hud-alt');
-    this.unit = root.querySelector('#hud-unit');
-    this.flashEl = root.querySelector('#hud-flash');
-    this.hint = root.querySelector('#hud-hint');
-    this.debugEl = root.querySelector('#hud-debug');
+    const q = (id) => root.querySelector('#' + id);
+    this.mode = q('hud-mode');
+    this.speed = q('hud-speed');
+    this.alt = q('hud-alt');
+    this.unit = q('hud-unit');
+    this.flashEl = q('hud-flash');
+    this.hint = q('hud-hint');
+    this.debugEl = q('hud-debug');
+    this.hp = q('hud-hp');
+    this.en = q('hud-en');
+    this.heat = q('hud-heat');
+    this.heatRow = q('hud-heat-row');
+    this.hitmark = q('hud-hitmark');
+    this.hurtEl = q('hud-hurt');
+    this.sensesEl = q('hud-senses');
+    this.toastsEl = q('hud-toasts');
+    this.bossEl = q('hud-boss');
+    this.bossName = q('hud-boss-name');
+    this.bossFill = q('hud-boss-fill');
+    this.objEl = q('hud-obj');
+    this.objTitle = q('hud-obj-title');
+    this.objTimer = q('hud-obj-timer');
+    this.objList = q('hud-obj-list');
+    this.carryEl = q('hud-carry');
+    this.statsEl = q('hud-stats');
+    this.minimapCanvas = q('hud-minimap');
+    this.ab = {
+      laser: q('ab-laser'),
+      breath: q('ab-breath'),
+      senses: q('ab-senses'),
+      carry: q('ab-carry'),
+      fly: q('ab-fly'),
+    };
     this.hintTimer = 14;
     this.lastMode = '';
+    this.hurt = 0;
+    this.hitTimer = 0;
+    this.lastObjHtml = '';
     this.resize();
     window.addEventListener('resize', () => this.resize());
   }
@@ -50,12 +104,107 @@ export class HUD {
     this.debugEl.classList.toggle('hidden', !this.debug);
   }
 
-  update(dt, player, info) {
-    const m = player.supersonic ? 'SUPERSONIC' : player.boosting ? 'BOOST' : player.flying ? 'FLYING' : 'ON FOOT';
-    if (m !== this.lastMode) {
-      this.mode.textContent = m;
-      this.mode.className = 'hud-mode mode-' + m.toLowerCase().replace(' ', '-');
-      this.lastMode = m;
+  reset() {
+    this.toastsEl.innerHTML = '';
+    this.setBoss(null);
+    this.setObjectives(null);
+    this.setCarry(null);
+    this.setSenses(false);
+    this.setStats('');
+    this.hurt = 0;
+  }
+
+  // ---------- notifications ----------
+
+  toast(text, kind = 'info', seconds = 3) {
+    // don't stack identical messages
+    for (const el of this.toastsEl.children) if (el.textContent === text) return;
+    const el = document.createElement('div');
+    el.className = `toast toast-${kind}`;
+    el.textContent = text;
+    this.toastsEl.appendChild(el);
+    while (this.toastsEl.children.length > 4) this.toastsEl.firstChild.remove();
+    setTimeout(() => el.classList.add('out'), seconds * 1000);
+    setTimeout(() => el.remove(), seconds * 1000 + 600);
+  }
+
+  hitMarker(kill = false, light = false) {
+    this.hitmark.className = 'hitmark show' + (kill ? ' kill' : '') + (light ? ' light' : '');
+    this.hitTimer = kill ? 0.35 : 0.15;
+  }
+
+  damaged(amount) {
+    this.hurt = Math.min(1, this.hurt + amount / 25);
+  }
+
+  setSenses(on) {
+    this.sensesEl.classList.toggle('on', on);
+    this.ab.senses.classList.toggle('active', on);
+  }
+
+  setCarry(label) {
+    this.carryEl.classList.toggle('hidden', !label);
+    if (label) this.carryEl.innerHTML = `Carrying <b>${label}</b> &middot; G drop &middot; LMB throw`;
+    this.ab.carry.classList.toggle('active', !!label);
+  }
+
+  setBoss(name, frac = 1) {
+    if (!name) {
+      this.bossEl.classList.add('hidden');
+      return;
+    }
+    this.bossEl.classList.remove('hidden');
+    this.bossName.textContent = name;
+    this.bossFill.style.width = `${Math.max(0, frac) * 100}%`;
+  }
+
+  setStats(html) {
+    if (this.statsEl.innerHTML !== html) this.statsEl.innerHTML = html;
+  }
+
+  /** obj: { title, timer (seconds or null), items: [{ text, done }] } or null */
+  setObjectives(obj) {
+    if (!obj) {
+      this.objEl.classList.add('hidden');
+      this.lastObjHtml = '';
+      return;
+    }
+    this.objEl.classList.remove('hidden');
+    if (this.objTitle.textContent !== obj.title) this.objTitle.textContent = obj.title;
+    const html = obj.items.map((i) => `<li class="${i.done ? 'done' : ''}">${i.text}</li>`).join('');
+    if (html !== this.lastObjHtml) {
+      this.objList.innerHTML = html;
+      this.lastObjHtml = html;
+    }
+    if (obj.timer == null) this.objTimer.textContent = '';
+    else {
+      const t = Math.max(0, Math.ceil(obj.timer));
+      this.objTimer.textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+      this.objTimer.classList.toggle('urgent', t <= 30);
+    }
+  }
+
+  flash(strength = 0.5, color = '#ffffff') {
+    const el = this.flashEl;
+    el.style.background = color;
+    el.style.transition = 'none';
+    el.style.opacity = String(strength);
+    void el.offsetWidth; // restart the fade
+    el.style.transition = 'opacity 0.6s ease-out';
+    el.style.opacity = '0';
+  }
+
+  // ---------- per frame ----------
+
+  update(dt, game, info) {
+    const player = game.player;
+    const m = game.meters;
+    const mode = player.supersonic ? 'SUPERSONIC' : player.boosting ? 'BOOST' : player.flying ? 'FLYING' : 'ON FOOT';
+    if (mode !== this.lastMode) {
+      this.mode.textContent = mode;
+      this.mode.className = 'hud-mode mode-' + mode.toLowerCase().replace(' ', '-');
+      this.lastMode = mode;
+      this.ab.fly.classList.toggle('active', player.flying);
     }
     if (player.supersonic) {
       // game-world speeds are scaled down; show the fantasy number once past the barrier
@@ -67,6 +216,25 @@ export class HUD {
     }
     this.alt.textContent = Math.max(0, Math.round(player.pos.y - CITY.G));
 
+    this.hp.style.width = `${(m.health / METERS.maxHealth) * 100}%`;
+    this.hp.classList.toggle('low', m.health < 30);
+    this.en.style.width = `${(m.energy / METERS.maxEnergy) * 100}%`;
+    this.heat.style.width = `${m.heat}%`;
+    this.heatRow.classList.toggle('overheated', m.overheated);
+    const ab = game.abilities;
+    this.ab.laser.classList.toggle('active', ab.laser.active);
+    this.ab.laser.classList.toggle('disabled', m.overheated);
+    this.ab.breath.classList.toggle('active', ab.breath.active);
+    this.ab.breath.classList.toggle('disabled', m.energy < 1);
+
+    this.hurt = Math.max(0, this.hurt - dt * 1.2);
+    this.hurtEl.style.opacity = String(Math.min(0.85, this.hurt + (m.health < 30 ? 0.25 + 0.1 * Math.sin(performance.now() / 200) : 0)));
+
+    if (this.hitTimer > 0) {
+      this.hitTimer -= dt;
+      if (this.hitTimer <= 0) this.hitmark.className = 'hitmark';
+    }
+
     if (this.hintTimer > 0) {
       this.hintTimer -= dt;
       if (this.hintTimer <= 0) this.hint.classList.add('fade');
@@ -77,19 +245,10 @@ export class HUD {
       this.debugEl.innerHTML =
         `FPS ${info.fps}<br>` +
         `XYZ ${p.x.toFixed(1)} ${p.y.toFixed(1)} ${p.z.toFixed(1)}<br>` +
-        `CHUNKS ${info.chunks}<br>DRAWS ${info.calls}<br>TRIS ${(info.tris / 1000).toFixed(0)}K`;
+        `CHUNKS ${info.chunks} DRAWS ${info.calls}<br>TRIS ${(info.tris / 1000).toFixed(0)}K ENT ${info.entities} FX ${info.particles}`;
     }
 
     this.drawSpeedLines(player.boostAmount);
-  }
-
-  flash(strength = 0.5) {
-    const el = this.flashEl;
-    el.style.transition = 'none';
-    el.style.opacity = String(strength);
-    void el.offsetWidth; // restart the fade
-    el.style.transition = 'opacity 0.6s ease-out';
-    el.style.opacity = '0';
   }
 
   drawSpeedLines(amount) {

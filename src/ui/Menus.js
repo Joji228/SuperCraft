@@ -1,28 +1,33 @@
-// Menu screens: loading, main menu, settings, controls, credits and pause.
+// Menu screens: loading, main menu, mission select, briefing, results, settings,
+// controls, credits, pause and the final victory screen.
 import { RENDER_DISTANCES } from '../engine/Settings.js';
+import { MISSIONS } from '../missions/missions.js';
+import { loadProgress, fmt } from '../missions/MissionManager.js';
 
 const CONTROLS = [
   ['W A S D', 'Move'],
   ['Mouse', 'Look'],
   ['Space', 'Jump (double-tap in the air to fly)'],
-  ['Shift', 'Run / boost while flying'],
+  ['Shift', 'Run / boost while flying (hold to go supersonic)'],
   ['F', 'Toggle flight'],
-  ['Space / C or Ctrl', 'Fly up / down'],
+  ['Space / C or Ctrl', 'Fly up / down (hold down on the ground to land)'],
+  ['Left mouse', 'Punch (3-hit combo) / throw what you carry'],
+  ['Right mouse (hold)', 'Laser eyes (watch the heat meter)'],
+  ['Q (hold)', 'Super breath: freeze, push, put out fires'],
+  ['E', 'Super senses: see through walls'],
+  ['G', 'Pick up / drop people, objects and cars'],
   ['V', 'Third / first person'],
   ['Esc', 'Pause'],
-  ['F3', 'Debug info'],
-  ['Left mouse', 'Punch (coming in Phase 2)'],
-  ['Right mouse', 'Laser eyes (coming in Phase 2)'],
-  ['Q', 'Super breath (coming in Phase 2)'],
-  ['E', 'Super senses (coming in Phase 2)'],
-  ['G', 'Carry (coming in Phase 2)'],
+  ['F3', 'Debug info (FPS)'],
 ];
 
+const stars = (n, max = 3) => '<span class="stars">' + '★'.repeat(n) + '<span class="dim">' + '★'.repeat(max - n) + '</span></span>';
+
 export class Menus {
-  constructor(root, settings, handlers) {
+  constructor(root, settings, game) {
     this.root = root;
     this.settings = settings;
-    this.handlers = handlers;
+    this.game = game;
     this.current = null;
     this.back = 'main';
   }
@@ -40,27 +45,37 @@ export class Menus {
     this.root.querySelectorAll('[data-action]').forEach((el) =>
       el.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.action(el.dataset.action);
+        this.game.audio.play('click');
+        this.action(el.dataset.action, el.dataset.arg);
       }),
     );
   }
 
-  action(a) {
+  action(a, arg) {
+    const g = this.game;
     switch (a) {
       case 'freeroam':
-        return this.handlers.startFreeRoam();
+        return g.startFreeRoam();
+      case 'campaign':
+        return this.showMissions();
+      case 'brief':
+        return this.showBriefing(parseInt(arg, 10));
+      case 'play':
+        return g.startMission(parseInt(arg, 10));
       case 'resume':
-        return this.handlers.resume();
+        return g.resume();
       case 'quit':
-        return this.handlers.quitToMenu();
+        return g.quitToMenu();
       case 'settings':
         return this.showSettings();
       case 'controls':
         return this.showControls();
       case 'credits':
         return this.showCredits();
+      case 'main':
+        return this.showMain();
       case 'back':
-        return this.back === 'pause' ? this.showPause() : this.showMain();
+        return this.back === 'pause' ? this.showPause(this.pauseInfo) : this.showMain();
     }
   }
 
@@ -89,34 +104,138 @@ export class Menus {
 
   showMain() {
     this.back = 'main';
+    const prog = loadProgress();
+    const total = Object.values(prog.stars).reduce((s, n) => s + n, 0);
     this.render(
       'main',
       `<h1 class="logo">SUPER<span>CRAFT</span></h1>
        <p class="tagline">Aegis protects Brightport</p>
        <div class="menu">
-         <button data-action="campaign" disabled title="Coming in Phase 5">Campaign <small>soon</small></button>
+         <button data-action="campaign" class="primary">Campaign <small>${total}/${MISSIONS.length * 3} ★</small></button>
          <button data-action="freeroam" class="primary">Free Roam</button>
          <button data-action="controls">Controls</button>
          <button data-action="settings">Settings</button>
          <button data-action="credits">Credits</button>
        </div>
-       <p class="small foot">Phase 1 preview &middot; click Free Roam to play</p>`,
+       <p class="small foot">Click a mode to play &middot; Esc pauses</p>`,
       'screen main',
     );
   }
 
-  showPause() {
+  showMissions() {
+    const prog = loadProgress();
+    const cards = MISSIONS.map((m, i) => {
+      const locked = i + 1 > prog.unlocked;
+      const s = prog.stars[m.id] || 0;
+      const best = prog.best[m.id];
+      return `<button class="mission ${locked ? 'locked' : ''}" ${locked ? 'disabled' : `data-action="brief" data-arg="${i}"`}>
+        <span class="m-num">${i + 1}</span>
+        <span class="m-body"><span class="m-name">${locked ? '&#128274; ' : ''}${m.name}</span><span class="m-tag">${m.tagline}</span></span>
+        <span class="m-stars">${stars(s)}${best ? `<small>${fmt(best)}</small>` : ''}</span>
+      </button>`;
+    }).join('');
+    this.render(
+      'missions',
+      `<h2>Campaign</h2><div class="missions">${cards}</div>
+       <div class="menu"><button data-action="main">Back</button></div>`,
+      'screen wide',
+    );
+  }
+
+  showBriefing(i) {
+    const m = MISSIONS[i];
+    const prog = loadProgress();
+    const r = m.rating;
+    this.render(
+      'briefing',
+      `<p class="small kicker">Mission ${i + 1} &middot; ${m.tagline}</p>
+       <h2>${m.name}</h2>
+       <p class="brief">${m.briefing}</p>
+       <div class="goals small">
+         <div>★ Finish under <b>${fmt(r.par)}</b></div>
+         <div>★ Keep everyone safe</div>
+         <div>★ Take less than <b>${r.damage}</b> damage</div>
+         ${m.timeLimit ? `<div class="warn">Time limit: <b>${fmt(m.timeLimit)}</b></div>` : ''}
+         ${prog.stars[m.id] ? `<div>Best: ${stars(prog.stars[m.id])}</div>` : ''}
+       </div>
+       <div class="menu">
+         <button data-action="play" data-arg="${i}" class="primary">Start mission</button>
+         <button data-action="campaign">Back</button>
+       </div>`,
+      'screen wide',
+    );
+  }
+
+  showPause(info = '') {
     this.back = 'pause';
+    this.pauseInfo = info;
+    const run = this.game.mode;
+    const retry = run && run.def ? `<button data-action="play" data-arg="${run.index}">Restart mission</button>` : '';
     this.render(
       'pause',
-      `<h2>Paused</h2>
+      `<h2>Paused</h2>${info}
        <div class="menu">
          <button data-action="resume" class="primary">Resume</button>
+         ${retry}
          <button data-action="controls">Controls</button>
          <button data-action="settings">Settings</button>
          <button data-action="quit">Main Menu</button>
        </div>`,
       'screen pause',
+    );
+  }
+
+  resultRows(result) {
+    return result.criteria.map((c) => `<tr class="${c.ok ? 'ok' : ''}"><td>${c.ok ? '★' : '☆'}</td><td>${c.label}</td><td>${c.value}</td></tr>`).join('');
+  }
+
+  showResult(run, result) {
+    const i = run.index;
+    const next = i + 1 < MISSIONS.length ? `<button data-action="brief" data-arg="${i + 1}" class="primary">Next mission</button>` : '';
+    this.render(
+      'result',
+      `<p class="small kicker">Mission complete</p>
+       <h2>${run.def.name}</h2>
+       <div class="big-stars">${stars(result.stars)}</div>
+       <table class="rating">${this.resultRows(result)}</table>
+       <div class="menu">
+         ${next}
+         <button data-action="play" data-arg="${i}">Replay</button>
+         <button data-action="campaign">Mission select</button>
+         <button data-action="quit">Main menu</button>
+       </div>`,
+      'screen wide',
+    );
+  }
+
+  showFail(run, reason) {
+    this.render(
+      'fail',
+      `<p class="small kicker">Mission failed</p>
+       <h2>${run.def.name}</h2>
+       <p>${reason}</p>
+       <div class="menu">
+         <button data-action="play" data-arg="${run.index}" class="primary">Try again</button>
+         <button data-action="campaign">Mission select</button>
+         <button data-action="quit">Main menu</button>
+       </div>`,
+      'screen',
+    );
+  }
+
+  showVictory(run, result) {
+    this.render(
+      'victory',
+      `<h1 class="logo">BRIGHTPORT<br><span>IS SAVED</span></h1>
+       <p class="brief">The Iron Tyrant lies in pieces, the gangs are behind bars and the skies over Brightport are clear. The city has a hero. Thank you, Aegis.</p>
+       <div class="big-stars">${stars(result.stars)}</div>
+       <table class="rating">${this.resultRows(result)}</table>
+       <div class="menu">
+         <button data-action="freeroam" class="primary">Keep patrolling (Free Roam)</button>
+         <button data-action="credits">Credits</button>
+         <button data-action="quit">Main menu</button>
+       </div>`,
+      'screen wide victory',
     );
   }
 
@@ -126,6 +245,7 @@ export class Menus {
       'controls',
       `<h2>Controls</h2><table class="controls">${rows}</table>
        <div class="menu"><button data-action="back">Back</button></div>`,
+      'screen wide',
     );
   }
 
@@ -137,7 +257,7 @@ export class Menus {
        <p class="small">Built with <b>Three.js</b> (MIT license).<br>
        Font: <b>Press Start 2P</b> by CodeMan38 (SIL Open Font License).<br>
        All textures, models and sounds are generated in code.</p>
-       <p class="small">Aegis and Brightport are original creations.</p>
+       <p class="small">Aegis, Brightport, Rook, Skyhook and the Iron Tyrant are original creations.</p>
        <div class="menu"><button data-action="back">Back</button></div>`,
     );
   }
@@ -154,12 +274,12 @@ export class Menus {
          <label>Field of view <span id="fov-val">${s.fov}</span>
            <input type="range" id="fov" min="60" max="100" step="1" value="${s.fov}"></label>
          <label>Render distance <select id="renderDistance">${rd}</select></label>
+         <label>Volume <span id="vol-val">${Math.round(s.volume * 100)}</span>
+           <input type="range" id="volume" min="0" max="1" step="0.05" value="${s.volume}"></label>
          <label class="check"><input type="checkbox" id="shadows" ${s.shadows ? 'checked' : ''}> Shadows</label>
          <label class="check"><input type="checkbox" id="invertY" ${s.invertY ? 'checked' : ''}> Invert mouse Y</label>
          <label class="check"><input type="checkbox" id="dayNight" ${s.dayNight ? 'checked' : ''}> Day/night cycle</label>
          <label class="check"><input type="checkbox" id="firstPerson" ${s.firstPerson ? 'checked' : ''}> First-person camera</label>
-         <label>Volume <span id="vol-val">${Math.round(s.volume * 100)}</span>
-           <input type="range" id="volume" min="0" max="1" step="0.05" value="${s.volume}"></label>
        </div>
        <div class="menu"><button data-action="back">Back</button></div>`,
     );

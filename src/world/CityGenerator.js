@@ -70,6 +70,7 @@ function streetSurface(x, z) {
 
 export function generateCity(world, seed = 20261011) {
   const rng = new RNG(seed);
+  world.buildings = []; // footprints, used by missions and events
   const set = (x, y, z, b) => world.set(x, y, z, b);
   const get = (x, y, z) => world.get(x, y, z);
   const fillBox = (x0, y0, z0, x1, y1, z1, b) => {
@@ -304,6 +305,7 @@ export function generateCity(world, seed = 20261011) {
       tiers.push([x0, z0, x1, z1, G, top]);
     }
     for (const [a, b, c, e, yb, yt] of tiers) box(a, b, c, e, yb, yt, st);
+    world.buildings.push({ x0, z0, x1, z1, top, kind, tiers });
     const [fx0, fz0, fx1, fz1] = tiers[tiers.length - 1];
     roofProps(fx0, fz0, fx1, fz1, top, st, {
       helipad: kind === 'glass' && rng.chance(0.35),

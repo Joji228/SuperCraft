@@ -1,6 +1,6 @@
 // Turns one 32x32 column chunk of voxels into compact mesh data with hidden-face
 // removal and per-vertex ambient occlusion.
-import { B, BLOCK_TILES, OPAQUE, ATLAS_COLS, ATLAS_CELL, ATLAS_SIZE } from './Blocks.js';
+import { B, T, BLOCK_TILES, OPAQUE, ATLAS_COLS, ATLAS_CELL, ATLAS_SIZE } from './Blocks.js';
 import { SX, SZ, SY, CS } from './World.js';
 
 // normal, u axis, v axis (u x v = normal, so corners 0,u,u+v,v wind counter-clockwise)
@@ -17,6 +17,8 @@ const CU = [0, 1, 1, 0];
 const CV = [0, 0, 1, 1];
 const AO_LEVELS = [0.52, 0.7, 0.85, 1.0];
 const PAD = (ATLAS_CELL - 16) / 2;
+// tiles that light up at night
+const GLOW_TILES = new Set([T.glass_lit, T.lamp, T.red_light]);
 
 class Buffers {
   constructor() {
@@ -24,6 +26,7 @@ class Buffers {
     this.nrm = [];
     this.uv = [];
     this.col = [];
+    this.glow = [];
     this.idx = [];
     this.verts = 0;
   }
@@ -34,6 +37,7 @@ class Buffers {
       normal: new Int8Array(this.nrm),
       uv: new Uint16Array(this.uv),
       color: new Uint8Array(this.col),
+      glow: new Uint8Array(this.glow),
       index: this.verts > 65535 ? new Uint32Array(this.idx) : new Uint16Array(this.idx),
     };
   }
@@ -95,6 +99,7 @@ export function meshChunk(world, cx, cz) {
           const tcx = (tile % ATLAS_COLS) * ATLAS_CELL + PAD;
           const tcy = Math.floor(tile / ATLAS_COLS) * ATLAS_CELL + PAD;
           const base = buf.verts;
+          const glow = GLOW_TILES.has(tile) ? 255 : 0;
 
           for (let k = 0; k < 4; k++) {
             const px = bx + CU[k] * ux + CV[k] * vx;
@@ -119,6 +124,7 @@ export function meshChunk(world, cx, cz) {
             buf.uv.push(Math.round(U * 65535), Math.round(V * 65535));
             const l = Math.round(AO_LEVELS[ao[k]] * 255);
             buf.col.push(l, l, l);
+            buf.glow.push(glow);
           }
           // flip the quad diagonal so AO interpolates without artefacts
           if (ao[0] + ao[2] < ao[1] + ao[3]) {

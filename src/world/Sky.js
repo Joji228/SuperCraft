@@ -140,6 +140,7 @@ export class Sky {
     const nightK = smoothstep(0.02, -0.25, elev);
     const top = DUSK.top.clone().lerp(DAY.top, dayK).lerp(NIGHT.top, nightK);
     const hor = DUSK.horizon.clone().lerp(DAY.horizon, dayK).lerp(NIGHT.horizon, nightK);
+    this.night = Math.min(1, 1 - dayK);
     this.uniforms.uTop.value.copy(top);
     this.uniforms.uHorizon.value.copy(hor);
     this.uniforms.uSunDir.value.copy(this.sunDir);

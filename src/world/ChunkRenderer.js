@@ -9,6 +9,7 @@ function toGeometry(d) {
   g.setAttribute('normal', new THREE.BufferAttribute(d.normal, 3, true));
   g.setAttribute('uv', new THREE.BufferAttribute(d.uv, 2, true));
   g.setAttribute('color', new THREE.BufferAttribute(d.color, 3, true));
+  g.setAttribute('glow', new THREE.BufferAttribute(d.glow, 1, true));
   g.setIndex(new THREE.BufferAttribute(d.index, 1));
   g.computeBoundingSphere();
   return g;
@@ -20,6 +21,17 @@ export class ChunkRenderer {
     this.group = new THREE.Group();
     scene.add(this.group);
     this.material = new THREE.MeshLambertMaterial({ map: atlas, vertexColors: true });
+    // lit windows, street lamps and beacons glow after dark
+    this.night = { value: 0 };
+    this.material.onBeforeCompile = (shader) => {
+      shader.uniforms.uNight = this.night;
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nattribute float glow;\nvarying float vGlow;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvGlow = glow;');
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform float uNight;\nvarying float vGlow;')
+        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += diffuseColor.rgb * vGlow * uNight * 1.4;');
+    };
     this.waterMaterial = new THREE.MeshLambertMaterial({
       map: atlas,
       transparent: true,
@@ -82,6 +94,10 @@ export class ChunkRenderer {
     this.chunks[i] = entry;
   }
 
+  setNight(k) {
+    this.night.value = k;
+  }
+
   setShadows(on) {
     this.shadows = on;
     for (const c of this.chunks) if (c?.solid) c.solid.castShadow = on;
@@ -89,7 +105,7 @@ export class ChunkRenderer {
 
   /** Remesh edited chunks (a few per frame) and cull by render distance. */
   update(camPos, renderDistance) {
-    let budget = 2;
+    let budget = this.world.dirty.size > 8 ? 6 : 2;
     for (const i of this.world.dirty) {
       if (budget-- <= 0) break;
       this.world.dirty.delete(i);

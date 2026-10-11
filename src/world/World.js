@@ -13,6 +13,7 @@ export class World {
     this.data = new Uint8Array(SX * SY * SZ);
     this.chunkMaxY = new Uint8Array(CX * CZ);
     this.dirty = new Set();
+    this.original = new Map(); // index -> block before the first runtime edit
   }
 
   inBounds(x, y, z) {
@@ -37,7 +38,25 @@ export class World {
 
   /** Set a block at runtime and mark affected chunks for remeshing. */
   edit(x, y, z, b) {
+    if (!this.inBounds(x, y, z)) return;
+    const i = x + SX * (z + SZ * y);
+    if (!this.original.has(i)) this.original.set(i, this.data[i]);
     this.set(x, y, z, b);
+    this.markDirty(x, z);
+  }
+
+  /** Undo every runtime edit (melted holes, smashed windows, ice...). */
+  revertEdits() {
+    for (const [i, b] of this.original) {
+      this.data[i] = b;
+      const x = i % SX;
+      const z = Math.floor(i / SX) % SZ;
+      this.markDirty(x, z);
+    }
+    this.original.clear();
+  }
+
+  markDirty(x, z) {
     const cx = x >> 5;
     const cz = z >> 5;
     this.dirty.add(cx + cz * CX);
