@@ -165,7 +165,8 @@ export class Game {
 
   hurtPlayer(amount, fromPos, type) {
     if (this.state !== 'playing' || this.koTimer > 0) return;
-    const dealt = this.meters.hurt(amount);
+    // Aegis is tough: enemies only do part of their listed damage
+    const dealt = this.meters.hurt(amount * 0.6);
     if (dealt <= 0) return;
     this.hud.damaged(dealt);
     if (type !== 'fire' || Math.random() < 0.1) this.audio.play('hurt');
@@ -470,10 +471,12 @@ export class Game {
     for (const e of this.entities.list) {
       if (e.removed || !e.alive) continue;
       const d2 = (e.pos.x - p.pos.x) ** 2 + (e.pos.z - p.pos.z) ** 2;
-      if (d2 > 95 * 95) continue;
+      if (d2 > (this.abilities.senses.active ? 170 * 170 : 95 * 95)) continue;
       if (e.team === 'enemy' && e.kind !== 'dummy') mk.push({ x: e.pos.x, z: e.pos.z, color: '#ff4d4d', size: e.boss ? 5 : 3 });
       else if (e.kind === 'civilian' && e.inDanger) mk.push({ x: e.pos.x, z: e.pos.z, color: '#ffd34d', size: 2.5 });
     }
+    // super senses widen the radar so distant trouble shows up
+    this.minimap.range = this.abilities.senses.active ? 170 : 90;
     this.minimap.draw(p.pos.x, p.pos.z, this.rig.yaw, mk);
     const boss = this.entities.nearest(p.pos, 150, (e) => e.boss && e.alive);
     this.hud.setBoss(boss ? boss.bossName : null, boss ? boss.health / boss.maxHealth : 0);

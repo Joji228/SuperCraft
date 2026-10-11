@@ -3,21 +3,27 @@
 A Minecraft-style voxel superhero game that runs in the browser.
 
 You play **Aegis**, an original superhero, in the blocky city of **Brightport**.
-Fly between skyscrapers, fight with your powers, and protect the city.
-You can roam freely or play through a story campaign.
+Fly between skyscrapers, break the sound barrier, punch, burn, freeze and
+carry your way through crimes, fires and villains: in an open city or a
+five-mission campaign.
 
 ## Modes
 
-- **Free Roam:** explore an open-world voxel city at your own pace.
-- **Campaign:** five story missions (coming in a later phase).
-
-## Powers
-
-- **Flight:** soar between skyscrapers.
-- **Laser eyes:** burn through blocks and enemies.
-- **Super punch:** smash anything in reach.
-- **Super breath:** freeze or blow away whatever is in front of you.
-- **Super senses:** see threats and secrets through walls.
+- **Campaign:** five handcrafted missions, unlocked in order, each rated with
+  up to three stars (time, people kept safe, damage taken).
+  1. **First Flight:** tutorial. Walk, jump, fly through rings around the
+     skyscrapers, punch training dummies, laser targets, put out a fire and
+     find a lost cat with super senses.
+  2. **Bank Job:** stop the Rook Gang robbing the bank, then beat Rook himself.
+  3. **Tower Inferno:** put out a skyscraper fire and fly trapped workers down
+     to the ambulance before the timer runs out.
+  4. **Bridge Collapse:** pull sinking cars out of the river, rescue commuters,
+     destroy drones, then chase down the jet-pack villain Skyhook.
+  5. **Iron Tyrant:** a three-phase fight against a giant mech in the plaza.
+- **Free Roam:** the open city with pedestrians and traffic. Random emergencies
+  pop up (muggings, car crashes, building fires, drone attacks and a mini-boss)
+  and show on the minimap and HUD. Your totals of people saved, villains
+  defeated and events handled are saved.
 
 ## Controls
 
@@ -26,17 +32,25 @@ You can roam freely or play through a story campaign.
 | W A S D | Move |
 | Mouse | Look (click the game to capture the mouse) |
 | Space | Jump, double-tap in the air to take off |
-| Shift | Run on foot, boost while flying |
+| Shift | Run on foot, boost while flying (hold ~2 s for a sonic boom) |
 | F | Toggle flight |
 | Space / C or Ctrl | Fly up / down (hold down on the ground to land) |
+| Left mouse | Punch (3-hit combo), or throw what you are carrying |
+| Right mouse (hold) | Laser eyes: damages, melts blocks, starts fires. Overheats! |
+| Q (hold) | Super breath: freezes enemies, pushes things, puts out fires, freezes water |
+| E | Super senses: see enemies, people in danger and objectives through walls |
+| G | Pick up / drop people, objects and even cars |
 | V | Switch third / first person |
 | Esc | Pause |
-| F3 | Debug info (FPS, position) |
+| F3 | Debug info (FPS, draw calls) |
 
-Punch, laser eyes, super breath, super senses and carrying arrive in Phase 2.
+Tips:
 
-Tip: use **C** rather than Ctrl to fly down. Browsers don't let games block
-shortcuts like Ctrl+W, so Ctrl plus a movement key can close the tab.
+- Use **C** rather than Ctrl to fly down. Browsers don't let games block
+  shortcuts like Ctrl+W, so Ctrl plus a movement key can close the tab.
+- Frozen enemies take double damage from punches. Frozen drones fall out of the sky.
+- Drop rescued people inside the green zones to save them.
+- Health and energy refill on their own when you stay out of trouble.
 
 ## Run locally
 
@@ -63,20 +77,48 @@ load from a CDN.
 There is no build step: `index.html` at the repo root is the game, and the
 `.nojekyll` file tells Pages to serve every file as is.
 
+## Adding missions
+
+Missions are data in [`src/missions/missions.js`](src/missions/missions.js).
+Each mission has a briefing, named anchor points, a rating (par time, damage
+limit) and a list of stages. A stage can spawn things in its `start` function
+and lists objectives such as:
+
+```js
+{ type: 'destroy', tag: 'gang', label: 'Take down the gang' }
+{ type: 'rescue', tag: 'trapped', at: somePoint, label: 'Fly the workers to safety' }
+{ type: 'extinguish', tag: 'inferno', label: 'Put out the fires' }
+{ type: 'protect', maxLost: 4, label: 'Keep bystanders safe' }
+```
+
+Other types: `reach`, `action` (jump, fly, land, senses, supersonic), `rings`,
+`defeat`, `find` and `custom`. Append a new entry to `MISSIONS` and it appears
+in mission select automatically.
+
 ## Tech
 
 - [Three.js](https://threejs.org/) 0.170.0 loaded through an import map, no bundler.
 - The city is a 512 × 512 × 128 voxel world, generated from a fixed seed and
-  drawn as 32 × 32 chunk meshes with hidden faces removed and ambient occlusion.
-- All textures are 16 × 16 pixel art drawn on a `<canvas>` at startup; sounds
-  will be synthesised with the Web Audio API. No external art assets.
-- Settings are saved in `localStorage`.
+  drawn as 32 × 32 chunk meshes with hidden faces removed, ambient occlusion
+  and glowing windows at night. Melted or smashed blocks remesh on the fly and
+  are restored when a new mission starts.
+- People, cars, props and drones are drawn with a few `InstancedMesh`es, so
+  crowds and traffic cost only a handful of draw calls.
+- All textures are 16 × 16 pixel art drawn on a `<canvas>` at startup; all
+  sounds are synthesised with the Web Audio API. No external art or audio.
+- Settings, campaign progress and Free Roam stats are saved in `localStorage`.
 
-See [docs/PLAN.md](docs/PLAN.md) for the file layout and the build phases.
+Code layout: `src/engine` (game loop, states), `src/world` (voxels, city
+generator, meshing, sky, fires, zones), `src/player`, `src/abilities`,
+`src/entities`, `src/npc`, `src/enemies`, `src/combat`, `src/fx`, `src/modes`
+(Free Roam and its events), `src/missions`, `src/ui`, `src/audio`, `src/save`.
+See [docs/PLAN.md](docs/PLAN.md) for the original plan.
 
 ## Status
 
-Phase 1 of 6 is done: the city, movement, the camera and flight (hold Shift while flying to break the sound barrier).
+All six planned phases are built: city, flight, powers, people and traffic,
+enemies and bosses, Free Roam events, the five-mission campaign, menus,
+saving, effects and sound.
 
 ## License
 

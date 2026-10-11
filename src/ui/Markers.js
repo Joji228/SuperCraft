@@ -35,6 +35,7 @@ export class Markers {
     n.t = 0;
     n.life = 0.9;
     n.el.textContent = Math.round(amount);
+    n.el.style.transform = 'translate(-9999px, 0)';
     n.el.style.color = color;
     n.el.style.display = 'block';
     n.el.style.fontSize = amount >= 40 ? '18px' : amount >= 20 ? '14px' : '11px';

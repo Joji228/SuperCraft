@@ -102,7 +102,7 @@ export class Fires {
       const dist = f.pos.distanceTo(camPos);
       // visuals: fewer particles for far fires
       if (dist < 220) {
-        const rate = (dist < 60 ? 26 : 10) * f.intensity * f.size;
+        const rate = (dist < 60 ? 40 : 14) * f.intensity * f.size;
         f.emitAcc += rate * dt;
         while (f.emitAcc >= 1) {
           f.emitAcc -= 1;

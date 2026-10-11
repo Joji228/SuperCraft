@@ -104,7 +104,9 @@ export class Entity extends Body {
     if (!this.alive || amount <= 0) return 0;
     if (this.frozen > 0 && opts.type === 'punch') amount *= 2; // shatter bonus
     this.health -= amount;
-    this.hitFlash = 0.12;
+    // continuous laser damage only flickers, so the target doesn't just turn white
+    if (opts.type !== 'laser' && opts.type !== 'fire') this.hitFlash = 0.12;
+    else if (Math.random() < 0.2) this.hitFlash = 0.04;
     if (opts.knock && this.pushable && !this.carried) {
       this.vel.addScaledVector(opts.knock, 1 / this.mass);
       if (opts.knock.lengthSq() > 64) this.thrown = true;

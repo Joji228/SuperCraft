@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { B, SOLID, LASER_PROOF, FLAMMABLE } from '../world/Blocks.js';
 import { CITY } from '../world/CityGenerator.js';
 
-const DPS = 75;
+const DPS = 60;
 const HEAT_PER_SEC = 30;
 const MELT_TIME = 0.32;
 
