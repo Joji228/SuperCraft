@@ -9,7 +9,11 @@ fsBtn.addEventListener('click', (e) => {
   if (document.fullscreenElement) document.exitFullscreen?.();
   else document.documentElement.requestFullscreen?.().catch(() => {});
 });
-document.addEventListener('fullscreenchange', () => fsBtn.classList.toggle('on', !!document.fullscreenElement));
+document.addEventListener('fullscreenchange', () => {
+  const on = !!document.fullscreenElement;
+  fsBtn.classList.toggle('on', on);
+  fsBtn.textContent = on ? 'Exit fullscreen' : 'Fullscreen';
+});
 window.supercraft = game; // handy for debugging in the console
 
 game.init().catch((err) => {
