@@ -104,7 +104,7 @@ export class Thug extends Humanoid {
 
   patrol(dt) {
     if (this.victim && !this.victim.removed && this.victim.alive) {
-      // menacing the victim (muggings)
+      // menacing the victim (robberies)
       const t = toward(this, this.victim.pos);
       if (t.d > 1.8) steer(this, t.dir.x, t.dir.z, 1.6, dt);
       else steer(this, 0, 0, 0, dt);

@@ -111,7 +111,8 @@ export class Entities {
       if (e.removed || !e.sensesColor || n >= SENSE_MAX) continue;
       const col = typeof e.sensesColor === 'function' ? e.sensesColor() : e.sensesColor;
       if (!col) continue;
-      s.set(e.halfW * 2 + 0.2, e.height + 0.2, e.halfW * 2 + 0.2);
+      const grow = e.senseLabel ? 0.8 : 0.3;
+      s.set(e.halfW * 2 + grow, e.height + grow, e.halfW * 2 + grow);
       p.set(e.pos.x, e.pos.y + e.height / 2, e.pos.z);
       m.compose(p, this._q, s);
       this.xray.setMatrixAt(n, m);
@@ -119,6 +120,7 @@ export class Entities {
       n++;
     }
     this.xray.count = n;
+    this.xray.material.opacity = 0.55 + Math.sin(performance.now() / 160) * 0.2;
     this.xray.instanceMatrix.needsUpdate = true;
     if (this.xray.instanceColor) this.xray.instanceColor.needsUpdate = true;
   }

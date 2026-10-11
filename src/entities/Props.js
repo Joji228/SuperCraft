@@ -128,6 +128,7 @@ export class Cat extends Entity {
     this.punchable = false;
     this.persistent = true;
     this.sensesColor = '#ff7ad9';
+    this.senseLabel = 'Whiskers the cat';
     this.boxes = [
       { y: 0.22, w: 0.32, h: 0.26, d: 0.6, color: 0xf08a24 },
       { y: 0.42, z: 0.32, w: 0.3, h: 0.28, d: 0.28, color: 0xf08a24 },
@@ -143,7 +144,8 @@ export class Cat extends Entity {
 
   update(dt) {
     super.update(dt);
-    if (!this.carried && Math.random() < dt * 0.3) this.game.audio.play('meow', this.pos);
+    const senses = this.game.abilities?.senses.active;
+    if (!this.carried && Math.random() < dt * (senses ? 0.8 : 0.3)) this.game.audio.play('meow', senses ? null : this.pos);
   }
 }
 

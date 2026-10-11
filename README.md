@@ -11,9 +11,10 @@ five-mission campaign.
 
 - **Campaign:** five handcrafted missions, unlocked in order, each rated with
   up to three stars (time, people kept safe, damage taken).
-  1. **First Flight:** tutorial. Walk, jump, fly through rings around the
-     skyscrapers, punch training dummies, laser targets, put out a fire and
-     find a lost cat with super senses.
+  1. **First Flight:** tutorial. Each power unlocks as you learn it: walk,
+     jump, take off, fly a ring course around a city block, boost down an
+     avenue, punch training dummies, laser targets, put out a fire and find a
+     lost cat with super senses.
   2. **Bank Job:** stop the Rook Gang robbing the bank, then beat Rook himself.
   3. **Tower Inferno:** put out a skyscraper fire and fly trapped workers down
      to the ambulance before the timer runs out.
@@ -21,7 +22,7 @@ five-mission campaign.
      destroy drones, then chase down the jet-pack villain Skyhook.
   5. **Iron Tyrant:** a three-phase fight against a giant mech in the plaza.
 - **Free Roam:** the open city with pedestrians and traffic. Random emergencies
-  pop up (muggings, car crashes, building fires, drone attacks and a mini-boss)
+  pop up (robberies, car crashes, building fires, drone attacks and a mini-boss)
   and show on the minimap and HUD. Your totals of people saved, villains
   defeated and events handled are saved.
 
@@ -32,7 +33,7 @@ five-mission campaign.
 | W A S D | Move |
 | Mouse | Look (click the game to capture the mouse) |
 | Space | Jump, double-tap in the air to take off |
-| Shift | Run on foot, boost while flying (hold ~2 s for a sonic boom) |
+| Shift | Run on foot, boost while flying (uses the SPEED bar; hold ~2 s for a sonic boom) |
 | F | Toggle flight |
 | Space / C or Ctrl | Fly up / down (hold down on the ground to land) |
 | Left mouse | Punch (3-hit combo), or throw what you are carrying |
@@ -50,6 +51,9 @@ Tips:
   shortcuts like Ctrl+W, so Ctrl plus a movement key can close the tab.
 - Frozen enemies take double damage from punches. Frozen drones fall out of the sky.
 - Drop rescued people inside the green zones to save them.
+- Super senses mark special targets with a pink beam of light, enemies with red
+  markers and people who need help with yellow ones.
+- Follow the gold light beam and the arrow at the screen edge to your objective.
 - Health and energy refill on their own when you stay out of trouble.
 
 ## Run locally

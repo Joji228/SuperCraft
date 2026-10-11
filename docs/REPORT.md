@@ -20,7 +20,7 @@ Everything is committed locally on `main`. Nothing has been pushed.
 - All sounds are synthesised with Web Audio: punches, laser hum, breath, wind, explosions, gunshots, sirens, cheering and more.
 
 **Phase 4: Free Roam**
-- Random events every 25 to 50 seconds: muggings, car crashes, building fires (with people on the roof), drone attacks, and the Brute after you've handled two events. Each event has a time limit.
+- Random events every 25 to 50 seconds: robberies, car crashes, building fires (with people on the roof), drone attacks, and the Brute after you've handled two events. Each event has a time limit.
 - Events show as red pins on the HUD and minimap, with a distance-based siren.
 - Saved stats: people saved, villains defeated, events handled.
 

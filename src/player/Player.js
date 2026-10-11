@@ -27,7 +27,9 @@ export class Player extends Body {
     this.supersonic = false;
     this.onSonicBoom = null;
     this.aimTimer = 0;
-    this.frozenInput = false;
+    // hooks set by the game: locked powers (tutorial) and the speed bar for boosting
+    this.allowed = () => true;
+    this.canBoost = () => true;
   }
 
   spawn(x, y, z, yaw = 0) {
@@ -54,9 +56,10 @@ export class Player extends Body {
     const ix = (input.isDown('right') ? 1 : 0) - (input.isDown('left') ? 1 : 0);
 
     // flight toggles: F, or double-tap Space in mid-air
-    if (input.pressed('fly')) this.setFlying(!this.flying);
+    const canFly = this.allowed('fly');
+    if (input.pressed('fly') && (canFly || this.flying)) this.setFlying(!this.flying);
     if (input.pressed('jump')) {
-      if (!this.flying && !this.onGround && this.time - this.lastJumpPress < 0.35) this.setFlying(true);
+      if (canFly && !this.flying && !this.onGround && this.time - this.lastJumpPress < 0.35) this.setFlying(true);
       this.lastJumpPress = this.time;
     }
 
@@ -73,7 +76,7 @@ export class Player extends Body {
         dz /= len;
       }
       const vert = (input.isDown('jump') ? 1 : 0) - (input.isDown('descend') ? 1 : 0);
-      this.boosting = input.isDown('boost') && iz > 0;
+      this.boosting = input.isDown('boost') && iz > 0 && this.allowed('boost') && this.canBoost();
       this.updateSupersonic(dt);
       const speed = this.supersonic ? MOVE.supersonic : this.boosting ? MOVE.boost : MOVE.fly;
       const tx = dx * speed;
@@ -100,7 +103,7 @@ export class Player extends Body {
 
       this.vel.y -= MOVE.gravity * dt;
       this.vel.y = Math.max(this.vel.y, -70);
-      if (this.onGround && input.pressed('jump')) {
+      if (this.onGround && input.pressed('jump') && this.allowed('jump')) {
         this.vel.y = MOVE.jump;
         this.onGround = false;
       }

@@ -112,7 +112,7 @@ export class Brute extends Thug {
 export class Rook extends Thug {
   constructor(game, x, y, z, opts = {}) {
     super(game, x, y, z, {
-      health: opts.health || 520,
+      health: opts.health || 400,
       scale: 1.3,
       weapon: 'gun',
       kind: 'rook',
@@ -148,9 +148,9 @@ export class Rook extends Thug {
     const eye = tmpA.set(this.pos.x, this.pos.y + 1.9, this.pos.z);
     const chest = heroChest(g, tmpB);
     if (this.cooldown <= 0 && heroDist < 32) {
-      this.cooldown = this.enraged ? 1.2 : 1.7;
+      this.cooldown = this.enraged ? 1.5 : 2.0;
       this.attackAnim = 1;
-      for (let i = 0; i < 6; i++) g.projectiles.fire('pellet', eye, chest, this, 0.09);
+      for (let i = 0; i < 5; i++) g.projectiles.fire('pellet', eye, chest, this, 0.1);
       g.audio.play('gunshot', this.pos);
       g.audio.play('punchHit', this.pos);
       g.addDanger(this.pos, 22, 2);
@@ -170,7 +170,7 @@ export class Rook extends Thug {
       }
       this.grenadeCd -= dt;
       if (this.grenadeCd <= 0 && heroDist < 30) {
-        this.grenadeCd = 3.5;
+        this.grenadeCd = 4.5;
         g.projectiles.fire('grenade', eye, chest, this, 0.05);
         g.audio.play('throw', this.pos);
       }

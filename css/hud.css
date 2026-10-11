@@ -568,3 +568,107 @@ table.rating td:first-child {
     transform: none;
   }
 }
+
+/* ---------- playtest round 1: clearer markers, speed bar, locked powers ---------- */
+
+.pin {
+  font-size: 10px;
+  gap: 4px;
+}
+
+.pin-icon {
+  width: 22px;
+  height: 22px;
+  border-width: 4px;
+  box-shadow: 0 0 12px rgba(255, 211, 77, 0.8);
+  animation: pin-bob 1s ease-in-out infinite;
+}
+
+@keyframes pin-bob {
+  50% {
+    translate: 0 -4px;
+  }
+}
+
+.pin-label:not(:empty),
+.pin-dist {
+  padding: 3px 6px;
+  background: rgba(16, 28, 56, 0.8);
+  border: 2px solid #0d1830;
+}
+
+.pin.off .pin-icon {
+  width: 34px;
+  height: 34px;
+  background: var(--gold);
+  box-shadow: none;
+  animation: none;
+  filter: drop-shadow(0 0 6px rgba(255, 211, 77, 0.9));
+}
+
+.pin-sense .pin-icon,
+.pin-sense.off .pin-icon {
+  background: #ff7ad9;
+  box-shadow: 0 0 16px #ff7ad9;
+}
+
+.pin-sense .pin-label {
+  color: #ffc4ef;
+  font-size: 11px;
+}
+
+.pin-enemy .pin-icon {
+  width: 12px;
+  height: 12px;
+  border-width: 3px;
+  background: #ff4d4d;
+  box-shadow: 0 0 10px #ff4d4d;
+}
+
+.pin-enemy .pin-dist,
+.pin-help .pin-dist {
+  display: none;
+}
+
+.pin-enemy.off,
+.pin-help.off {
+  display: none;
+}
+
+.pin-help .pin-icon {
+  width: 12px;
+  height: 12px;
+  border-width: 3px;
+  background: #ffd34d;
+}
+
+.pin-help .pin-label {
+  color: #ffd34d;
+}
+
+.speed .meter-fill {
+  background: linear-gradient(#fff3a0, #f2b630);
+}
+
+.speed.empty .meter-label {
+  color: #ff8a6a;
+}
+
+.ab.locked {
+  opacity: 0.25;
+  position: relative;
+}
+
+.ab.locked::after {
+  content: 'LOCKED';
+  position: absolute;
+  inset: auto 0 -14px 0;
+  font-size: 6px;
+  color: #ff8a6a;
+}
+
+.overlay-senses {
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.14) 0 2px, transparent 2px 4px),
+    radial-gradient(ellipse at center, rgba(40, 220, 200, 0.12) 25%, rgba(10, 80, 110, 0.65) 100%);
+}

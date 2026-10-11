@@ -59,6 +59,20 @@ export class FreeRoam {
     return this.director.markers();
   }
 
+  /** Light beam over the nearest emergency. */
+  beaconPos() {
+    const p = this.game.player.pos;
+    let best = null, bd = Infinity;
+    for (const ev of this.director.events) {
+      const d = ev.pos.distanceTo(p);
+      if (d < bd) {
+        bd = d;
+        best = ev.pos;
+      }
+    }
+    return best ? best.clone() : null;
+  }
+
   onPlayerDefeated() {
     const g = this.game;
     g.knockout('You were knocked out! Aegis recovers at the plaza...', () => {

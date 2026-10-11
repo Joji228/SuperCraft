@@ -69,6 +69,7 @@ export class Game {
     this.propTimer = 0;
     this.koTimer = 0;
     this.cutscene = null;
+    this.locks = new Set(); // powers not yet unlocked (tutorial)
 
     this.input.onLockChange = (locked) => {
       if (!locked && this.state === 'playing') this.pause();
@@ -107,6 +108,15 @@ export class Game {
     this.flightFX = new FlightFX(this.scene, this.particles, this.world);
     this.player.onSonicBoom = () => this.sonicBoom();
     this.meters = new Meters();
+    this.player.allowed = (name) => this.allowed(name);
+    this.player.canBoost = () => (this.player.boosting ? this.meters.speed > 0 : this.meters.speed > 12);
+    // a tall light beam over the current objective
+    this.beacon = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.5, 0.9, 90, 12, 1, true).translate(0, 45, 0),
+      new THREE.MeshBasicMaterial({ color: 0xffd34d, transparent: true, opacity: 0.35, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, fog: false }),
+    );
+    this.beacon.visible = false;
+    this.scene.add(this.beacon);
     this.entities = new Entities(this);
     this.humanoids = new HumanoidRenderer(this.scene);
     this.boxes = new BoxRenderer(this.scene);
@@ -154,6 +164,26 @@ export class Game {
 
   // ---------- shared gameplay services ----------
 
+  allowed(name) {
+    return !this.locks.has(name);
+  }
+
+  /** Lock powers (tutorial). names: array of 'jump'|'fly'|'boost'|'punch'|'laser'|'breath'|'senses'|'carry' */
+  lockPowers(names) {
+    this.locks = new Set(names);
+    this.hud.setLocks(this.locks);
+  }
+
+  unlockPowers(names, announce = true) {
+    const LABELS = { jump: 'Jump (Space)', fly: 'Flight (F)', boost: 'Super speed (Shift)', punch: 'Super punch (LMB)', laser: 'Laser eyes (RMB)', breath: 'Super breath (Q)', senses: 'Super senses (E)', carry: 'Carry (G)' };
+    for (const n of names) {
+      if (!this.locks.delete(n)) continue;
+      if (announce) this.hud.toast(`New power unlocked: ${LABELS[n] || n}`, 'good', 3.5);
+    }
+    this.hud.setLocks(this.locks);
+    if (announce) this.audio.play('objective');
+  }
+
   hitStop(t) {
     this.hitStopTime = Math.max(this.hitStopTime, t);
   }
@@ -166,7 +196,7 @@ export class Game {
   hurtPlayer(amount, fromPos, type) {
     if (this.state !== 'playing' || this.koTimer > 0) return;
     // Aegis is tough: enemies only do part of their listed damage
-    const dealt = this.meters.hurt(amount * 0.6);
+    const dealt = this.meters.hurt(amount * 0.4);
     if (dealt <= 0) return;
     this.hud.damaged(dealt);
     if (type !== 'fire' || Math.random() < 0.1) this.audio.play('hurt');
@@ -253,6 +283,8 @@ export class Game {
     this.koTimer = 0;
     this.cutscene = null;
     this.hitStopTime = 0;
+    this.lockPowers([]);
+    this.beacon.visible = false;
   }
 
   startMode(mode) {
@@ -265,9 +297,12 @@ export class Game {
     this.hud.hintTimer = 14;
     this.hud.hint.classList.remove('fade');
     // populate around the hero straight away
-    if (mode.population) {
-      for (let i = 0; i < 24; i++) this.crowd.spawnNear(this.player.pos.x, this.player.pos.z, 8, 90);
-      for (let i = 0; i < 12; i++) this.traffic.spawnNear(this.player.pos.x, this.player.pos.z, 20, 120);
+    const pop = mode.population === true ? 1 : mode.population || 0;
+    this.crowd.target = Math.round(40 * pop);
+    this.traffic.target = Math.round(22 * pop);
+    if (pop > 0) {
+      for (let i = 0; i < 24 * pop; i++) this.crowd.spawnNear(this.player.pos.x, this.player.pos.z, 8, 90);
+      for (let i = 0; i < 12 * pop; i++) this.traffic.spawnNear(this.player.pos.x, this.player.pos.z, 20, 120);
     }
     this.resume();
   }
@@ -419,6 +454,7 @@ export class Game {
     }
     const canAct = !ko && !this.cutscene;
     p.update(dt, canAct ? input : NO_INPUT, this.rig.yaw, this.rig.pitch);
+    if (p.boosting) this.meters.drainSpeed(dt);
     this.abilities.update(dt, input, canAct);
     this.meters.update(dt);
 
@@ -433,7 +469,9 @@ export class Game {
     this.projectiles.update(dt);
     this.fires.update(dt, cam.position);
     this.zones.update(dt);
+    this.abilities.senses.pins();
     this.markers.endPins();
+    this.updateBeacon();
     for (let i = this.dangers.length - 1; i >= 0; i--) if ((this.dangers[i].ttl -= dt) <= 0) this.dangers.splice(i, 1);
 
     // hero model
@@ -466,11 +504,13 @@ export class Game {
     this.audio.setLoopLevel('wind', p.flying ? Math.min(1, Math.max(0, (speed - 6) / 60)) : 0, 0.15);
 
     // HUD
+    cam.updateMatrixWorld();
     this.markers.update(realDt, p.pos);
     const mk = [...(this.mode?.markers?.() || [])];
     for (const e of this.entities.list) {
       if (e.removed || !e.alive) continue;
       const d2 = (e.pos.x - p.pos.x) ** 2 + (e.pos.z - p.pos.z) ** 2;
+      if (e.senseLabel && this.abilities.senses.active) mk.push({ x: e.pos.x, z: e.pos.z, color: '#ff7ad9', shape: 'diamond', size: 6, edge: true });
       if (d2 > (this.abilities.senses.active ? 170 * 170 : 95 * 95)) continue;
       if (e.team === 'enemy' && e.kind !== 'dummy') mk.push({ x: e.pos.x, z: e.pos.z, color: '#ff4d4d', size: e.boss ? 5 : 3 });
       else if (e.kind === 'civilian' && e.inDanger) mk.push({ x: e.pos.x, z: e.pos.z, color: '#ffd34d', size: 2.5 });
@@ -489,6 +529,17 @@ export class Game {
       particles: this.particles.count,
     });
     return p.pos;
+  }
+
+  /** Light pillar over the mode's main target (objective, event or sensed target). */
+  updateBeacon() {
+    const pos = this.abilities.senses.beaconTarget() || this.mode?.beaconPos?.();
+    this.beacon.visible = !!pos && !this.cutscene;
+    if (!pos) return;
+    this.beacon.position.set(pos.x, pos.y - 1, pos.z);
+    const t = performance.now() / 1000;
+    this.beacon.material.opacity = 0.28 + Math.sin(t * 4) * 0.1;
+    this.beacon.material.color.set(this.abilities.senses.beaconTarget() ? 0xff7ad9 : 0xffd34d);
   }
 
   /** Street props appear around the hero (and are cleaned up behind). */

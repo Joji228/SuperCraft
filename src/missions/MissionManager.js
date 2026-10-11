@@ -133,7 +133,8 @@ class Objective {
     const g = this.run.game;
     const d = this.def;
     if (this.done || d.noPin) return null;
-    if (d.type === 'reach') return d.at.clone().setY(d.at.y + 1.5);
+    if (d.type === 'reach' || (d.type === 'action' && d.at)) return d.at.clone().setY(d.at.y + 1.5);
+    if (d.type === 'find') return null; // super senses put their own marker and beam on it
     if (d.type === 'rings') return this.rings[this.progress]?.position.clone() || null;
     if (d.type === 'extinguish') {
       const n = g.fires.nearest(g.player.pos);
@@ -173,6 +174,7 @@ export class MissionRun {
     const def = this.def;
     this.ctx = { g, run: this, a: def.anchors(g), data: {} };
     if (def.timeOfDay != null) g.setTimeOfDay(def.timeOfDay);
+    if (def.lockPowers) g.lockPowers(def.lockPowers);
     const s = this.ctx.a.start;
     g.placeHero(s.x, s.y, s.z, s.yaw ?? 0);
     const ev = (name) => (e) => this.objectives.forEach((o) => o.onEvent(name, e));
@@ -201,6 +203,7 @@ export class MissionRun {
       this.complete();
       return;
     }
+    if (st.unlock) this.game.unlockPowers(st.unlock);
     st.start?.(this.ctx);
     this.objectives = st.objectives.map((d) => new Objective(this, typeof d === 'function' ? d(this.ctx) : d));
     this.stageTime = 0;
@@ -278,6 +281,16 @@ export class MissionRun {
     for (const off of this.offs) off();
     this.offs = [];
     this.def.cleanup?.(this.ctx);
+  }
+
+  /** Where the gold light beam goes: the first objective with a target. */
+  beaconPos() {
+    for (const o of this.objectives) {
+      if (o.def.type === 'find' || o.def.type === 'rings') continue;
+      const p = o.pin();
+      if (p) return p.setY(p.y - 2);
+    }
+    return null;
   }
 
   markers() {

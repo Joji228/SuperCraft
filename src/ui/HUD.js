@@ -27,11 +27,13 @@ export class HUD {
         <div class="meter health"><span class="meter-label">HP</span><div class="meter-bar"><div class="meter-fill" id="hud-hp"></div></div></div>
         <div class="meter energy"><span class="meter-label">EN</span><div class="meter-bar"><div class="meter-fill" id="hud-en"></div></div></div>
         <div class="meter heat" id="hud-heat-row"><span class="meter-label">HEAT</span><div class="meter-bar"><div class="meter-fill" id="hud-heat"></div></div></div>
+        <div class="meter speed" id="hud-spd-row"><span class="meter-label">SPEED</span><div class="meter-bar"><div class="meter-fill" id="hud-spd"></div></div></div>
         <div class="hud-mode" id="hud-mode">ON FOOT</div>
         <div class="hud-readout"><span id="hud-speed">0</span> <span id="hud-unit">KM/H</span> &nbsp; ALT <span id="hud-alt">0</span> M</div>
       </div>
       <div class="carry hidden" id="hud-carry"></div>
       <div class="abilities">
+        <div class="ab" id="ab-boost"><b>SHIFT</b>Boost</div>
         <div class="ab" id="ab-punch"><b>LMB</b>Punch</div>
         <div class="ab" id="ab-laser"><b>RMB</b>Laser</div>
         <div class="ab" id="ab-breath"><b>Q</b>Breath</div>
@@ -59,6 +61,8 @@ export class HUD {
     this.en = q('hud-en');
     this.heat = q('hud-heat');
     this.heatRow = q('hud-heat-row');
+    this.spd = q('hud-spd');
+    this.spdRow = q('hud-spd-row');
     this.hitmark = q('hud-hitmark');
     this.hurtEl = q('hud-hurt');
     this.sensesEl = q('hud-senses');
@@ -74,6 +78,8 @@ export class HUD {
     this.statsEl = q('hud-stats');
     this.minimapCanvas = q('hud-minimap');
     this.ab = {
+      punch: q('ab-punch'),
+      boost: q('ab-boost'),
       laser: q('ab-laser'),
       breath: q('ab-breath'),
       senses: q('ab-senses'),
@@ -135,6 +141,12 @@ export class HUD {
 
   damaged(amount) {
     this.hurt = Math.min(1, this.hurt + amount / 25);
+  }
+
+  /** Grey out powers that aren't unlocked yet (tutorial). */
+  setLocks(locks) {
+    const map = { punch: 'punch', laser: 'laser', breath: 'breath', senses: 'senses', carry: 'carry', fly: 'fly', boost: 'boost' };
+    for (const [k, id] of Object.entries(map)) this.ab[id]?.classList.toggle('locked', locks.has(k));
   }
 
   setSenses(on) {
@@ -220,6 +232,9 @@ export class HUD {
     this.hp.classList.toggle('low', m.health < 30);
     this.en.style.width = `${(m.energy / METERS.maxEnergy) * 100}%`;
     this.heat.style.width = `${m.heat}%`;
+    this.spd.style.width = `${m.speed}%`;
+    this.spdRow.classList.toggle('empty', m.speed < 12);
+    this.ab.boost.classList.toggle('active', player.boosting);
     this.heatRow.classList.toggle('overheated', m.overheated);
     const ab = game.abilities;
     this.ab.laser.classList.toggle('active', ab.laser.active);

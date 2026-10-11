@@ -4,6 +4,9 @@
 import * as THREE from 'three';
 import { Entity } from '../entities/Entity.js';
 import { CITY } from '../world/CityGenerator.js';
+import { B } from '../world/Blocks.js';
+
+const ROAD_BLOCKS = new Set([B.ASPHALT, B.LINE_X_HI, B.LINE_X_LO, B.LINE_Z_HI, B.LINE_Z_LO, B.CROSS_X, B.CROSS_Z, B.SIDEWALK, B.SCORCH]);
 
 const { O, CELL, NC, RIVER_ROW, BRIDGE_ROAD, G } = CITY;
 const COLORS = [0xe74c3c, 0x3498db, 0xf1c40f, 0x2ecc71, 0xecf0f1, 0x2c3e50, 0x9b59b6, 0xe67e22, 0x1abc9c, 0xc0392b, 0x7f8c8d];
@@ -26,7 +29,6 @@ export class Car extends Entity {
     this.speed = 0;
     this.cruise = 9 + Math.random() * 3;
     this.stuck = 0;
-    this.ghost = 0;
     this.dent = 0;
     this.burnt = false;
     this.color = color;
@@ -102,34 +104,78 @@ export class Car extends Entity {
     }
   }
 
+  /**
+   * Junction reservation: only one car at a time inside an intersection, so crossing
+   * traffic can't drive into each other. Returns false if we must wait.
+   */
+  claimJunction() {
+    const nodes = this.game.traffic.nodes;
+    // let go of the junction we've just left
+    if (this.heldKey && (Math.abs(this.pos.x - this.heldX) > 8.5 || Math.abs(this.pos.z - this.heldZ) > 8.5)) {
+      if (nodes.get(this.heldKey) === this) nodes.delete(this.heldKey);
+      this.heldKey = null;
+    }
+    const c = this.nextC;
+    if (c < 0 || c > NC) return true;
+    const col = this.axis === 'x' ? c : this.road;
+    const row = this.axis === 'x' ? this.road : c;
+    const key = col * 100 + row;
+    if (key === this.heldKey) return true;
+    const along = (road(c) + 4 - this.s) * this.dir;
+    if (along > 9.5 || along < -4) return true;
+    const owner = nodes.get(key);
+    if (owner && owner !== this && !owner.removed && owner.heldKey === key) return false;
+    nodes.set(key, this);
+    this.heldKey = key;
+    this.heldX = road(col) + 4;
+    this.heldZ = road(row) + 4;
+    return true;
+  }
+
+  remove() {
+    if (this.heldKey != null && this.game.traffic?.nodes.get(this.heldKey) === this) this.game.traffic.nodes.delete(this.heldKey);
+    super.remove();
+  }
+
+  /** Anything in a cone in front of the car, using real positions (so turning cars and
+   *  crashed cars are seen too). */
   blocked() {
     const g = this.game;
     const fx = this.axis === 'x' ? this.dir : 0, fz = this.axis === 'z' ? this.dir : 0;
-    const ax = this.pos.x + fx * 4.5, az = this.pos.z + fz * 4.5;
+    const test = (x, z, reach, width) => {
+      const dx = x - this.pos.x, dz = z - this.pos.z;
+      const along = dx * fx + dz * fz;
+      const side = Math.abs(dx * fz - dz * fx);
+      return along > 0 && along < reach && side < width;
+    };
     const p = g.player;
-    if (Math.abs(p.pos.x - ax) < 2.6 && Math.abs(p.pos.z - az) < 2.6 && p.pos.y < G + 3) return 'player';
+    if (p.pos.y < G + 3 && test(p.pos.x, p.pos.z, 6.5, 2.2)) return 'player';
     for (const e of g.entities.list) {
       if (e === this || e.removed || e.carried) continue;
-      if (e.kind !== 'car' && !e.look) continue;
-      if (e.kind === 'car' && this.ghost > 0) continue;
-      const dx = e.pos.x - ax, dz = e.pos.z - az;
-      const r = e.kind === 'car' ? 2.6 : 1.8;
-      if (Math.abs(dx) < r && Math.abs(dz) < r && Math.abs(e.pos.y - this.pos.y) < 3) return e.kind === 'car' ? 'car' : 'person';
+      if (Math.abs(e.pos.y - this.pos.y) > 3) continue;
+      if (e.kind === 'car') {
+        if (test(e.pos.x, e.pos.z, 7.5, 2.4)) return 'car';
+      } else if (e.look || e.kind === 'prop') {
+        if (test(e.pos.x, e.pos.z, 5.5, 1.8)) return 'person';
+      }
     }
     return null;
   }
 
   drive(dt) {
-    this.ghost = Math.max(0, this.ghost - dt);
-    const b = this.blocked();
+    // self-heal: if the planned turn point is somehow behind us, plan again from here
+    if ((this.s - this.turnAt) * this.dir > 1.5) this.planNext();
+    const b = this.claimJunction() ? this.blocked() : 'car';
     const target = b ? 0 : this.cruise;
     this.speed += (target - this.speed) * (1 - Math.exp(-(b ? 6 : 1.5) * dt));
     if (b && this.speed < 0.5) {
       this.stuck += dt;
       if (b === 'player' && Math.random() < dt * 0.4) this.game.audio.play('horn', this.pos);
-      if (b !== 'player' && this.stuck > 4) {
-        this.ghost = 2;
-        this.stuck = 0;
+      // gridlocked out of sight: quietly take this car off the road (it respawns elsewhere)
+      const far = this.pos.distanceTo(this.game.player.pos) > 35;
+      if (b !== 'player' && !this.persistent && ((this.stuck > 6 && far) || this.stuck > 15)) {
+        if (!far) this.game.effects.dust(this.pos, 10, 1);
+        this.remove();
       }
     } else this.stuck = 0;
 
@@ -138,6 +184,16 @@ export class Car extends Entity {
     // reached the turning point?
     if ((this.s - this.turnAt) * this.dir >= 0 && (prev - this.turnAt) * this.dir < 0) {
       if (this.plan.axis) {
+        // wait if the lane we're turning into is occupied right there
+        const nx = this.plan.axis === 'z' ? this.turnAt : this.L;
+        const nz = this.plan.axis === 'z' ? this.L : this.turnAt;
+        const clash = this.game.entities.list.some((e) => e !== this && e.kind === 'car' && !e.removed && Math.hypot(e.pos.x - nx, e.pos.z - nz) < 4.2);
+        if (clash) {
+          this.s = prev;
+          this.speed = 0;
+          this.syncPos();
+          return;
+        }
         const oldL = this.L;
         this.axis = this.plan.axis;
         this.dir = this.plan.dir;
@@ -161,7 +217,26 @@ export class Car extends Entity {
     // anything that shoves the car takes it off the road for good
     if (this.driving && (this.carried || this.vel.lengthSq() > 4)) this.driving = false;
     if (this.driving && this.alive) this.drive(dt);
-    else this.physics(dt);
+    else {
+      if (this.heldKey != null) {
+        if (this.game.traffic.nodes.get(this.heldKey) === this) this.game.traffic.nodes.delete(this.heldKey);
+        this.heldKey = null;
+      }
+      this.physics(dt);
+    }
+    // cars can't float: one that ends up on the water sinks (missions handle their own)
+    if (!this.carried && !this.persistent && this.onGround) {
+      const under = this.game.world.get(Math.floor(this.pos.x), Math.floor(this.pos.y) - 1, Math.floor(this.pos.z));
+      if (under === B.WATER || under === B.ICE) {
+        this.sinkTime = (this.sinkTime || 0) + dt;
+        this.visualLift = -this.sinkTime * 0.5;
+        if (Math.random() < dt * 10) this.game.effects.steam(this.pos, 1);
+        if (this.sinkTime > 3) this.remove();
+      } else if (this.sinkTime) {
+        this.sinkTime = 0;
+        this.visualLift = 0;
+      }
+    }
     if (this.burnt && Math.random() < dt * 4) this.game.effects.smoke(this.center, 1, 0.7, 0.15);
   }
 
@@ -203,6 +278,7 @@ export class Traffic {
     this.game = game;
     this.target = 22;
     this.timer = 0;
+    this.nodes = new Map(); // junction key -> car currently crossing it
   }
 
   /** Spawn a car on a random lane segment near (cx, cz). */
@@ -224,7 +300,8 @@ export class Traffic {
       car.place(axis, dir, ri, s);
       const d = Math.hypot(car.pos.x - cx, car.pos.z - cz);
       if (d < minR || d > maxR) continue;
-      if (g.entities.nearest(car.pos, 7, (e) => e.kind === 'car')) continue;
+      if (g.entities.nearest(car.pos, 9, (e) => e.kind === 'car')) continue;
+      if (!ROAD_BLOCKS.has(g.world.get(Math.floor(car.pos.x), G - 1, Math.floor(car.pos.z)))) continue;
       return g.entities.add(car);
     }
     return null;
@@ -240,6 +317,7 @@ export class Traffic {
       if (e.kind !== 'car' || e.removed || e.persistent) continue;
       const d = Math.hypot(e.pos.x - focus.x, e.pos.z - focus.z);
       if (d > 170 && !e.carried) e.remove();
+      else if (e.driving && !ROAD_BLOCKS.has(g.world.get(Math.floor(e.pos.x), G - 1, Math.floor(e.pos.z)))) e.remove(); // off the road somehow
       else if (e.driving) n++;
     }
     for (let i = n; i < this.target && i < n + 3; i++) this.spawnNear(focus.x, focus.z, n < 6 ? 25 : 60, 150);

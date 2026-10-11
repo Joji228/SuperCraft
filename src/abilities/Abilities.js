@@ -56,15 +56,22 @@ export class Abilities {
       this.carry.update(dt);
       return;
     }
-    if (input.pressed('punch')) {
+    const g = this.game;
+    // in the tutorial, powers unlock one at a time
+    const ok = (name) => {
+      if (g.allowed(name)) return true;
+      if (input.pressed(name)) g.hud.toast('You will learn that power later in training', 'info', 1.5);
+      return false;
+    };
+    if (ok('punch') && input.pressed('punch')) {
       if (this.carry.held) this.carry.throw(aim);
       else this.punch.trigger(aim);
     }
-    if (input.pressed('carry')) this.carry.toggle(aim);
-    if (input.pressed('senses')) this.senses.toggle();
+    if (ok('carry') && input.pressed('carry')) this.carry.toggle(aim);
+    if (ok('senses') && input.pressed('senses')) this.senses.toggle();
     const busy = !!this.carry.held;
-    this.laser.update(dt, input.isDown('laser') && !busy, aim);
-    this.breath.update(dt, input.isDown('breath') && !this.laser.active, aim);
+    this.laser.update(dt, ok('laser') && input.isDown('laser') && !busy, aim);
+    this.breath.update(dt, ok('breath') && input.isDown('breath') && !this.laser.active, aim);
     this.senses.update(dt);
     this.carry.update(dt);
   }

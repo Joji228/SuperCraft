@@ -42,24 +42,31 @@ function heroStart(p, yaw = 0) {
   return { x: p.x, y: p.y, z: p.z, yaw };
 }
 
-/** Ring checkpoints circling downtown, nudged out of buildings. */
-function ringPath(g, startFrom) {
-  const c = V(252, 0, 122);
+/**
+ * A lap of rings, one behind the other, down the streets around the city block
+ * just north of the plaza, flying between the skyscrapers.
+ */
+function blockLap() {
+  const [x0, z0] = lotOrigin(5, 2);
+  const W = x0 - 4, E = x0 + CITY.CELL - CITY.ROAD + 4; // centres of the roads either side
+  const N = z0 - 4, S = z0 + CITY.CELL - CITY.ROAD + 4;
+  const y = G + 14;
+  const corners = [V(x0 + 16, y, S), V(W, y, S), V(W, y, N), V(E, y, N), V(E, y, S), V(x0 + 24, y, S)];
   const pts = [];
-  let a0 = Math.atan2(startFrom.z - c.z, startFrom.x - c.x);
-  for (let i = 0; i < 8; i++) {
-    const a = a0 - (i / 8) * Math.PI * 1.7;
-    let r = 40;
-    const y = G + 22 + i * 7;
-    let p;
-    for (let k = 0; k < 12; k++, r += 6) {
-      p = V(c.x + Math.cos(a) * r, y, c.z + Math.sin(a) * r);
-      let clear = true;
-      for (let dy = -4; dy <= 4 && clear; dy += 2) for (let dx = -4; dx <= 4 && clear; dx += 2) for (let dz = -4; dz <= 4 && clear; dz += 2) if (g.world.isSolid(Math.floor(p.x + dx), Math.floor(p.y + dy), Math.floor(p.z + dz))) clear = false;
-      if (clear) break;
-    }
-    pts.push(p);
+  for (let i = 0; i < corners.length - 1; i++) {
+    const a = corners[i], b = corners[i + 1];
+    const n = Math.max(1, Math.round(a.distanceTo(b) / 10));
+    for (let k = i === 0 ? 0 : 1; k <= n; k++) pts.push(a.clone().lerp(b, k / n));
   }
+  return pts;
+}
+
+/** Long straight of rings down the avenue east of the block: a speed run. */
+function speedLine() {
+  const [x0, z0] = lotOrigin(5, 2);
+  const z = z0 + CITY.CELL - CITY.ROAD + 4;
+  const pts = [];
+  for (let i = 0; i < 9; i++) pts.push(V(x0 + 44 + i * 22, G + 14, z));
   return pts;
 }
 
@@ -93,8 +100,9 @@ export const MISSIONS = [
     briefing:
       'Welcome to Brightport, Aegis. Before the city needs you for real, let\'s make sure you know what you can do. Walk, jump, take to the sky, then try out your fists, your laser eyes, your freezing breath and your super senses. Oh, and Mrs. Alvarez lost her cat again.',
     timeOfDay: 0.36,
-    population: true,
-    rating: { par: 330, damage: 15, lostMax: 0 },
+    population: 0.35, // a quieter city while you learn
+    lockPowers: ['jump', 'fly', 'boost', 'punch', 'laser', 'breath', 'senses', 'carry'],
+    rating: { par: 360, damage: 15, lostMax: 0 },
     anchors(g) {
       const pz = plaza();
       const s = spawnPoint();
@@ -107,14 +115,20 @@ export const MISSIONS = [
     },
     stages: [
       { objectives: [(c) => ({ type: 'reach', at: c.a.plazaNorth, radius: 2.5, label: 'Walk to the marker (WASD)' })] },
-      { objectives: [{ type: 'action', action: 'jump', label: 'Jump (Space)' }] },
-      { objectives: [{ type: 'action', action: 'fly', label: 'Take off (F)' }] },
+      { unlock: ['jump'], objectives: [{ type: 'action', action: 'jump', label: 'Jump (Space)' }] },
+      { unlock: ['fly'], objectives: [{ type: 'action', action: 'fly', label: 'Take off (F)' }] },
       {
-        toast: 'Fly through the rings! Shift to boost.',
-        objectives: [(c) => ({ type: 'rings', points: ringPath(c.g, c.g.player.pos), label: 'Fly through the rings' })],
+        toast: 'Follow the rings around the block. Steer with the mouse!',
+        objectives: [{ type: 'rings', points: blockLap(), label: 'Fly through the rings' }],
       },
-      { objectives: [(c) => ({ type: 'action', action: 'land', at: c.a.plazaCenter, radius: 30, label: 'Land back at the plaza (hold C)' })] },
       {
+        unlock: ['boost'],
+        toast: 'Hold Shift while flying forward to boost. Watch the SPEED bar!',
+        objectives: [{ type: 'rings', points: speedLine(), label: 'Boost through the speed rings (hold Shift)' }],
+      },
+      { objectives: [(c) => ({ type: 'action', action: 'land', at: c.a.plazaCenter, radius: 30, label: 'Fly back and land at the plaza (hold C)' })] },
+      {
+        unlock: ['punch'],
         toast: 'Punch with the left mouse button. Three hits make a combo!',
         start(c) {
           const pz = plaza();
@@ -123,6 +137,7 @@ export const MISSIONS = [
         objectives: [{ type: 'destroy', tag: 'dummy', label: 'Punch the training dummies (LMB)' }],
       },
       {
+        unlock: ['laser'],
         toast: 'Hold the right mouse button to fire your laser eyes. Watch the heat meter!',
         start(c) {
           const pz = plaza();
@@ -135,6 +150,7 @@ export const MISSIONS = [
         objectives: [{ type: 'destroy', tag: 'target', label: 'Burn the targets with laser eyes (hold RMB)' }],
       },
       {
+        unlock: ['breath'],
         toast: 'Hold Q to use your freezing super breath.',
         start(c) {
           const pz = plaza();
@@ -144,12 +160,16 @@ export const MISSIONS = [
         objectives: [{ type: 'extinguish', tag: 'tut', label: 'Put out the fire (hold Q)' }],
       },
       {
-        toast: 'Press E for super senses: you can see through walls.',
+        unlock: ['senses', 'carry'],
+        toast: 'Press E for super senses: Whiskers will glow pink through walls, with a light beam above.',
         start(c) {
           // hide the cat on a nearby rooftop
           const g = c.g;
-          const cands = buildingsNear(g.world, plaza().cx, plaza().cz, 80, (b) => b.top > G + 6 && b.top < G + 35);
-          const b = cands[Math.floor(Math.random() * cands.length)] || g.world.buildings[0];
+          // a lowish rooftop not far from the plaza (nearest few candidates)
+          const pz = plaza();
+          const dist = (b) => Math.hypot((b.x0 + b.x1) / 2 - pz.cx, (b.z0 + b.z1) / 2 - pz.cz);
+          const cands = g.world.buildings.filter((b) => b.top > G + 6 && b.top < G + 45 && dist(b) > 35).sort((a, b) => dist(a) - dist(b)).slice(0, 4);
+          const b = cands[Math.floor(Math.random() * cands.length)];
           const t = b.tiers[b.tiers.length - 1];
           const x = t[0] + 2.5, z = t[1] + 2.5;
           const y = g.world.surfaceY(Math.floor(x), Math.floor(z)) + 1;

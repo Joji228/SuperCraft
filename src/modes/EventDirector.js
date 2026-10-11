@@ -1,4 +1,4 @@
-// Free Roam random events: muggings, car crashes, building fires, drone attacks and a mini-boss.
+// Free Roam random events: robberies, car crashes, building fires, drone attacks and a mini-boss.
 import * as THREE from 'three';
 import { Thug } from '../enemies/Thug.js';
 import { Drone } from '../enemies/Drone.js';
@@ -51,11 +51,11 @@ class GameEvent {
   }
 }
 
-class Mugging extends GameEvent {
+class Robbery extends GameEvent {
   constructor(game, pos) {
     super(game, pos);
-    this.title = 'Mugging';
-    this.desc = 'A mugging is in progress!';
+    this.title = 'Robbery';
+    this.desc = 'Thieves are robbing someone! Stop them.';
     const g = game;
     const victim = this.add(new Civilian(g, pos.x, pos.y, pos.z, { state: 'held' }));
     this.victim = victim;
@@ -90,6 +90,8 @@ class Mugging extends GameEvent {
 class CarCrash extends GameEvent {
   constructor(game, pos) {
     super(game, pos);
+    // clear traffic out of the crash site so nothing overlaps
+    for (const e of game.entities.query(pos, 10, (x) => x.kind === 'car' && !x.persistent)) e.remove();
     this.title = 'Car crash';
     this.desc = 'A crash! Put out the fire and get the driver to safety.';
     const g = game;
@@ -199,6 +201,7 @@ class DroneAttack extends GameEvent {
 class MiniBoss extends GameEvent {
   constructor(game, pos) {
     super(game, pos);
+    for (const e of game.entities.query(pos, 10, (x) => x.kind === 'car' && !x.persistent)) e.remove();
     this.title = 'The Brute';
     this.desc = 'A super-strong villain is smashing up the street!';
     this.timeLimit = 240;
@@ -222,7 +225,7 @@ class MiniBoss extends GameEvent {
 }
 
 const TYPES = [
-  { cls: Mugging, weight: 3 },
+  { cls: Robbery, weight: 3 },
   { cls: CarCrash, weight: 2 },
   { cls: BuildingFire, weight: 2 },
   { cls: DroneAttack, weight: 2 },
@@ -243,7 +246,7 @@ export class EventDirector {
     const total = ok.reduce((s, t) => s + t.weight, 0);
     let r = Math.random() * total;
     for (const t of ok) if ((r -= t.weight) <= 0) return t.cls;
-    return Mugging;
+    return Robbery;
   }
 
   spawn(cls) {
@@ -324,4 +327,4 @@ export class EventDirector {
   }
 }
 
-export const EVENT_TYPES = { Mugging, CarCrash, BuildingFire, DroneAttack, MiniBoss };
+export const EVENT_TYPES = { Robbery, CarCrash, BuildingFire, DroneAttack, MiniBoss };

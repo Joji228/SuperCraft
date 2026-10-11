@@ -1,13 +1,15 @@
 // Hero health, energy and laser heat.
 export const METERS = {
   maxHealth: 100,
-  healthRegen: 5, // per second, after a short delay
-  regenDelay: 4,
+  healthRegen: 8, // per second, after a short delay
+  regenDelay: 3,
   maxEnergy: 100,
   energyRegen: 15,
   energyRegenDelay: 0.8,
   heatCool: 38,
   overheatRecover: 25, // heat must drop below this to fire again
+  speedDrain: 8, // boost bar per second (about 12 s of boosting)
+  speedRegen: 14,
 };
 
 export class Meters {
@@ -19,6 +21,8 @@ export class Meters {
     this.health = METERS.maxHealth;
     this.energy = METERS.maxEnergy;
     this.heat = 0;
+    this.speed = 100;
+    this.boosting = false;
     this.overheated = false;
     this.sinceHit = 99;
     this.sinceDrain = 99;
@@ -68,5 +72,13 @@ export class Meters {
     if (!this.heating) this.heat = Math.max(0, this.heat - METERS.heatCool * dt);
     if (this.overheated && this.heat < METERS.overheatRecover) this.overheated = false;
     this.heating = false;
+    if (!this.boosting) this.speed = Math.min(100, this.speed + METERS.speedRegen * dt);
+    this.boosting = false;
+  }
+
+  /** Called every frame the hero boosts. */
+  drainSpeed(dt) {
+    this.speed = Math.max(0, this.speed - METERS.speedDrain * dt);
+    this.boosting = true;
   }
 }
