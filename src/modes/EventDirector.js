@@ -307,10 +307,6 @@ export class EventDirector {
       ev.end();
       this.events = this.events.filter((x) => x !== ev);
     }
-    // the siren gets louder the closer you are to trouble
-    let near = Infinity;
-    for (const ev of this.events) near = Math.min(near, ev.pos.distanceTo(g.player.pos));
-    g.audio.setLoopLevel('siren', this.events.length ? Math.max(0.15, 1 - near / 150) : 0, 0.5);
   }
 
   markers() {

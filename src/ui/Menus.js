@@ -74,6 +74,8 @@ export class Menus {
         return this.showCredits();
       case 'main':
         return this.showMain();
+      case 'resetAll':
+        return this.resetAll();
       case 'back':
         return this.back === 'pause' ? this.showPause(this.pauseInfo) : this.showMain();
     }
@@ -117,15 +119,33 @@ export class Menus {
          <button data-action="settings">Settings</button>
          <button data-action="credits">Credits</button>
        </div>
+       <div class="testing">
+         <label class="check"><input type="checkbox" id="unlockAll" ${this.settings.unlockAll ? 'checked' : ''}> Unlock all missions (testing)</label>
+         <button data-action="resetAll" class="danger">Reset all progress</button>
+       </div>
        <p class="small foot">Click a mode to play &middot; Esc pauses</p>`,
       'screen main',
     );
+    this.root.querySelector('#unlockAll').addEventListener('change', (e) => this.settings.set('unlockAll', e.target.checked));
+  }
+
+  /** Testing helper: wipe campaign stars, Free Roam stats and settings. */
+  resetAll() {
+    if (!window.confirm('Reset all campaign progress, Free Roam stats and settings?')) return;
+    for (const key of ['progress', 'freeroam', 'settings']) {
+      try {
+        localStorage.removeItem('supercraft.' + key);
+      } catch {
+        // storage unavailable: nothing saved anyway
+      }
+    }
+    location.reload();
   }
 
   showMissions() {
     const prog = loadProgress();
     const cards = MISSIONS.map((m, i) => {
-      const locked = i + 1 > prog.unlocked;
+      const locked = !this.settings.unlockAll && i + 1 > prog.unlocked;
       const s = prog.stars[m.id] || 0;
       const best = prog.best[m.id];
       return `<button class="mission ${locked ? 'locked' : ''}" ${locked ? 'disabled' : `data-action="brief" data-arg="${i}"`}>

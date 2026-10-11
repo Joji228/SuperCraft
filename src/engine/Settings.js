@@ -16,6 +16,7 @@ const DEFAULTS = {
   volume: 0.56,
   fov: 75,
   firstPerson: false,
+  unlockAll: false, // testing: every campaign mission playable
 };
 
 export class Settings {
