@@ -3,6 +3,7 @@
 import { RENDER_DISTANCES } from '../engine/Settings.js';
 import { MISSIONS } from '../missions/missions.js';
 import { loadProgress, fmt } from '../missions/MissionManager.js';
+import { SKINS, hex } from '../player/skins.js';
 
 const CONTROLS = [
   ['W A S D', 'Move'],
@@ -78,6 +79,11 @@ export class Menus {
         return this.showMain();
       case 'resetAll':
         return this.resetAll();
+      case 'customize':
+        return this.showCustomize();
+      case 'skin':
+        this.settings.set('skin', arg);
+        return this.showCustomize();
       case 'back':
         return this.back === 'pause' ? this.showPause(this.pauseInfo) : this.showMain();
     }
@@ -117,12 +123,41 @@ export class Menus {
        <div class="menu">
          <button data-action="campaign" class="primary">Campaign <small>${total}/${MISSIONS.length * 3} ★</small></button>
          <button data-action="freeroam" class="primary">Free Roam</button>
+         <button data-action="customize">Customize</button>
          <button data-action="controls">Controls</button>
          <button data-action="settings">Settings</button>
          <button data-action="credits">Credits</button>
        </div>
        <p class="small foot">Click a mode to play &middot; Esc pauses</p>`,
       'screen main',
+    );
+  }
+
+  /** Costume picker: five colour schemes, shown as little blocky figures. */
+  showCustomize() {
+    const cur = this.settings.skin;
+    const cards = SKINS.map((s) => {
+      const cape = s.cape !== null ? `<i class="fig-cape" style="background:${hex(s.cape)}"></i>` : '';
+      const mask = s.mask !== null ? `<i class="fig-mask" style="background:${hex(s.mask)}"></i>` : '';
+      return `<button class="skin ${s.id === cur ? 'selected' : ''}" data-action="skin" data-arg="${s.id}">
+        <span class="fig">
+          ${cape}
+          <i class="fig-head"></i>${mask}
+          <i class="fig-body" style="background:${hex(s.suit)}"><i class="fig-emblem" style="background:${hex(s.emblemBg)}"></i></i>
+          <i class="fig-belt" style="background:${hex(s.belt)}"></i>
+          <i class="fig-arm l" style="background:${hex(s.suit)}"><i style="background:${hex(s.accent)}"></i></i>
+          <i class="fig-arm r" style="background:${hex(s.suit)}"><i style="background:${hex(s.accent)}"></i></i>
+          <i class="fig-leg l" style="background:${hex(s.suit)}"><i style="background:${hex(s.accent)}"></i></i>
+          <i class="fig-leg r" style="background:${hex(s.suit)}"><i style="background:${hex(s.accent)}"></i></i>
+        </span>
+        <span class="skin-name">${s.name}</span>
+      </button>`;
+    }).join('');
+    this.render(
+      'customize',
+      `<h2>Customize Aegis</h2><div class="skins">${cards}</div>
+       <div class="menu"><button data-action="main">Back</button></div>`,
+      'screen wide',
     );
   }
 

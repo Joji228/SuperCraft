@@ -14,6 +14,7 @@ export class FirstPersonArms {
     this.group.scale.setScalar(0.8);
     camera.add(this.group);
     const suit = mat(0x1c9c93), white = mat(0xf3f3ee), gold = mat(0xf2b630);
+    this.mats = { suit, white, gold };
     const arm = (side) => {
       const g = new THREE.Group();
       const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.17, 0.62), suit);
@@ -37,6 +38,12 @@ export class FirstPersonArms {
     this.left = arm(-1);
     this.t = 0;
     this.group.visible = false;
+  }
+
+  applySkin(sk) {
+    this.mats.suit.color.setHex(sk.suit);
+    this.mats.white.color.setHex(sk.accent);
+    this.mats.gold.color.setHex(sk.belt);
   }
 
   /** s: { visible, speed, onGround, flying, punchT, punchCombo, carrying, laser, breath } */

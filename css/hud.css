@@ -809,3 +809,124 @@ button.danger {
   color: #ffd34d;
   font-weight: normal;
 }
+
+/* costume picker */
+.skins {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+button.skin {
+  width: 128px;
+  padding: 12px 6px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  font-size: 8px;
+}
+
+button.skin.selected {
+  background: var(--accent-dark);
+  box-shadow: inset -4px -4px 0 #0b4f49, inset 4px 4px 0 var(--accent), 0 0 0 3px var(--gold);
+}
+
+.fig {
+  position: relative;
+  width: 48px;
+  height: 84px;
+}
+
+.fig i {
+  position: absolute;
+  display: block;
+}
+
+.fig-head {
+  left: 14px;
+  top: 0;
+  width: 20px;
+  height: 20px;
+  background: #e2a77e;
+  border-top: 5px solid #3b2618;
+}
+
+.fig-mask {
+  left: 14px;
+  top: 10px;
+  width: 20px;
+  height: 5px;
+}
+
+.fig-body {
+  left: 11px;
+  top: 20px;
+  width: 26px;
+  height: 30px;
+}
+
+.fig-emblem {
+  left: 9px;
+  top: 6px;
+  width: 8px;
+  height: 9px;
+  clip-path: polygon(0 0, 100% 0, 100% 55%, 50% 100%, 0 55%);
+}
+
+.fig-belt {
+  left: 11px;
+  top: 46px;
+  width: 26px;
+  height: 4px;
+}
+
+.fig-arm {
+  top: 20px;
+  width: 10px;
+  height: 30px;
+}
+
+.fig-arm.l {
+  left: 1px;
+}
+
+.fig-arm.r {
+  right: 1px;
+}
+
+.fig-arm i,
+.fig-leg i {
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 10px;
+}
+
+.fig-leg {
+  top: 50px;
+  width: 12px;
+  height: 32px;
+}
+
+.fig-leg.l {
+  left: 12px;
+}
+
+.fig-leg.r {
+  right: 12px;
+}
+
+.fig-cape {
+  left: 9px;
+  top: 18px;
+  width: 30px;
+  height: 52px;
+  opacity: 0.9;
+}
+
+.skin-name {
+  line-height: 1.6;
+}

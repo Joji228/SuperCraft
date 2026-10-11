@@ -94,7 +94,7 @@ export class FlightFX {
     // ---- air trail ----
     if (player.flying && speed > 14) {
       const sup = player.supersonic;
-      const rate = speed * (sup ? 7 : 3.2);
+      const rate = speed * (sup ? 8.5 : 4);
       this.emitAcc += rate * dt;
       const n = Math.min(60, Math.floor(this.emitAcc));
       this.emitAcc -= n;
@@ -119,10 +119,10 @@ export class FlightFX {
           vx: player.vel.x * 0.04 + (Math.random() - 0.5) * 1.2,
           vy: player.vel.y * 0.04 + (Math.random() - 0.5) * 1.2,
           vz: player.vel.z * 0.04 + (Math.random() - 0.5) * 1.2,
-          life: (sup ? 1.0 : 0.55) + Math.random() * 0.35,
-          size: sup ? 0.32 : 0.24,
-          grow: sup ? 3.2 : 2.4,
-          alpha: (sup ? 0.5 : 0.32) * (0.4 + 0.6 * strength),
+          life: (sup ? 1.15 : 0.65) + Math.random() * 0.35,
+          size: sup ? 0.36 : 0.27,
+          grow: sup ? 3.4 : 2.6,
+          alpha: (sup ? 0.6 : 0.4) * (0.45 + 0.55 * strength),
           r: 0.94, g: 0.97, b: 1,
           drag: 1.5,
         });

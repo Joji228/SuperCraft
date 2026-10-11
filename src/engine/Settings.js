@@ -16,6 +16,7 @@ const DEFAULTS = {
   volume: 0.56,
   fov: 75,
   cameraMode: 0, // 0 close, 1 medium, 2 far, 3 first person (V cycles)
+  skin: 'sky', // costume (see player/skins.js)
   unlockAll: false, // testing: every campaign mission playable
 };
 

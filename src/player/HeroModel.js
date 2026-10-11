@@ -1,6 +1,7 @@
 // Aegis: a blocky, original hero built from boxes, with simple procedural poses.
 import * as THREE from 'three';
 import { damp } from '../util/math.js';
+import { SKINS, hex } from './skins.js';
 
 const COLORS = {
   suit: 0x1c9c93,
@@ -25,15 +26,17 @@ function pixelTexture(w, h, draw) {
   return t;
 }
 
-function faceTexture() {
+function faceTexture(skin) {
   return pixelTexture(8, 8, (g) => {
     g.fillStyle = '#e2a77e';
     g.fillRect(0, 0, 8, 8);
     g.fillStyle = '#3b2618'; // hairline
     g.fillRect(0, 0, 8, 2);
-    g.fillStyle = '#137068'; // mask band
-    g.fillRect(0, 3, 8, 2);
-    g.fillStyle = '#ffffff'; // glowing eyes
+    if (skin.mask !== null) {
+      g.fillStyle = hex(skin.mask); // mask band
+      g.fillRect(0, 3, 8, 2);
+    }
+    g.fillStyle = skin.mask !== null ? '#ffffff' : '#2b4fa0'; // eyes
     g.fillRect(1, 3, 2, 1);
     g.fillRect(5, 3, 2, 1);
     g.fillStyle = '#b5785a'; // mouth
@@ -41,17 +44,17 @@ function faceTexture() {
   });
 }
 
-function chestTexture() {
+function chestTexture(skin) {
   return pixelTexture(16, 16, (g) => {
-    g.fillStyle = '#1c9c93';
+    g.fillStyle = hex(skin.suit);
     g.fillRect(0, 0, 16, 16);
     // shield-shaped emblem
-    g.fillStyle = '#f2b630';
+    g.fillStyle = hex(skin.emblemBg);
     g.fillRect(4, 3, 8, 5);
     g.fillRect(5, 8, 6, 2);
     g.fillRect(6, 10, 4, 1);
     g.fillRect(7, 11, 2, 1);
-    g.fillStyle = '#ffffff';
+    g.fillStyle = hex(skin.emblemMark);
     g.fillRect(7, 4, 2, 5);
     g.fillRect(6, 5, 1, 1);
     g.fillRect(9, 5, 1, 1);
@@ -79,9 +82,11 @@ export class HeroModel {
     const gold = mat(COLORS.gold);
     const hair = mat(COLORS.hair);
     const skin = mat(COLORS.skin);
+    this.mats = { suit, white, gold };
 
     // torso (front face gets the emblem)
-    const chest = new THREE.MeshLambertMaterial({ map: chestTexture() });
+    const chest = new THREE.MeshLambertMaterial({ map: chestTexture(SKINS[0]) });
+    this.chestMat = chest;
     const torso = part(0.62, 0.75, 0.34, [suit, suit, suit, suit, chest, suit], 0, 0.125, 0);
     this.pivot.add(torso);
     this.pivot.add(part(0.64, 0.1, 0.36, gold, 0, -0.2, 0)); // belt
@@ -89,7 +94,8 @@ export class HeroModel {
     // head
     this.head = new THREE.Group();
     this.head.position.set(0, 0.5, 0);
-    const face = new THREE.MeshLambertMaterial({ map: faceTexture() });
+    const face = new THREE.MeshLambertMaterial({ map: faceTexture(SKINS[0]) });
+    this.faceMat = face;
     this.head.add(part(0.5, 0.5, 0.5, [skin, skin, hair, skin, face, hair], 0, 0.25, 0));
     this.head.add(part(0.54, 0.12, 0.54, hair, 0, 0.5, -0.02));
     this.pivot.add(this.head);
@@ -122,6 +128,7 @@ export class HeroModel {
     this.cape = new THREE.Group();
     this.cape.position.set(0, 0.48, -0.19);
     const capeMat = mat(COLORS.cape);
+    this.capeMat = capeMat;
     this.cape.add(part(0.6, 1.15, 0.05, capeMat, 0, -0.575, 0));
     this.cape.add(part(0.62, 0.06, 0.06, gold, 0, -1.15, 0));
     this.pivot.add(this.cape);
@@ -148,6 +155,21 @@ export class HeroModel {
     this.tilt = 0;
     this.yaw = 0;
     this.time = 0;
+  }
+
+  /** Re-colour the costume (see skins.js). */
+  applySkin(sk) {
+    this.mats.suit.color.setHex(sk.suit);
+    this.mats.white.color.setHex(sk.accent);
+    this.mats.gold.color.setHex(sk.belt);
+    this.cape.visible = sk.cape !== null;
+    if (sk.cape !== null) this.capeMat.color.setHex(sk.cape);
+    this.chestMat.map?.dispose();
+    this.chestMat.map = chestTexture(sk);
+    this.chestMat.needsUpdate = true;
+    this.faceMat.map?.dispose();
+    this.faceMat.map = faceTexture(sk);
+    this.faceMat.needsUpdate = true;
   }
 
   /** Start a punch animation; alternates arms, third hit is a big uppercut. */
@@ -178,12 +200,10 @@ export class HeroModel {
       // superhero pose: one fist forward, other arm tucked
       armR = -2.9 * move;
       armL = -0.25 * move;
-      if (s.supersonic) {
-        // breaking the sound barrier: both arms swept back along the body, streamlined
-        armR = 0.35;
-        armL = 0.35;
-        armSpread = 0.12;
-      }
+      // past the sound barrier both fists reach forward, eased in rather than snapped
+      this.superK = damp(this.superK || 0, s.supersonic ? 1 : 0, 2.2, dt);
+      armL = armL + (-2.9 - armL) * this.superK;
+      armSpread = 0.06 * this.superK;
       legL = 0.08 + Math.sin(this.time * 6) * 0.05 * move;
       legR = 0.02 - Math.sin(this.time * 6) * 0.05 * move;
       // the body tilt already makes the cape trail behind; just add flutter

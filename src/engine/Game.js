@@ -19,6 +19,7 @@ import { Player } from '../player/Player.js';
 import { HeroModel } from '../player/HeroModel.js';
 import { CameraRig } from '../player/CameraRig.js';
 import { FirstPersonArms } from '../player/FirstPersonArms.js';
+import { skinById } from '../player/skins.js';
 import { Meters } from '../abilities/Meters.js';
 import { Abilities } from '../abilities/Abilities.js';
 import { Entities } from '../entities/Entities.js';
@@ -108,6 +109,7 @@ export class Game {
     this.rig = new CameraRig(this.camera, this.world, this.settings);
     this.scene.add(this.camera); // so the first-person arms (children of the camera) render
     this.fpArms = new FirstPersonArms(this.camera);
+    this.applySkin(this.settings.skin);
     this.particles = new Particles(this.scene, 7000);
     this.effects = new Effects(this.particles);
     this.flightFX = new FlightFX(this.scene, this.particles, this.world);
@@ -152,12 +154,21 @@ export class Game {
         if (this.sky) this.sky.sun.castShadow = value;
         this.chunks?.setShadows(value);
         break;
+      case 'skin':
+        this.applySkin(value);
+        break;
       case 'dayNight':
         if (!this.sky) break;
         this.sky.cycle = value;
         if (!value) this.setTimeOfDay(this.baseTime ?? 0.36);
         break;
     }
+  }
+
+  applySkin(id) {
+    const sk = skinById(id);
+    this.hero.applySkin(sk);
+    this.fpArms.applySkin(sk);
   }
 
   setTimeOfDay(t) {
