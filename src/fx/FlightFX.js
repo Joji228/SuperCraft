@@ -102,9 +102,9 @@ export class FlightFX {
       for (let i = 0; i < n; i++) {
         // stagger along the path travelled this frame so the trail stays continuous
         const back = 0.6 + Math.random() * speed * dt;
-        let ox = (Math.random() - 0.5) * 0.5;
-        let oy = (Math.random() - 0.5) * 0.5;
-        let oz = (Math.random() - 0.5) * 0.5;
+        let ox = (Math.random() - 0.5) * 0.8;
+        let oy = (Math.random() - 0.5) * 0.8;
+        let oz = (Math.random() - 0.5) * 0.8;
         if (sup && i % 3 !== 0) {
           // two contrails off the shoulders
           const side = i % 3 === 1 ? 0.55 : -0.55;
@@ -120,8 +120,8 @@ export class FlightFX {
           vy: player.vel.y * 0.04 + (Math.random() - 0.5) * 1.2,
           vz: player.vel.z * 0.04 + (Math.random() - 0.5) * 1.2,
           life: (sup ? 1.15 : 0.65) + Math.random() * 0.35,
-          size: sup ? 0.36 : 0.27,
-          grow: sup ? 3.4 : 2.6,
+          size: sup ? 0.5 : 0.38,
+          grow: sup ? 3.8 : 3,
           alpha: (sup ? 0.6 : 0.4) * (0.45 + 0.55 * strength),
           r: 0.94, g: 0.97, b: 1,
           drag: 1.5,

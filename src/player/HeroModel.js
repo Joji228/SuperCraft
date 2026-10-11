@@ -201,7 +201,7 @@ export class HeroModel {
       armR = -2.9 * move;
       armL = -0.25 * move;
       // past the sound barrier both fists reach forward, eased in rather than snapped
-      this.superK = damp(this.superK || 0, s.supersonic ? 1 : 0, 2.2, dt);
+      this.superK = damp(this.superK || 0, s.supersonic ? 1 : 0, 6, dt); // about half a second
       armL = armL + (-2.9 - armL) * this.superK;
       armSpread = 0.06 * this.superK;
       legL = 0.08 + Math.sin(this.time * 6) * 0.05 * move;
