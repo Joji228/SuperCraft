@@ -34,6 +34,8 @@ export class HUD {
       </div>
       <div class="carry hidden" id="hud-carry"></div>
       <div class="prompt hidden" id="hud-prompt"></div>
+      <div class="banner hidden" id="hud-banner"></div>
+      <div class="idle-hint hidden" id="hud-idle"></div>
       <div class="abilities">
         <div class="ab" id="ab-boost"><b>SHIFT</b>Boost</div>
         <div class="ab" id="ab-punch"><b>LMB</b>Punch</div>
@@ -80,6 +82,8 @@ export class HUD {
     this.objList = q('hud-obj-list');
     this.carryEl = q('hud-carry');
     this.promptEl = q('hud-prompt');
+    this.bannerEl = q('hud-banner');
+    this.idleEl = q('hud-idle');
     this.guideEl = q('hud-guide');
     this.guideDist = q('hud-guide-dist');
     this.statsEl = q('hud-stats');
@@ -126,6 +130,8 @@ export class HUD {
     this.setStats('');
     this.setPrompt(null);
     this.setGuide(null);
+    this.setBanner(null);
+    this.setIdleHint(null);
     this.hurt = 0;
   }
 
@@ -177,6 +183,22 @@ export class HUD {
     rel = Math.atan2(Math.sin(rel), Math.cos(rel));
     this.guideEl.style.setProperty('--rot', `${-rel}rad`);
     this.guideDist.textContent = Math.round(d) + ' m';
+  }
+
+  /** Big step-by-step instruction at the top (tutorial). Key names in brackets get highlighted. */
+  setBanner(text) {
+    this.bannerEl.classList.toggle('hidden', !text);
+    if (!text) return;
+    const html = text.replace(/\(([^)]+)\)/g, '<b>$1</b>');
+    if (this.bannerEl.innerHTML !== html) this.bannerEl.innerHTML = html;
+  }
+
+  /** Flashing centre-screen reminder when the player hasn't done anything for a few seconds. */
+  setIdleHint(text) {
+    this.idleEl.classList.toggle('hidden', !text);
+    if (!text) return;
+    const html = text.replace(/\(([^)]+)\)/g, '<b>$1</b>');
+    if (this.idleEl.innerHTML !== html) this.idleEl.innerHTML = html;
   }
 
   /** A context hint like "Press T to summon the Iron Tyrant". */

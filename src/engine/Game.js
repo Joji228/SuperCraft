@@ -446,6 +446,8 @@ export class Game {
     const cam = this.camera;
     document.body.classList.toggle('unlocked', !input.locked);
     const [dx, dy] = input.consumeMouse();
+    // how long since the player last pressed anything or moved the mouse (tutorial hints)
+    this.idleTime = input.held.size || Math.abs(dx) + Math.abs(dy) > 2 ? 0 : (this.idleTime || 0) + realDt;
     if (!this.cutscene) this.rig.look(dx, dy);
     if (input.pressed('camera')) {
       const m = (this.settings.cameraMode + 1) % 4;
@@ -495,6 +497,7 @@ export class Game {
     this.abilities.senses.pins();
     this.markers.endPins();
     this.updateBeacon();
+    this.updatePickupPrompt();
     for (let i = this.dangers.length - 1; i >= 0; i--) if ((this.dangers[i].ttl -= dt) <= 0) this.dangers.splice(i, 1);
 
     // hero model
@@ -583,6 +586,19 @@ export class Game {
     if (t) return t;
     const boss = this.entities.nearest(this.player.pos, 800, (e) => e.boss && e.alive);
     return boss ? boss.pos : null;
+  }
+
+  /** "Press G to pick up ..." when standing next to something worth carrying (missions). */
+  updatePickupPrompt() {
+    if (this.mode instanceof FreeRoam) return; // Free Roam uses the prompt for the Tyrant circle
+    if (this.abilities.carry.held || !this.allowed('carry')) {
+      this.hud.setPrompt(null);
+      return;
+    }
+    const p = this.player.pos;
+    const e = this.entities.nearest((this.tmpProbe ||= new THREE.Vector3()).set(p.x, p.y + 1, p.z), 3.6, (x) => x.carryable && !x.carried && !x.saved && x.persistent && (x.kind === 'cat' || x.tags.size > 0) && (x.alive || x.kind === 'car'));
+    if (e) this.hud.setPrompt(`Press <b>G</b> to pick up ${e.carryLabel || 'it'}`);
+    else this.hud.setPrompt(null);
   }
 
   /** Light pillar over the mode's main target (objective, event or sensed target). */

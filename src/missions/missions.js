@@ -43,30 +43,28 @@ function heroStart(p, yaw = 0) {
 }
 
 /**
- * A lap of rings, one behind the other, down the streets around the city block
- * just north of the plaza, flying between the skyscrapers.
+ * The ring course: straight east along the avenue north of the plaza for two blocks,
+ * then turn left and fly once round the next block. Rings are spaced out so the
+ * next one is always easy to see.
  */
 function blockLap() {
-  const [x0, z0] = lotOrigin(5, 2);
-  const W = x0 - 4, E = x0 + CITY.CELL - CITY.ROAD + 4; // centres of the roads either side
-  const N = z0 - 4, S = z0 + CITY.CELL - CITY.ROAD + 4;
+  const road = (i) => CITY.O + i * CITY.CELL + 4; // centre line of road i
   const y = G + 14;
-  const corners = [V(x0 + 16, y, S), V(W, y, S), V(W, y, N), V(E, y, N), V(E, y, S), V(x0 + 24, y, S)];
+  const corners = [V(road(5) + 20, y, road(3)), V(road(7), y, road(3)), V(road(7), y, road(2)), V(road(6), y, road(2)), V(road(6), y, road(3) - 4)];
   const pts = [];
   for (let i = 0; i < corners.length - 1; i++) {
     const a = corners[i], b = corners[i + 1];
-    const n = Math.max(1, Math.round(a.distanceTo(b) / 10));
+    const n = Math.max(1, Math.round(a.distanceTo(b) / 20));
     for (let k = i === 0 ? 0 : 1; k <= n; k++) pts.push(a.clone().lerp(b, k / n));
   }
   return pts;
 }
 
-/** Long straight of rings down the avenue east of the block: a speed run. */
+/** A short, straight speed run east down the same avenue. */
 function speedLine() {
-  const [x0, z0] = lotOrigin(5, 2);
-  const z = z0 + CITY.CELL - CITY.ROAD + 4;
+  const road = (i) => CITY.O + i * CITY.CELL + 4;
   const pts = [];
-  for (let i = 0; i < 9; i++) pts.push(V(x0 + 44 + i * 22, G + 14, z));
+  for (let i = 0; i < 5; i++) pts.push(V(road(7) + 15 + i * 35, G + 14, road(3)));
   return pts;
 }
 
@@ -100,7 +98,8 @@ export const MISSIONS = [
     briefing:
       'Welcome to Brightport, Aegis. Before the city needs you for real, let\'s make sure you know what you can do. Walk, jump, take to the sky, then try out your fists, your laser eyes, your freezing breath and your super senses. Oh, and Mrs. Alvarez lost her cat again.',
     timeOfDay: 0.36,
-    population: 0.35, // a quieter city while you learn
+    population: 0.55, // a calmer city while you learn
+    banner: true, // big instruction banner + idle hints
     lockPowers: ['jump', 'fly', 'boost', 'punch', 'laser', 'breath', 'senses', 'carry'],
     rating: { par: 360, damage: 15, lostMax: 0 },
     anchors(g) {
@@ -112,6 +111,15 @@ export const MISSIONS = [
         plazaCenter: V(pz.cx, G, pz.cz),
         plazaZone: V(pz.cx - 8, G, pz.cz + 8),
       };
+    },
+    setup(c) {
+      // Mrs. Alvarez waits at the plaza the whole time, hoping someone finds her cat
+      const g = c.g;
+      const a = c.a.plazaZone;
+      const owner = add(c, new Civilian(g, a.x + 1.5, G, a.z + 1.5, { state: 'idle', look: { skin: 0xe2a77e, hair: 0x9b9b9b, shirt: 0xb05fa0, pants: 0x3e2723, scale: 0.95 } }), 'owner');
+      owner.timer = 1e9;
+      owner.carryable = false;
+      c.data.owner = owner;
     },
     stages: [
       { objectives: [(c) => ({ type: 'reach', at: c.a.plazaNorth, radius: 2.5, label: 'Walk to the marker (WASD)' })] },
@@ -180,7 +188,17 @@ export const MISSIONS = [
           { type: 'find', tag: 'cat', label: 'Find the lost cat and pick it up (G)' },
         ],
       },
-      { objectives: [(c) => ({ type: 'rescue', tag: 'cat', at: c.a.plazaZone, radius: 4, zoneLabel: 'Mrs. Alvarez', label: 'Bring the cat back to the plaza' })] },
+      {
+        update(c) {
+          const o = c.data.owner;
+          if (o && !c.data.cheered && c.g.entities.list.some((e) => e.tags.has('cat') && e.saved)) {
+            c.data.cheered = true;
+            o.cheer(6);
+            c.g.hud.toast('Mrs. Alvarez: "Whiskers! Thank you, Aegis!"', 'good', 4);
+          }
+        },
+        objectives: [(c) => ({ type: 'rescue', tag: 'cat', at: c.a.plazaZone, radius: 4, zoneLabel: 'Mrs. Alvarez', label: 'Bring the cat back to Mrs. Alvarez' })],
+      },
     ],
   },
 

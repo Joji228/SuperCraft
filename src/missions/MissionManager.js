@@ -189,6 +189,7 @@ export class MissionRun {
     this.ctx = { g, run: this, a: def.anchors(g), data: {} };
     if (def.timeOfDay != null) g.setTimeOfDay(def.timeOfDay);
     if (def.lockPowers) g.lockPowers(def.lockPowers);
+    def.setup?.(this.ctx);
     const s = this.ctx.a.start;
     g.placeHero(s.x, s.y, s.z, s.yaw ?? 0);
     const ev = (name) => (e) => this.objectives.forEach((o) => o.onEvent(name, e));
@@ -248,6 +249,14 @@ export class MissionRun {
       items: this.objectives.filter((o) => !o.def.hidden).map((o) => ({ text: o.label, done: o.done && o.def.type !== 'protect' })),
     });
 
+    // tutorial: big banner with the current step, and a flashing hint if the player stalls
+    if (this.def.banner) {
+      const cur = this.objectives.find((o) => !o.done && o.def.type !== 'protect');
+      const text = cur ? cur.label : '';
+      g.hud.setBanner(text);
+      g.hud.setIdleHint(g.idleTime > 3.5 && text ? text : null);
+    }
+
     // failure
     const protect = this.objectives.find((o) => o.def.type === 'protect');
     const maxLost = protect ? protect.def.maxLost : this.def.maxLost;
@@ -292,6 +301,8 @@ export class MissionRun {
   }
 
   end() {
+    this.game.hud.setBanner(null);
+    this.game.hud.setIdleHint(null);
     for (const o of this.objectives) o.cleanup();
     for (const off of this.offs) off();
     this.offs = [];

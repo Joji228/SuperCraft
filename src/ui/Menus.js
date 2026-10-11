@@ -122,7 +122,7 @@ export class Menus {
        <p class="tagline">Aegis protects Brightport</p>
        <div class="menu">
          <button data-action="campaign" class="primary">Campaign <small>${total}/${MISSIONS.length * 3} ★</small></button>
-         <button data-action="freeroam" class="primary">Free Roam</button>
+         ${this.freeRoamOpen() ? '<button data-action="freeroam" class="primary">Free Roam</button>' : '<button disabled title="Finish the First Flight mission to unlock">&#128274; Free Roam <small>finish First Flight</small></button>'}
          <button data-action="customize">Customize</button>
          <button data-action="controls">Controls</button>
          <button data-action="settings">Settings</button>
@@ -131,6 +131,12 @@ export class Menus {
        <p class="small foot">Click a mode to play &middot; Esc pauses</p>`,
       'screen main',
     );
+  }
+
+  /** Free Roam opens once the tutorial mission has been completed (or everything is unlocked for testing). */
+  freeRoamOpen() {
+    const prog = loadProgress();
+    return this.settings.unlockAll || (prog.stars['first-flight'] || 0) > 0;
   }
 
   /** Costume picker: five colour schemes, shown as little blocky figures. */
