@@ -52,11 +52,22 @@ export class FirstPersonArms {
     if (!s.visible) return;
     this.t += dt;
     const walk = s.onGround && !s.flying ? Math.min(1, s.speed / 7) : 0;
-    const bobX = Math.sin(this.t * 9) * 0.025 * walk;
-    const bobY = Math.abs(Math.cos(this.t * 9)) * 0.03 * walk + Math.sin(this.t * 1.6) * 0.008;
+    // on foot the arms sit smaller and lower and swing like a walk; flying keeps the big fists
+    const footK = s.flying ? 0 : 1;
+    this.footK = damp(this.footK ?? footK, footK, 8, dt);
+    this.group.scale.setScalar(0.8 - 0.18 * this.footK);
+    const pace = 6 + Math.min(14, s.speed) * 0.6;
+    this.phase = (this.phase || 0) + dt * pace * (walk > 0.05 ? 1 : 0);
+    const bobX = Math.sin(this.phase) * 0.02 * walk;
+    const bobY = Math.abs(Math.cos(this.phase)) * 0.03 * walk + Math.sin(this.t * 1.6) * 0.008;
     for (const [arm, side] of [[this.right, 1], [this.left, -1]]) {
       const rest = arm.userData.rest;
-      let x = rest.x + bobX, y = rest.y - bobY, z = rest.z, rx = 0;
+      let x = rest.x + bobX, y = rest.y - bobY - 0.08 * this.footK, z = rest.z, rx = 0;
+      // walking: one arm forward while the other goes back, then swap
+      const swing = Math.sin(this.phase) * side * walk * this.footK;
+      z -= swing * 0.22;
+      y += Math.max(0, swing) * 0.05;
+      rx = -swing * 0.25;
       if (s.flying && s.speed > 15) {
         // flying fast: fists tucked lower and back
         y -= 0.12;
@@ -67,7 +78,7 @@ export class FirstPersonArms {
         y += 0.14;
         z -= 0.12;
         x -= side * 0.08;
-        rx = 0.35;
+        rx = 0.35; // (overrides the walk swing)
       }
       if (s.breath) y -= 0.08;
       // punch: the 2nd hit of the combo uses the left fist, the others the right
