@@ -186,10 +186,11 @@ export class HUD {
   }
 
   /** Big step-by-step instruction at the top (tutorial). Key names in brackets get highlighted. */
-  setBanner(text) {
+  setBanner(text, kicker = '') {
     this.bannerEl.classList.toggle('hidden', !text);
+    document.body.classList.toggle('has-banner', !!text);
     if (!text) return;
-    const html = text.replace(/\(([^)]+)\)/g, '<b>$1</b>');
+    const html = (kicker ? `<small>${kicker}</small>` : '') + text.replace(/\(([^)]+)\)/g, '<b>$1</b>');
     if (this.bannerEl.innerHTML !== html) this.bannerEl.innerHTML = html;
   }
 

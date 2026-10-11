@@ -122,7 +122,7 @@ export class Menus {
        <p class="tagline">Aegis protects Brightport</p>
        <div class="menu">
          <button data-action="campaign" class="primary">Campaign <small>${total}/${MISSIONS.length * 3} ★</small></button>
-         ${this.freeRoamOpen() ? '<button data-action="freeroam" class="primary">Free Roam</button>' : '<button disabled title="Finish the First Flight mission to unlock">&#128274; Free Roam <small>finish First Flight</small></button>'}
+         ${this.freeRoamOpen() ? '<button data-action="freeroam" class="primary">Free Roam</button>' : '<button disabled class="locked-mode" title="Complete First Flight in the Campaign to unlock Free Roam">&#128274; Free Roam<span class="unlock-hint">Complete the first Campaign mission, First Flight, to unlock</span></button>'}
          <button data-action="customize">Customize</button>
          <button data-action="controls">Controls</button>
          <button data-action="settings">Settings</button>

@@ -977,3 +977,39 @@ button.skin.selected {
     opacity: 0.25;
   }
 }
+
+/* banner sits at the very top in the tutorial; toasts move below it */
+.banner {
+  top: 12px;
+}
+
+.banner small {
+  display: block;
+  font-size: 9px;
+  color: var(--gold);
+  margin-bottom: 4px;
+}
+
+body.has-banner .hud-topcenter {
+  top: 118px;
+}
+
+/* locked Free Roam button on the main menu */
+button.locked-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.unlock-hint {
+  font-size: 7px;
+  line-height: 1.5;
+  color: var(--gold);
+  opacity: 0.9;
+}
+
+/* in the tutorial the banner replaces the objectives panel */
+body.has-banner .objectives {
+  display: none;
+}

@@ -201,7 +201,7 @@ export class MissionRun {
         if (e.tags.has('mission') || e.tags.has(def.protectTag || 'mission') || [...e.tags].some((t) => def.protectTags?.includes(t))) this.lose(e);
       }),
     );
-    g.hud.toast(def.name, 'good', 3);
+    if (!def.banner) g.hud.toast(def.name, 'good', 3);
     this.nextStage();
   }
 
@@ -222,7 +222,7 @@ export class MissionRun {
     st.start?.(this.ctx);
     this.objectives = st.objectives.map((d) => new Objective(this, typeof d === 'function' ? d(this.ctx) : d));
     this.stageTime = 0;
-    if (st.toast) this.game.hud.toast(st.toast, 'info', 4);
+    if (st.toast && !this.def.banner) this.game.hud.toast(st.toast, 'info', 4);
   }
 
   update(dt) {
@@ -253,7 +253,7 @@ export class MissionRun {
     if (this.def.banner) {
       const cur = this.objectives.find((o) => !o.done && o.def.type !== 'protect');
       const text = cur ? cur.label : '';
-      g.hud.setBanner(text);
+      g.hud.setBanner(text, `Training · step ${this.stage + 1} of ${this.def.stages.length}`);
       g.hud.setIdleHint(g.idleTime > 3.5 && text ? text : null);
     }
 

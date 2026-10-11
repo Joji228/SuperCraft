@@ -43,19 +43,25 @@ function heroStart(p, yaw = 0) {
 }
 
 /**
- * The ring course: straight east along the avenue north of the plaza for two blocks,
- * then turn left and fly once round the next block. Rings are spaced out so the
- * next one is always easy to see.
+ * The ring course: a diagonal climb out of the plaza down the open avenue, then a
+ * gentle glide east along the open river. Each ring is in plain view from the one
+ * before, and they're nudged up out of anything solid.
  */
-function blockLap() {
-  const road = (i) => CITY.O + i * CITY.CELL + 4; // centre line of road i
-  const y = G + 14;
-  const corners = [V(road(5) + 20, y, road(3)), V(road(7), y, road(3)), V(road(7), y, road(2)), V(road(6), y, road(2)), V(road(6), y, road(3) - 4)];
+function blockLap(g) {
+  // climb diagonally out of the plaza and down the open avenue towards the river...
   const pts = [];
-  for (let i = 0; i < corners.length - 1; i++) {
-    const a = corners[i], b = corners[i + 1];
-    const n = Math.max(1, Math.round(a.distanceTo(b) / 20));
-    for (let k = i === 0 ? 0 : 1; k <= n; k++) pts.push(a.clone().lerp(b, k / n));
+  const climb = [[248, 18, 178], [257, 26, 195], [260, 34, 213], [260, 42, 232], [260, 48, 251]];
+  for (const [x, y, z] of climb) pts.push(V(x, y, z));
+  // ...then glide gently down along the open river, heading east
+  const river = [[256, 50, 270], [276, 45, 279], [300, 40, 282], [325, 36, 282], [350, 33, 280]];
+  for (const [x, y, z] of river) pts.push(V(x, y, z));
+  for (const p of pts) {
+    for (let k = 0; k < 20; k++) {
+      let clear = true;
+      for (let dy = -4; dy <= 4 && clear; dy += 2) for (let dx = -4; dx <= 4 && clear; dx += 2) for (let dz = -4; dz <= 4 && clear; dz += 2) if (g.world.isSolid(Math.floor(p.x + dx), Math.floor(p.y + dy), Math.floor(p.z + dz))) clear = false;
+      if (clear) break;
+      p.y += 3;
+    }
   }
   return pts;
 }
@@ -127,7 +133,7 @@ export const MISSIONS = [
       { unlock: ['fly'], objectives: [{ type: 'action', action: 'fly', label: 'Take off (F)' }] },
       {
         toast: 'Follow the rings around the block. Steer with the mouse!',
-        objectives: [{ type: 'rings', points: blockLap(), label: 'Fly through the rings' }],
+        objectives: [(c) => ({ type: 'rings', points: blockLap(c.g), label: 'Fly through the gold rings' })],
       },
       {
         unlock: ['boost'],
