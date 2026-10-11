@@ -53,6 +53,11 @@ export class Punch {
     const hits = g.entities.query(this.center, 1.7, (e) => e.punchable && !e.carried && e.team !== 'civ' && !e.removed);
     const far = g.entities.raycast(this.origin, dir, 3.2, (e) => e.punchable && !e.carried && e.team !== 'civ');
     if (far && !hits.includes(far.entity)) hits.push(far.entity);
+    // big shields: a punch lands if the fist reaches the bubble's surface
+    for (const e of g.entities.list) {
+      const sp = !e.removed && e.sphere?.();
+      if (sp && !hits.includes(e) && this.center.distanceTo(sp.c) < sp.r + 1.8) hits.push(e);
+    }
 
     if (hits.length) {
       for (const e of hits) {

@@ -56,9 +56,21 @@ export class Breath {
     }
 
     // entities in the cone
-    const list = g.entities.query(this.mouth, RANGE + 2);
+    const list = g.entities.query(this.mouth, RANGE + 12);
     for (const e of list) {
       if (e.carried) continue;
+      const sp = e.sphere?.();
+      if (sp) {
+        // shields: breath reaches if it hits the bubble anywhere in the cone
+        this.to.copy(sp.c).sub(this.mouth);
+        const dc = this.to.length();
+        const surf = Math.max(0, dc - sp.r);
+        if (surf > RANGE) continue;
+        const spread = dc > sp.r ? Math.asin(Math.min(1, sp.r / dc)) : Math.PI;
+        if (dc > sp.r && this.to.divideScalar(dc).dot(dir) < Math.cos(Math.acos(COS_HALF) + spread)) continue;
+        e.onBreath?.(dt, 1 - surf / RANGE);
+        continue;
+      }
       e.centerInto(this.to).sub(this.mouth);
       const d = this.to.length();
       if (d < 0.01 || d > RANGE) continue;

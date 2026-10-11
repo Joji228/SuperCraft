@@ -10,6 +10,47 @@ import { toward, heroChest } from './AI.js';
 import { CITY } from '../world/CityGenerator.js';
 import { B } from '../world/Blocks.js';
 
+/** Icy shield textures: frosted, then with more and more cracks. */
+function iceTexture(cracks, seed) {
+  const c = document.createElement('canvas');
+  c.width = 128;
+  c.height = 64;
+  const g = c.getContext('2d');
+  let s = seed;
+  const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  g.fillStyle = '#cfefff';
+  g.fillRect(0, 0, 128, 64);
+  for (let i = 0; i < 700; i++) {
+    const v = 200 + Math.floor(rnd() * 55);
+    g.fillStyle = 'rgb(' + (v - 30) + ',' + (v - 5) + ',255)';
+    g.fillRect(Math.floor(rnd() * 128), Math.floor(rnd() * 64), 2, 2);
+  }
+  g.strokeStyle = '#ffffff';
+  g.lineWidth = 1;
+  for (let i = 0; i < 10; i++) {
+    g.beginPath();
+    let x = rnd() * 128, y = rnd() * 64;
+    g.moveTo(x, y);
+    for (let k = 0; k < 4; k++) g.lineTo((x += (rnd() - 0.5) * 20), (y += (rnd() - 0.5) * 12));
+    g.stroke();
+  }
+  g.strokeStyle = '#1b4f72';
+  g.lineWidth = 2;
+  for (let i = 0; i < cracks * 6; i++) {
+    g.beginPath();
+    let x = 64 + (rnd() - 0.5) * 60, y = 32 + (rnd() - 0.5) * 30;
+    g.moveTo(x, y);
+    for (let k = 0; k < 6; k++) g.lineTo((x += (rnd() - 0.5) * 30), (y += (rnd() - 0.5) * 18));
+    g.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.magFilter = THREE.NearestFilter;
+  t.wrapS = THREE.RepeatWrapping;
+  t.repeat.set(3, 2);
+  return t;
+}
+
 const tmpA = new THREE.Vector3();
 const tmpB = new THREE.Vector3();
 const STEEL = 0x5b6470;
@@ -78,6 +119,8 @@ export class IronTyrant extends Entity {
     );
     this.shieldMesh.visible = false;
     game.scene.add(this.shieldMesh);
+    this.iceTextures = [0, 1, 2].map((n) => iceTexture(n, 1234 + n * 77));
+    this.shieldFrozen = 0; // seconds the frozen shield stays frozen
 
     // sweeping beam
     const beamGeo = new THREE.BoxGeometry(1, 1, 1).translate(0, 0, 0.5);
@@ -90,34 +133,49 @@ export class IronTyrant extends Entity {
     return false;
   }
 
+  /** He stands on the street and stomps through small things, so never lift him onto them. */
+  unstick() {}
+
   remove() {
     super.remove();
     this.game.scene.remove(this.shieldMesh);
     this.game.scene.remove(this.beam);
   }
 
+  get shieldUp() {
+    return this.alive && this.shield && this.shieldDown <= 0;
+  }
+
+  /** While the shield is up, hits land on a sphere around the mech instead of its box. */
+  sphere() {
+    return this.shieldUp ? { c: this.shieldMesh.position, r: 7.5 } : null;
+  }
+
   /** Hits only land when the shield is down; the core takes double laser damage in phase 3. */
   damage(amount, opts = {}) {
     const g = this.game;
-    if (this.shield && this.shieldDown <= 0) {
-      if (opts.type === 'punch' && this.shieldIce >= 1) {
+    if (this.shieldUp) {
+      if (opts.type === 'punch' && this.shieldFrozen > 0) {
         this.shieldCracks++;
         g.audio.play('glass', this.pos);
-        g.effects.iceBurst(this.center, 20);
+        g.effects.iceBurst(this.shieldMesh.position.clone().lerp(g.player.pos, 0.85), 30);
         g.rig.shake = Math.max(g.rig.shake, 0.4);
+        g.hitStop(0.08);
+        if (this.shieldCracks < 3) g.hud.toast('Crack! ' + (3 - this.shieldCracks) + ' more', 'good', 1.2);
         if (this.shieldCracks >= 3) {
           this.shieldDown = 12;
           this.shieldCracks = 0;
           this.shieldIce = 0;
+          this.shieldFrozen = 0;
           g.hud.toast('Shield shattered! Hit him now!', 'good');
           g.effects.iceBurst(this.center, 60);
           g.audio.play('objective');
         }
       } else {
         g.audio.play('shieldHit', this.pos);
-        if (!this.hinted) {
-          this.hinted = true;
-          g.hud.toast('Freeze the shield with super breath (Q), then punch it!', 'warn', 5);
+        if (!this.hintCd || this.age > this.hintCd) {
+          this.hintCd = this.age + 8;
+          g.hud.toast('Freeze the shield with super breath (hold Q), then punch it!', 'warn', 4);
         }
       }
       return 0;
@@ -128,7 +186,16 @@ export class IronTyrant extends Entity {
   }
 
   onBreath(dt) {
-    if (this.shield && this.shieldDown <= 0) this.shieldIce = Math.min(1, this.shieldIce + dt * 0.55);
+    if (!this.shieldUp || this.shieldFrozen > 0) return;
+    this.shieldIce = Math.min(1, this.shieldIce + dt * 0.8);
+    if (this.shieldIce >= 1) {
+      this.shieldFrozen = 8;
+      this.shieldCracks = 0;
+      const g = this.game;
+      g.hud.toast('Shield FROZEN! Punch it 3 times!', 'good', 3);
+      g.audio.play('freeze');
+      g.effects.iceBurst(this.shieldMesh.position, 50);
+    }
   }
 
   onDefeated() {
@@ -169,7 +236,7 @@ export class IronTyrant extends Entity {
       g.hud.toast('The Iron Tyrant raises an energy shield!', 'warn', 4);
       g.audio.play('alert');
       for (let i = 0; i < 4; i++) {
-        const d = new Drone(g, this.pos.x + (i - 1.5) * 4, this.pos.y + 12, this.pos.z, { health: 30 });
+        const d = new Drone(g, this.pos.x + (i - 1.5) * 4, this.pos.y + 12, this.pos.z, { health: 30, style: 'sentinel' });
         d.tags.add('tyrant');
         g.entities.add(d);
       }
@@ -219,16 +286,56 @@ export class IronTyrant extends Entity {
     if (frac < 0.66 && this.phase === 1) this.setPhase(2);
     if (frac < 0.33 && this.phase === 2) this.setPhase(3);
 
-    // shield visuals and recovery
+    // shield visuals: blue energy -> frosting over -> solid cracked ice
     this.shieldDown = Math.max(0, this.shieldDown - dt);
-    this.shieldIce = Math.max(0, this.shieldIce - dt * 0.08);
-    const shieldUp = this.shield && this.shieldDown <= 0;
+    const shieldUp = this.shieldUp;
     this.shieldMesh.visible = shieldUp;
+    this.shieldMesh.position.set(this.pos.x, this.pos.y + 5.5, this.pos.z);
     if (shieldUp) {
-      this.shieldMesh.position.set(this.pos.x, this.pos.y + 5.5, this.pos.z);
-      const ice = this.shieldIce;
-      this.shieldMesh.material.color.setRGB(0.38 + ice * 0.5, 0.82 + ice * 0.15, 1);
-      this.shieldMesh.material.opacity = 0.2 + ice * 0.35 + Math.sin(this.age * 6) * 0.03;
+      const mat = this.shieldMesh.material;
+      if (this.shieldFrozen > 0) {
+        this.shieldFrozen -= dt;
+        if (this.shieldFrozen <= 0) {
+          this.shieldIce = 0;
+          this.shieldCracks = 0;
+          g.hud.toast('The shield thawed. Freeze it again!', 'warn');
+        }
+        mat.map = this.iceTextures[Math.min(2, this.shieldCracks)];
+        mat.color.setRGB(1, 1, 1);
+        mat.opacity = 0.8;
+      } else {
+        this.shieldIce = Math.max(0, this.shieldIce - dt * 0.05);
+        const ice = this.shieldIce;
+        mat.map = ice > 0.05 ? this.iceTextures[0] : null;
+        mat.color.setRGB(0.38 + ice * 0.62, 0.82 + ice * 0.18, 1);
+        mat.opacity = 0.22 + ice * 0.45 + Math.sin(this.age * 6) * 0.03;
+        if (ice > 0) g.markers.setPin('tyrant-ice', this.shieldMesh.position.clone().setY(this.pos.y + 14), 'Freezing ' + Math.round(ice * 100) + '%', 'sense');
+      }
+      if (mat.map !== this.lastMap) {
+        mat.needsUpdate = true;
+        this.lastMap = mat.map;
+      }
+    }
+
+    // he's solid: push the hero out of his body
+    const hb = g.player.pos;
+    const dxh = hb.x - this.pos.x, dzh = hb.z - this.pos.z;
+    const dh = Math.hypot(dxh, dzh);
+    const R = 3.1;
+    if (dh < R && hb.y < this.pos.y + 10.5 && hb.y + 1.9 > this.pos.y) {
+      const nx = dh > 0.01 ? dxh / dh : 1, nz = dh > 0.01 ? dzh / dh : 0;
+      if (hb.y > this.pos.y + 9.5) {
+        hb.y = this.pos.y + 10.5; // standing on his head
+        g.player.vel.y = Math.max(0, g.player.vel.y);
+      } else {
+        hb.x = this.pos.x + nx * R;
+        hb.z = this.pos.z + nz * R;
+        const vin = g.player.vel.x * nx + g.player.vel.z * nz;
+        if (vin < 0) {
+          g.player.vel.x -= vin * nx;
+          g.player.vel.z -= vin * nz;
+        }
+      }
     }
     this.core.color = this.phase === 3 ? (Math.sin(this.age * 10) > 0 ? 0xff6040 : 0xffd040) : 0x40e0ff;
     this.core.w = this.core.h = this.phase === 3 ? 1.9 : 1.4;

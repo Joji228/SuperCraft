@@ -41,6 +41,33 @@ export class Drone extends Entity {
       { y: 0.12, w: 0.2, h: 0.12, d: 0.4, color: 0x222222 },
     ];
     this.rotors = this.boxes.slice(5, 9);
+    this.eyeBox = this.boxes[9];
+    if (opts.style === 'sentinel') this.makeSentinel();
+  }
+
+  /** The Iron Tyrant's own drones: armoured red orbs with a big eye and a spinning blade ring. */
+  makeSentinel() {
+    const red = 0x8e1b1b, dark = 0x22252b, gold = 0xd4a017;
+    this.style = 'sentinel';
+    this.boxes = [
+      { y: 0.35, w: 0.9, h: 0.9, d: 0.9, color: red },
+      { y: 0.35, w: 1.05, h: 0.5, d: 0.5, color: dark },
+      { y: 0.35, w: 0.5, h: 1.05, d: 0.5, color: dark },
+      { y: 0.35, z: 0.47, w: 0.42, h: 0.42, d: 0.06, color: 0xffa020, glow: true },
+      { y: 0.35, z: 0.5, w: 0.16, h: 0.16, d: 0.06, color: 0xfff2a0, glow: true },
+      // blade ring (spins)
+      { y: 0.35, w: 1.9, h: 0.06, d: 0.14, color: gold },
+      { y: 0.35, w: 0.14, h: 0.06, d: 1.9, color: gold },
+      { y: 0.35, w: 1.4, h: 0.06, d: 0.14, color: gold, ry: Math.PI / 4 },
+      { y: 0.35, w: 1.4, h: 0.06, d: 0.14, color: gold, ry: -Math.PI / 4 },
+      // thruster glow underneath
+      { y: -0.15, w: 0.3, h: 0.2, d: 0.3, color: 0xff5020, glow: true },
+      { y: 0.35, x: 0.6, z: 0.15, w: 0.14, h: 0.14, d: 0.5, color: dark },
+      { y: 0.35, x: -0.6, z: 0.15, w: 0.14, h: 0.14, d: 0.5, color: dark },
+    ];
+    this.rotors = this.boxes.slice(5, 9);
+    this.eyeBox = this.boxes[3];
+    this.boxes[9].isThruster = true;
   }
 
   get canFreeze() {
@@ -50,14 +77,15 @@ export class Drone extends Entity {
   onDefeated() {
     const c = this.centerInto(new THREE.Vector3());
     this.game.explode(c, 2.5, 8, this);
-    this.boxes[9].hidden = true;
+    this.eyeBox.hidden = true;
+    for (const b of this.boxes) if (b.isThruster) b.hidden = true;
     this.flying = false;
     this.carryable = true;
     this.deadTime = 0;
   }
 
   update(dt) {
-    for (const r of this.rotors) r.ry = (r.ry || 0) + dt * (this.alive && this.frozen <= 0 ? 40 : 0);
+    for (const r of this.rotors) r.ry = (r.ry || 0) + dt * (this.alive && this.frozen <= 0 ? (this.style === 'sentinel' ? 6 : 40) : 0);
     if (!this.alive) {
       this.deadTime += dt;
       this.flying = false;
@@ -102,7 +130,7 @@ export class Drone extends Entity {
     const aimAt = focus === p.pos ? heroChest(g, tmpB) : tmpB.set(focus.x, focus.y + 1, focus.z);
     if (this.cooldown <= 0 && eye.distanceTo(aimAt) < 45 && canSee(g.world, eye, aimAt)) {
       this.cooldown = 1.4 + Math.random() * 1.2;
-      g.projectiles.fire('bolt', eye, aimAt, this, 0.03);
+      g.projectiles.fire(this.style === 'sentinel' ? 'plasma' : 'bolt', eye, aimAt, this, 0.03);
       g.audio.play('zap', this.pos);
       g.addDanger(focus, 12, 1.5);
     }

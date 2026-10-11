@@ -30,7 +30,8 @@ export class Entities {
   }
 
   clear() {
-    for (const e of this.list) e.removed = true;
+    // remove() lets entities clean up their own extra meshes (boss shields, beams...)
+    for (const e of this.list) if (!e.removed) e.remove();
     this.list.length = 0;
   }
 
@@ -89,6 +90,15 @@ export class Entities {
     let bt = maxDist;
     for (const e of this.list) {
       if (e.removed || (filter && !filter(e))) continue;
+      const sp = e.sphere?.();
+      if (sp) {
+        const t = raySphere(o, d, sp.c, sp.r);
+        if (t !== null && t < bt) {
+          bt = t;
+          best = e;
+        }
+        continue;
+      }
       const hw = e.halfW + pad;
       const t = rayBox(o, d, e.pos.x - hw, e.pos.y - pad, e.pos.z - hw, e.pos.x + hw, e.pos.y + e.height + pad, e.pos.z + hw);
       if (t !== null && t < bt) {
@@ -124,6 +134,17 @@ export class Entities {
     this.xray.instanceMatrix.needsUpdate = true;
     if (this.xray.instanceColor) this.xray.instanceColor.needsUpdate = true;
   }
+}
+
+/** Ray vs sphere; returns entry distance (0 if starting inside) or null. */
+export function raySphere(o, d, c, r) {
+  const ox = o.x - c.x, oy = o.y - c.y, oz = o.z - c.z;
+  const b = ox * d.x + oy * d.y + oz * d.z;
+  const cc = ox * ox + oy * oy + oz * oz - r * r;
+  if (cc <= 0) return 0;
+  const disc = b * b - cc;
+  if (disc < 0 || b > 0) return null;
+  return -b - Math.sqrt(disc);
 }
 
 /** Slab test; returns entry distance or null. */
