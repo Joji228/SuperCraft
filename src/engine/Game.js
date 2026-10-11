@@ -584,7 +584,7 @@ export class Game {
   /** What the red guide arrow at the top of the screen points at: the main objective. */
   guideTarget() {
     if (this.cutscene) return null;
-    const t = this.mode?.beaconPos?.();
+    const t = this.mode?.guidePos?.() || this.mode?.beaconPos?.();
     if (t) return t;
     const boss = this.entities.nearest(this.player.pos, 800, (e) => e.boss && e.alive);
     return boss ? boss.pos : null;

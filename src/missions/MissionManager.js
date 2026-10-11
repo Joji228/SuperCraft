@@ -3,6 +3,8 @@
 import * as THREE from 'three';
 import { load, save } from '../save/Save.js';
 
+const CITY_G = 12; // street level
+
 const RING_GEO = new THREE.TorusGeometry(3.4, 0.35, 8, 40);
 
 export function loadProgress() {
@@ -314,7 +316,19 @@ export class MissionRun {
     for (const o of this.objectives) {
       if (o.def.type === 'find' || o.def.type === 'rings') continue;
       const p = o.pin();
-      if (p) return p.setY(p.y - 2);
+      if (!p) continue;
+      if (o.def.type === 'extinguish' || p.y > CITY_G + 8) return null; // high up: marker only, no beam
+      return p.setY(p.y - 2);
+    }
+    return null;
+  }
+
+  /** The guide arrow points at the first objective with a target, beam or not. */
+  guidePos() {
+    for (const o of this.objectives) {
+      if (o.def.type === 'find') continue;
+      const p = o.pin();
+      if (p) return p;
     }
     return null;
   }

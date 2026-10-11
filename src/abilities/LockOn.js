@@ -30,30 +30,47 @@ export class LockOn {
       g.audio.play('sensesOff');
       return;
     }
+    const best = this.pick(true);
+    if (!best) {
+      g.hud.toast('No target to lock on to', 'info', 1.2);
+      return;
+    }
+    this.lockTo(best);
+    g.audio.play('sensesOn');
+  }
+
+  /**
+   * Best enemy to lock on to: the one closest to the crosshair on screen, or
+   * (onScreenOnly = false, used after a kill) simply the nearest one around you.
+   */
+  pick(onScreenOnly, exclude = null) {
+    const g = this.game;
     const cam = g.camera;
     cam.updateMatrixWorld();
     let best = null;
     let bestScore = Infinity;
     for (const e of g.entities.list) {
-      if (e.removed || !e.alive || e.team !== 'enemy') continue;
+      if (e === exclude || e.removed || !e.alive || e.team !== 'enemy' || e.kind === 'dummy') continue;
       const p = this.aimPoint(e, new THREE.Vector3());
-      if (p.distanceTo(g.player.pos) > RANGE) continue;
+      const d = p.distanceTo(g.player.pos);
+      if (d > RANGE) continue;
       const s = p.clone().project(cam);
-      if (s.z > 1 || Math.abs(s.x) > 1.05 || Math.abs(s.y) > 1.05) continue; // must be on screen
-      const score = s.x * s.x + s.y * s.y; // closest to the crosshair wins
+      const onScreen = s.z <= 1 && Math.abs(s.x) <= 1.05 && Math.abs(s.y) <= 1.05;
+      if (onScreenOnly && !onScreen) continue;
+      // closest to the crosshair wins; off-screen enemies only count by distance
+      const score = onScreen ? s.x * s.x + s.y * s.y : 10 + d / RANGE;
       if (score < bestScore) {
         bestScore = score;
         best = e;
       }
     }
-    if (!best) {
-      g.hud.toast('No target to lock on to', 'info', 1.2);
-      return;
-    }
+    return best;
+  }
+
+  lockTo(best) {
     this.target = best;
     this.label.textContent = best.boss ? best.bossName : best.kind === 'drone' ? 'DRONE' : 'TARGET';
     this.el.classList.remove('hidden');
-    g.audio.play('sensesOn');
   }
 
   release() {
@@ -67,7 +84,10 @@ export class LockOn {
     if (!t) return;
     const g = this.game;
     if (t.removed || !t.alive || t.pos.distanceTo(g.player.pos) > RANGE + 30) {
-      this.release();
+      // target down: hop straight to the next enemy nearby, if there is one
+      const next = this.pick(false, t);
+      if (next) this.lockTo(next);
+      else this.release();
       return;
     }
     const c = g.camera.position;
