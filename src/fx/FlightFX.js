@@ -96,8 +96,8 @@ export class FlightFX {
       const hs = Math.hypot(player.vel.x, player.vel.z);
       if (hs > 14) {
         const k = Math.min(1, (hs - 14) / 20);
-        this.runAcc = (this.runAcc || 0) + hs * 9 * k * dt;
-        const n = Math.min(60, Math.floor(this.runAcc));
+        this.runAcc = (this.runAcc || 0) + hs * 22 * k * dt;
+        const n = Math.min(140, Math.floor(this.runAcc));
         this.runAcc -= n;
         const hx = player.vel.x / hs, hz = player.vel.z / hs;
         for (let i = 0; i < n; i++) {
@@ -109,15 +109,15 @@ export class FlightFX {
             y: player.pos.y + h,
             z: player.pos.z - hz * back + (Math.random() - 0.5) * 0.5,
             vx: (Math.random() - 0.5) * 0.6, vy: (Math.random() - 0.3) * 0.6, vz: (Math.random() - 0.5) * 0.6,
-            life: 0.5 + Math.random() * 0.45,
-            size: 0.3 + Math.random() * 0.25, grow: 1.8,
+            life: 0.7 + Math.random() * 0.6,
+            size: 0.4 + Math.random() * 0.35, grow: 2.2,
             alpha: k,
             r: 1, g: 0.55 + hot * 0.4, b: 0.05 + hot * 0.35,
             drag: 2,
           });
         }
         // little lightning crackles flicking off the body
-        if (Math.random() < dt * 12 * k) {
+        if (Math.random() < dt * 30 * k) {
           const c = this.center;
           for (let i = 0; i < 6; i++) {
             const a = Math.random() * Math.PI * 2;
@@ -130,6 +130,8 @@ export class FlightFX {
         }
       }
     }
+
+    this.updateBolts(dt, player);
 
     // ---- air trail ----
     if (player.flying && speed > 14) {
@@ -201,6 +203,48 @@ export class FlightFX {
       const s = 1 + (1 - this.coneFlash) * 0.15;
       this.cone.scale.set(s, 1, s);
     }
+  }
+
+  /** Jagged lightning bolts crackling along the super-speed trail. */
+  updateBolts(dt, player) {
+    if (!this.bolts) {
+      const segs = 8 * 7; // 8 bolts x 7 segments
+      this.boltPos = new Float32Array(segs * 2 * 3);
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(this.boltPos, 3));
+      const mat = new THREE.LineBasicMaterial({ color: 0xfff09a, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false });
+      this.bolts = new THREE.LineSegments(geo, mat);
+      this.bolts.frustumCulled = false;
+      this.scene.add(this.bolts);
+      this.boltTimer = 0;
+    }
+    const hs = Math.hypot(player.vel.x, player.vel.z);
+    const on = !player.flying && player.sprinting && hs > 18;
+    this.bolts.visible = on;
+    if (!on) return;
+    this.boltTimer -= dt;
+    if (this.boltTimer > 0) return;
+    this.boltTimer = 0.045; // re-strike the bolts every few frames
+    this.bolts.material.color.setHex(Math.random() < 0.5 ? 0xfff09a : 0xffb030);
+    const hx = player.vel.x / hs, hz = player.vel.z / hs;
+    const sx = -hz, sz = hx; // sideways
+    let o = 0;
+    for (let b = 0; b < 8; b++) {
+      let back = Math.random() * 0.6;
+      let side = (Math.random() - 0.5) * 0.8;
+      let h = 0.3 + Math.random() * 1.5;
+      for (let s = 0; s < 7; s++) {
+        const p0 = [player.pos.x - hx * back + sx * side, player.pos.y + h, player.pos.z - hz * back + sz * side];
+        back += 0.5 + Math.random() * 0.9;
+        side += (Math.random() - 0.5) * 0.9;
+        h = Math.max(0.15, Math.min(2.1, h + (Math.random() - 0.5) * 0.9));
+        const p1 = [player.pos.x - hx * back + sx * side, player.pos.y + h, player.pos.z - hz * back + sz * side];
+        this.boltPos.set(p0, o);
+        this.boltPos.set(p1, o + 3);
+        o += 6;
+      }
+    }
+    this.bolts.geometry.attributes.position.needsUpdate = true;
   }
 
   /** Height of the water surface within a few blocks below the hero, or null. */

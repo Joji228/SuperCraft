@@ -68,9 +68,9 @@ function blockLap(g) {
 
 /** A short, straight speed run east down the same avenue. */
 function speedLine() {
-  const road = (i) => CITY.O + i * CITY.CELL + 4;
+  // continues straight on from the last flight ring, east along the river and out to sea
   const pts = [];
-  for (let i = 0; i < 5; i++) pts.push(V(road(7) + 15 + i * 35, G + 14, road(3)));
+  for (let i = 0; i < 5; i++) pts.push(V(378 + i * 38, 33, 280));
   return pts;
 }
 

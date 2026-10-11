@@ -250,6 +250,7 @@ export class Menus {
   showResult(run, result) {
     const i = run.index;
     const next = i + 1 < MISSIONS.length ? `<button data-action="brief" data-arg="${i + 1}" class="primary">Next mission</button>` : '';
+    const roam = this.freeRoamOpen() ? '<button data-action="freeroam" class="primary">Free Roam</button>' : '';
     this.render(
       'result',
       `<p class="small kicker">Mission complete</p>
@@ -258,6 +259,7 @@ export class Menus {
        <table class="rating">${this.resultRows(result)}</table>
        <div class="menu">
          ${next}
+         ${roam}
          <button data-action="play" data-arg="${i}">Replay</button>
          <button data-action="campaign">Mission select</button>
          <button data-action="quit">Main menu</button>
