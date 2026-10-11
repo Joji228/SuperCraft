@@ -137,7 +137,7 @@ export class HeroModel {
   }
 
   /**
-   * state: { pos, yaw, mode: 'ground'|'air'|'fly'|'swim', speed, hSpeed, vy, boost }
+   * state: { pos, yaw, mode: 'ground'|'air'|'fly', speed, hSpeed, vy, boost }
    */
   update(dt, s) {
     this.time += dt;
@@ -183,10 +183,6 @@ export class HeroModel {
       legL = -sw;
       legR = sw;
       cape = 0.1 + Math.min(1.1, s.hSpeed * 0.07) + Math.sin(this.time * 7) * 0.04 * k;
-      if (s.mode === 'swim') {
-        armL = Math.sin(this.time * 5) * 1.5;
-        armR = -armL;
-      }
       if (k < 0.05) {
         const b = Math.sin(this.time * 2) * 0.03;
         armL = b;

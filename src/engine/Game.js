@@ -74,7 +74,7 @@ export class Game {
     this.scene.add(this.hero.root);
     this.rig = new CameraRig(this.camera, this.world, this.settings);
     this.particles = new Particles(this.scene);
-    this.flightFX = new FlightFX(this.scene, this.particles);
+    this.flightFX = new FlightFX(this.scene, this.particles, this.world);
     this.player.onSonicBoom = () => this.sonicBoom();
 
     for (const k of ['renderDistance', 'shadows', 'dayNight']) this.applySetting(k, this.settings[k]);
@@ -186,6 +186,10 @@ export class Game {
       });
       this.rig.update(dt, p);
       this.flightFX.update(dt, p);
+      if (this.flightFX.shake) {
+        this.rig.shake = Math.max(this.rig.shake, this.flightFX.shake);
+        this.flightFX.shake = 0;
+      }
       this.particles.update(dt, cam, this.renderer.domElement.height);
       focus = p.pos;
       this.hud.update(dt, p, {

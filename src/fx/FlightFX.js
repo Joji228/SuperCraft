@@ -1,13 +1,16 @@
-// Flight effects: air trail behind the hero, supersonic vapour cone and the sonic boom.
+// Flight effects: air trail behind the hero, sonic boom, and spray/wake over water.
 import * as THREE from 'three';
+import { B } from '../world/Blocks.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 
 export class FlightFX {
-  constructor(scene, particles) {
+  constructor(scene, particles, world) {
     this.scene = scene;
     this.particles = particles;
+    this.world = world;
     this.emitAcc = 0;
+    this.sprayAcc = 0;
     this.dir = new THREE.Vector3();
     this.right = new THREE.Vector3();
     this.center = new THREE.Vector3();
@@ -128,6 +131,8 @@ export class FlightFX {
       this.emitAcc = 0;
     }
 
+    this.waterSpray(dt, player, speed);
+
     // ---- shockwave rings ----
     for (const ring of this.rings) {
       if (!ring.active) continue;
@@ -156,6 +161,84 @@ export class FlightFX {
       const s = 1 + (1 - this.coneFlash) * 0.15;
       this.cone.scale.set(s, 1, s);
     }
+  }
+
+  /** Height of the water surface within a few blocks below the hero, or null. */
+  waterBelow(player, range) {
+    const x = Math.floor(player.pos.x), z = Math.floor(player.pos.z);
+    const y0 = Math.floor(player.pos.y);
+    for (let y = y0; y >= y0 - range; y--) {
+      const b = this.world.get(x, y, z);
+      if (b === B.WATER) return y + 0.9;
+      if (b !== B.AIR) return null;
+    }
+    return null;
+  }
+
+  /** Fighter-jet style rooster tail and foam wake when skimming low and fast over water. */
+  waterSpray(dt, player, speed) {
+    const MAX_H = 7;
+    if (!player.flying || speed < 18) {
+      this.sprayAcc = 0;
+      return;
+    }
+    const surface = this.waterBelow(player, MAX_H);
+    if (surface === null) {
+      this.sprayAcc = 0;
+      return;
+    }
+    const h = player.pos.y - surface;
+    const low = Math.max(0, 1 - h / MAX_H);
+    const fast = Math.min(1, (speed - 18) / 50);
+    const k = low * (0.35 + 0.65 * fast);
+    if (k <= 0.02) return;
+    const p = this.particles;
+    const d = this.dir;
+    const r = this.right;
+    // horizontal flight direction
+    const hl = Math.hypot(d.x, d.z) || 1;
+    const fx = d.x / hl, fz = d.z / hl;
+    const rate = 220 * k * (player.supersonic ? 1.5 : 1);
+    this.sprayAcc += rate * dt;
+    const n = Math.min(80, Math.floor(this.sprayAcc));
+    this.sprayAcc -= n;
+    const px = player.pos.x, pz = player.pos.z;
+    for (let i = 0; i < n; i++) {
+      const back = 1 + Math.random() * (speed * dt + 2);
+      const bx = px - fx * back, bz = pz - fz * back;
+      const kind = i % 4;
+      if (kind === 0) {
+        // foam left on the surface: a widening V-shaped wake
+        const side = (Math.random() < 0.5 ? -1 : 1) * (0.4 + Math.random() * 1.2);
+        p.emit({
+          x: bx + r.x * side, y: surface + 0.05, z: bz + r.z * side,
+          vx: r.x * side * 1.6, vy: 0, vz: r.z * side * 1.6,
+          life: 1.6 + Math.random() * 1.2,
+          size: 0.5, grow: 3,
+          alpha: 0.55 * k + 0.15,
+          r: 0.9, g: 0.96, b: 1,
+          drag: 1.2,
+        });
+      } else {
+        // rooster tail: water thrown up and back, falling under gravity
+        const up = (7 + Math.random() * 11) * k * (player.supersonic ? 1.4 : 1);
+        const spread = (Math.random() - 0.5) * 6 * k;
+        p.emit({
+          x: bx + (Math.random() - 0.5) * 0.8, y: surface + 0.1, z: bz + (Math.random() - 0.5) * 0.8,
+          vx: -fx * speed * 0.05 * Math.random() + r.x * spread,
+          vy: up,
+          vz: -fz * speed * 0.05 * Math.random() + r.z * spread,
+          life: 0.7 + Math.random() * 0.7,
+          size: 0.28 + Math.random() * 0.28, grow: 2.4,
+          alpha: 0.75,
+          r: 0.78 + Math.random() * 0.2, g: 0.9 + Math.random() * 0.1, b: 1,
+          drag: 0.6,
+          gravity: 18,
+        });
+      }
+    }
+    // a little rumble when skimming really low
+    if (low > 0.75 && fast > 0.3) this.shake = Math.max(this.shake || 0, 0.15 * fast);
   }
 
   clear() {

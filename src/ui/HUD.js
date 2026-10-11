@@ -51,7 +51,7 @@ export class HUD {
   }
 
   update(dt, player, info) {
-    const m = player.supersonic ? 'SUPERSONIC' : player.boosting ? 'BOOST' : player.flying ? 'FLYING' : player.inWater ? 'SWIMMING' : 'ON FOOT';
+    const m = player.supersonic ? 'SUPERSONIC' : player.boosting ? 'BOOST' : player.flying ? 'FLYING' : 'ON FOOT';
     if (m !== this.lastMode) {
       this.mode.textContent = m;
       this.mode.className = 'hud-mode mode-' + m.toLowerCase().replace(' ', '-');

@@ -11,8 +11,9 @@ varying vec3 vColor;
 void main() {
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * mv;
-  gl_PointSize = clamp(aSize * uScale / -mv.z, 1.0, 256.0);
-  vAlpha = aAlpha;
+  gl_PointSize = clamp(aSize * uScale / -mv.z, 1.0, 96.0);
+  // fade out particles right in front of the camera so trails never white-out the view
+  vAlpha = aAlpha * smoothstep(1.5, 8.0, -mv.z);
   vColor = color;
 }`;
 
