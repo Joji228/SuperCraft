@@ -599,7 +599,7 @@ export class Game {
       return;
     }
     const p = this.player.pos;
-    const e = this.entities.nearest((this.tmpProbe ||= new THREE.Vector3()).set(p.x, p.y + 1, p.z), 3.6, (x) => x.carryable && !x.carried && !x.saved && x.persistent && (x.kind === 'cat' || x.tags.size > 0) && (x.alive || x.kind === 'car'));
+    const e = this.entities.nearest((this.tmpProbe ||= new THREE.Vector3()).set(p.x, p.y + 1, p.z), 3.6, (x) => x.carryable && !x.carried && !x.saved && x.persistent && (this.mode?.isCarryTarget ? this.mode.isCarryTarget(x) : x.tags.size > 0) && (x.alive || x.kind === 'car'));
     if (e) this.hud.setPrompt(`Press <b>G</b> to pick up ${e.carryLabel || 'it'}`);
     else this.hud.setPrompt(null);
   }

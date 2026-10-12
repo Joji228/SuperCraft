@@ -185,6 +185,11 @@ export class MissionRun {
     this.finished = false;
   }
 
+  /** Is this something the current stage wants carried (so it's worth a "Press G" prompt)? */
+  isCarryTarget(e) {
+    return e.kind === 'cat' || this.objectives.some((o) => (o.def.type === 'rescue' || o.def.type === 'find') && e.tags.has(o.def.tag));
+  }
+
   start() {
     const g = this.game;
     const def = this.def;
