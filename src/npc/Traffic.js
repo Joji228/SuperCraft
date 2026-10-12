@@ -211,6 +211,11 @@ export class Car extends Entity {
   }
 
   update(dt) {
+    if (this.playerDriven) {
+      // the hero is at the wheel: Driving moves the car
+      if (this.burnt && Math.random() < dt * 4) this.game.effects.smoke(this.center, 1, 0.7, 0.15);
+      return;
+    }
     this.age += dt;
     this.hitFlash = Math.max(0, this.hitFlash - dt);
     if (this.frozen > 0) this.frozen = Math.max(0, this.frozen - dt);

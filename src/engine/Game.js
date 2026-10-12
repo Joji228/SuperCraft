@@ -19,6 +19,7 @@ import { Player } from '../player/Player.js';
 import { HeroModel } from '../player/HeroModel.js';
 import { CameraRig } from '../player/CameraRig.js';
 import { FirstPersonArms } from '../player/FirstPersonArms.js';
+import { Driving } from '../player/Driving.js';
 import { skinById } from '../player/skins.js';
 import { Meters } from '../abilities/Meters.js';
 import { Abilities } from '../abilities/Abilities.js';
@@ -131,6 +132,7 @@ export class Game {
     this.fires = new Fires(this);
     this.zones = new Zones(this);
     this.abilities = new Abilities(this);
+    this.driving = new Driving(this);
     this.crowd = new Crowd(this);
     this.traffic = new Traffic(this);
     this.minimap = new Minimap(this.hud.minimapCanvas, this.world);
@@ -285,6 +287,7 @@ export class Game {
   // ---------- modes and states ----------
 
   resetSession() {
+    this.driving.reset();
     this.abilities.reset();
     this.entities.clear();
     this.projectiles.clear();
@@ -480,10 +483,21 @@ export class Game {
     }
     const canAct = !ko && !this.cutscene;
     p.firstPerson = this.settings.firstPerson;
-    p.update(dt, canAct ? input : NO_INPUT, this.rig.yaw, this.rig.pitch);
-    if (p.boosting) this.meters.drainSpeed(dt);
-    else if (p.sprinting) this.meters.drainSpeed(dt * 0.6); // running is cheaper than flying
-    this.abilities.update(dt, input, canAct);
+    const drv = this.driving;
+    // R next to a car (Free Roam): steal it
+    if (canAct && !drv.active && input.pressed('enter')) {
+      const car = drv.findCar();
+      if (car) drv.enter(car);
+    }
+    if (drv.active) {
+      drv.update(dt, canAct ? input : NO_INPUT, Math.abs(dx) + Math.abs(dy));
+      if (drv.active && ko) drv.exit();
+    } else {
+      p.update(dt, canAct ? input : NO_INPUT, this.rig.yaw, this.rig.pitch);
+      if (p.boosting) this.meters.drainSpeed(dt);
+      else if (p.sprinting) this.meters.drainSpeed(dt * 0.6); // running is cheaper than flying
+    }
+    this.abilities.update(dt, input, canAct && !drv.active);
     this.meters.update(dt);
 
     this.markers.beginPins();
@@ -505,7 +519,7 @@ export class Game {
 
     // hero model
     const held = this.abilities.carry.held;
-    this.hero.setVisible(!this.settings.firstPerson || !!this.cutscene);
+    this.hero.setVisible((!this.settings.firstPerson || !!this.cutscene) && !drv.active);
     this.hero.update(dt, {
       pos: p.pos,
       yaw: p.yaw,
@@ -521,9 +535,10 @@ export class Game {
     });
 
     if (this.cutscene) this.updateCutscene(realDt);
+    else if (drv.active) this.rig.updateVehicle(realDt, drv.car, drv.lookIdle);
     else this.rig.update(realDt, p);
     this.fpArms.update(realDt, {
-      visible: this.settings.firstPerson && !this.cutscene && this.state === 'playing',
+      visible: this.settings.firstPerson && !this.cutscene && this.state === 'playing' && !drv.active,
       speed: p.vel.length(),
       onGround: p.onGround,
       flying: p.flying,

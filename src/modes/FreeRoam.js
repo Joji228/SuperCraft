@@ -9,6 +9,7 @@ export class FreeRoam {
   constructor(game) {
     this.game = game;
     this.population = true;
+    this.allowDriving = true; // R steals cars here
     this.stats = load('freeroam', { saved: 0, defeated: 0, events: 0 });
     this.session = { saved: 0, defeated: 0, events: 0 };
     this.director = new EventDirector(game, this.stats);
@@ -105,6 +106,7 @@ export class FreeRoam {
   }
 
   end() {
+    if (this.game.driving.active) this.game.driving.exit();
     this.director.clear();
     if (this.circle) this.game.scene.remove(this.circle);
     for (const off of this.offs) off();
@@ -118,6 +120,7 @@ export class FreeRoam {
     // the Iron Tyrant summoning circle
     const p = g.player.pos;
     this.roamTime += dt;
+    let prompt = null;
     if (!this.circleReady) {
       if (this.roamTime >= 90) {
         this.circleReady = true;
@@ -127,16 +130,17 @@ export class FreeRoam {
       }
     } else if (!this.tyrant) {
       this.circleGlow.material.opacity = 0.14 + Math.sin(performance.now() / 300) * 0.08;
-      const inside = Math.hypot(p.x - this.circlePos.x, p.z - this.circlePos.z) < 3.2 && Math.abs(p.y - this.circlePos.y) < 4;
-      g.hud.setPrompt(inside ? 'Press <b>T</b> to summon the <b>Iron Tyrant</b>' : null);
+      const inside = !g.driving.active && Math.hypot(p.x - this.circlePos.x, p.z - this.circlePos.z) < 3.2 && Math.abs(p.y - this.circlePos.y) < 4;
+      if (inside) prompt = 'Press <b>T</b> to summon the <b>Iron Tyrant</b>';
       if (inside && g.input.pressed('summon')) {
-        g.hud.setPrompt(null);
+        prompt = null;
         this.summonTyrant();
       }
     } else if (this.tyrant.removed || (this.tyrant.alive && this.tyrant.pos.distanceTo(p) > 450)) {
       if (this.tyrant.alive) g.hud.toast('The Iron Tyrant stomps off...', 'info', 3);
       this.endTyrant();
     }
+    g.hud.setPrompt(prompt || g.driving.prompt());
     g.hud.setStats(`SAVED <b>${this.stats.saved}</b> &nbsp; VILLAINS <b>${this.stats.defeated}</b> &nbsp; EVENTS <b>${this.stats.events}</b>`);
     const items = this.director.items();
     g.hud.setObjectives(items.length ? { title: 'Emergencies', timer: null, items } : null);

@@ -43,6 +43,7 @@ Fly over a voxel city, break the sound barrier and save Brightport.
 | **E** | Super senses |
 | **G** | Pick up / drop |
 | **Wheel click** | Lock on to a target |
+| **R** | Free Roam: steal a car and drive (Shift nitro · Space drift · H horn · R get out) |
 | **V** | Camera: close / medium / far / first person |
 | **Esc** | Pause |
 

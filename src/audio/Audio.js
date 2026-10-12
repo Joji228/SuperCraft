@@ -155,9 +155,41 @@ export class Audio {
   }
 }
 
-const LOOP_GAIN = { wind: 0.5, laser: 0.22, breath: 0.35, senses: 0.12, fire: 0.3, siren: 0.07, city: 0.16 };
+const LOOP_GAIN = { engine: 0.2, wind: 0.5, laser: 0.22, breath: 0.35, senses: 0.12, fire: 0.3, siren: 0.07, city: 0.16 };
 
 const LOOPS = {
+  // car engine: two detuned saws through a lowpass, pitch follows rpm (0..1+)
+  engine(a, dest) {
+    const ctx = a.ctx;
+    const o1 = ctx.createOscillator();
+    o1.type = 'sawtooth';
+    const o2 = ctx.createOscillator();
+    o2.type = 'sawtooth';
+    const sub = ctx.createOscillator();
+    sub.type = 'square';
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.Q.value = 2;
+    const sg = ctx.createGain();
+    sg.gain.value = 0.35;
+    o1.connect(f);
+    o2.connect(f);
+    sub.connect(sg).connect(f);
+    f.connect(dest);
+    const rpm = (r) => {
+      const t = ctx.currentTime;
+      const hz = 38 + r * 120;
+      o1.frequency.setTargetAtTime(hz, t, 0.08);
+      o2.frequency.setTargetAtTime(hz * 1.51, t, 0.08);
+      sub.frequency.setTargetAtTime(hz * 0.5, t, 0.08);
+      f.frequency.setTargetAtTime(380 + r * 1500, t, 0.08);
+    };
+    rpm(0);
+    o1.start();
+    o2.start();
+    sub.start();
+    return { rpm };
+  },
   // distant city hum: low traffic rumble with a slow swell
   city(a, dest) {
     const ctx = a.ctx;

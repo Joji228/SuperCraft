@@ -20,6 +20,8 @@ const BINDINGS = {
   carry: ['KeyG'],
   lock: ['Mouse1'], // middle mouse / wheel click
   summon: ['KeyT'],
+  enter: ['KeyR'], // steal / leave a car (Free Roam)
+  horn: ['KeyH'],
 };
 
 const CODE_TO_ACTIONS = {};
@@ -27,7 +29,7 @@ for (const [action, codes] of Object.entries(BINDINGS)) {
   for (const c of codes) (CODE_TO_ACTIONS[c] ||= []).push(action);
 }
 
-const BLOCKED_DEFAULTS = new Set(['Space', 'F3', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Backquote', 'KeyF', 'KeyC', 'KeyQ', 'KeyE', 'KeyG', 'KeyT']);
+const BLOCKED_DEFAULTS = new Set(['Space', 'F3', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Backquote', 'KeyF', 'KeyC', 'KeyQ', 'KeyE', 'KeyG', 'KeyT', 'KeyR', 'KeyH']);
 
 export class Input {
   constructor(element) {

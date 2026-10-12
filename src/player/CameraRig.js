@@ -81,4 +81,54 @@ export class CameraRig {
     cam.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
     cam.updateProjectionMatrix();
   }
+
+  /**
+   * Chase camera while driving: swings back behind the car after you stop looking
+   * around with the mouse; first person sits in the driver's seat.
+   */
+  updateVehicle(dt, car, lookIdle) {
+    const cam = this.camera;
+    const behind = car.yaw + Math.PI;
+    const speed = Math.hypot(car.vel.x, car.vel.z);
+    if (lookIdle > 0.8) {
+      let d = behind - this.yaw;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      this.yaw += d * (1 - Math.exp(-(2 + speed * 0.08) * dt));
+      this.pitch += (-0.2 - this.pitch) * (1 - Math.exp(-2 * dt));
+    }
+    this.fovPunch = Math.max(0, this.fovPunch - dt * 30);
+    cam.fov = damp(cam.fov, this.settings.fov + Math.min(8, speed * 0.15) + this.fovPunch, 4, dt);
+    this.focusY = car.pos.y + 1.6;
+    this.focus.set(car.pos.x, this.focusY, car.pos.z);
+    if (this.firstPerson) {
+      // driver's seat: left of centre, just behind the windscreen
+      cam.position.set(car.pos.x + Math.cos(car.yaw) * 0.42 - Math.sin(car.yaw) * 0.1, car.pos.y + 1.45, car.pos.z - Math.sin(car.yaw) * 0.42 - Math.cos(car.yaw) * 0.1);
+    } else {
+      const want = [6.5, 8, 10][this.settings.cameraMode] ?? 6.5;
+      this.dist = damp(this.dist, want + Math.min(1.5, speed * 0.03), 4, dt);
+      const f = this.forward();
+      const back = f.clone().multiplyScalar(-this.dist);
+      back.y += 1.6;
+      const len = back.length();
+      const dir = back.clone().divideScalar(len);
+      const hit = this.world.raycast(this.focus.x, this.focus.y, this.focus.z, dir.x, dir.y, dir.z, len + 0.3);
+      const d = hit ? Math.max(0.5, hit.t - 0.3) : len;
+      cam.position.copy(this.focus).addScaledVector(dir, d);
+      // backed up against a wall: rise above the car instead of ending up inside it
+      const lift = Math.max(0, 4 - d);
+      this.carLift = damp(this.carLift || 0, lift, 6, dt);
+      if (this.carLift > 0.01) {
+        cam.position.y += this.carLift;
+        if (lookIdle > 0.8) this.pitch += (-0.2 - this.carLift * 0.18 - this.pitch) * (1 - Math.exp(-4 * dt));
+      }
+    }
+    if (this.shake > 0) {
+      this.shake = Math.max(0, this.shake - dt * 2);
+      const s = this.shake * 0.3;
+      cam.position.x += (Math.random() - 0.5) * s;
+      cam.position.y += (Math.random() - 0.5) * s;
+    }
+    cam.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
+    cam.updateProjectionMatrix();
+  }
 }

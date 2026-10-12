@@ -33,6 +33,11 @@ export class HUD {
         <div class="hud-readout"><span id="hud-speed">0</span> <span id="hud-unit">KM/H</span> &nbsp; ALT <span id="hud-alt">0</span> M</div>
       </div>
       <div class="carry hidden" id="hud-carry"></div>
+      <div class="speedo hidden" id="hud-speedo">
+        <div class="speedo-dial"><div class="speedo-ticks"></div><div class="speedo-needle" id="hud-needle"></div><div class="speedo-num"><span id="hud-kmh">0</span><small>KM/H</small></div></div>
+        <div class="speedo-row"><span>CAR</span><div class="speedo-bar"><div class="speedo-fill" id="hud-carhp"></div></div></div>
+        <div class="speedo-keys"><span><b>R</b> get out</span><span><b>F</b> fly out</span><span><b>SHIFT</b> nitro</span><span><b>SPACE</b> drift</span><span><b>H</b> horn</span></div>
+      </div>
       <div class="prompt hidden" id="hud-prompt"></div>
       <div class="banner hidden" id="hud-banner"></div>
       <div class="idle-hint hidden" id="hud-idle"></div>
@@ -81,6 +86,11 @@ export class HUD {
     this.objTimer = q('hud-obj-timer');
     this.objList = q('hud-obj-list');
     this.carryEl = q('hud-carry');
+    this.speedoEl = q('hud-speedo');
+    this.needle = q('hud-needle');
+    this.kmh = q('hud-kmh');
+    this.carHp = q('hud-carhp');
+    this.wasDriving = false;
     this.promptEl = q('hud-prompt');
     this.bannerEl = q('hud-banner');
     this.idleEl = q('hud-idle');
@@ -268,7 +278,23 @@ export class HUD {
   update(dt, game, info) {
     const player = game.player;
     const m = game.meters;
-    const mode = player.supersonic ? 'SUPERSONIC' : player.boosting ? 'BOOST' : player.flying ? 'FLYING' : 'ON FOOT';
+    const drv = game.driving;
+    const driving = drv.active;
+    if (driving !== this.wasDriving) {
+      this.wasDriving = driving;
+      this.speedoEl.classList.toggle('hidden', !driving);
+      document.body.classList.toggle('driving', driving);
+    }
+    if (driving) {
+      const kmh = Math.round(Math.abs(drv.speed) * 3.6);
+      this.kmh.textContent = kmh;
+      this.needle.style.transform = `rotate(${-135 + Math.min(1, kmh / 200) * 270}deg)`;
+      const hp = Math.max(0, drv.car.health / drv.car.maxHealth);
+      this.carHp.style.width = `${hp * 100}%`;
+      this.carHp.classList.toggle('low', hp < 0.35);
+      this.speedoEl.classList.toggle('nitro', drv.nitro);
+    }
+    const mode = driving ? (drv.nitro ? 'NITRO' : 'DRIVING') : player.supersonic ? 'SUPERSONIC' : player.boosting ? 'BOOST' : player.flying ? 'FLYING' : 'ON FOOT';
     if (mode !== this.lastMode) {
       this.mode.textContent = mode;
       this.mode.className = 'hud-mode mode-' + mode.toLowerCase().replace(' ', '-');

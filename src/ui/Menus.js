@@ -19,6 +19,7 @@ const CONTROLS = [
   ['G', 'Pick up / drop people, objects and cars'],
   ['Middle mouse', 'Lock on to the target nearest the crosshair (again to release)'],
   ['T', 'Free Roam: summon the Iron Tyrant from the red plaza circle'],
+  ['R', 'Free Roam: steal a car / get out (W S drive, A D steer, Shift nitro, Space handbrake, H horn)'],
   ['V', 'Camera: close / medium / far / first person'],
   ['Esc', 'Pause'],
   ['F3', 'Debug info (FPS)'],
