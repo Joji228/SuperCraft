@@ -140,6 +140,7 @@ export class Game {
 
     this.state = 'menu';
     this.menus.showMain();
+    document.body.classList.remove('booting'); // full-screen button appears once loading is done
     this.loop.start();
   }
 

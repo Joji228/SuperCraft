@@ -1045,3 +1045,7 @@ body.has-banner .objectives {
 body.in-play .fullscreen-btn {
   display: none;
 }
+
+body.booting .fullscreen-btn {
+  display: none;
+}
