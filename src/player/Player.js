@@ -77,15 +77,21 @@ export class Player extends Body {
         dy /= len;
         dz /= len;
       }
-      const vert = (input.isDown('jump') ? 1 : 0) - (input.isDown('descend') ? 1 : 0);
+      let vert = (input.isDown('jump') ? 1 : 0) - (input.isDown('descend') ? 1 : 0);
+      if (vert > 0 && this.pos.y >= MOVE.maxAltitude - 0.5) vert = 0; // at the ceiling: nothing to climb (or boost) into
       this.sprinting = false; // on-foot super speed ends when you take off, so the SPEED bar can refill
-      this.boosting = input.isDown('boost') && iz > 0 && this.allowed('boost') && this.canBoost();
+      // Shift boosts any way you're heading: forward, or straight up/down with Space / C
+      this.boosting = input.isDown('boost') && (iz > 0 || vert !== 0) && this.allowed('boost') && this.canBoost();
       this.updateSupersonic(dt);
       const speed = this.supersonic ? MOVE.supersonic : this.boosting ? MOVE.boost : MOVE.fly;
-      const tx = dx * speed;
-      const ty = dy * speed + vert * MOVE.fly * 0.75;
-      const tz = dz * speed;
-      this.steer(tx, ty, tz, dt);
+      if (this.boosting) {
+        // full boost speed along the combined direction (forward + climb/dive)
+        const bx = dx, by = dy + vert, bz = dz;
+        const bl = Math.hypot(bx, by, bz) || 1;
+        this.steer((bx / bl) * speed, (by / bl) * speed, (bz / bl) * speed, dt);
+      } else {
+        this.steer(dx * speed, dy * speed + vert * MOVE.fly * 0.75, dz * speed, dt);
+      }
     } else {
       this.boosting = false;
       this.supersonic = false;
