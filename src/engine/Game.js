@@ -606,6 +606,7 @@ export class Game {
 
     // HUD
     cam.updateMatrixWorld();
+    this.abilities.laser.place();
     this.markers.update(realDt, p.pos);
     this.abilities.lockOn.updateMarker();
     this.markers.setBrackets(this.droneTargets());

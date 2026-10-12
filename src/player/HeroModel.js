@@ -197,6 +197,7 @@ export class HeroModel {
       // only movement along the way he faces lays the body flat; strafing sideways
       // (e.g. while aiming the laser) or backwards keeps him upright, floating
       const fwd = Math.max(0, (s.vx ?? 0) * Math.sin(this.yaw) + (s.vz ?? 0) * Math.cos(this.yaw));
+      this.fwdSpeed = fwd;
       const move = Math.min(1, Math.hypot(fwd, s.vy) / 12);
       const ang = Math.atan2(fwd, s.vy); // 0 = straight up, PI/2 = level
       tiltTarget = Math.min(ang, 2.6) * move;
@@ -300,7 +301,9 @@ export class HeroModel {
     let yawRate = (this.yaw - this.prevYaw) / Math.max(dt, 1e-4);
     yawRate = Math.atan2(Math.sin(yawRate * dt), Math.cos(yawRate * dt)) / Math.max(dt, 1e-4);
     this.prevYaw = this.yaw;
-    const fast = s.mode === 'fly' ? Math.min(1, s.hSpeed / 20) : 0;
+    // banking only makes sense lying flat and moving forward; upright (strafing while
+    // aiming) it would just twist the body round to one side
+    const fast = s.mode === 'fly' ? Math.min(1, (this.fwdSpeed || 0) / 20) * Math.max(0, Math.sin(Math.min(this.tilt, Math.PI / 2))) : 0;
     this.bank = damp(this.bank, Math.max(-0.9, Math.min(0.9, -yawRate * 0.18)) * fast, 6, dt);
     this.rollCd = Math.max(0, this.rollCd - dt);
     let spin = 0;

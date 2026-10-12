@@ -45,29 +45,21 @@ export class Laser {
     this.active = false;
   }
 
-  update(dt, firing, aim) {
+  /**
+   * Draw the beams from the hero's eyes to the crosshair. Called at the end of the
+   * frame, after the hero model and camera have moved: placing them earlier used
+   * last frame's head position, so at flying speed the beams started half a metre
+   * away from his face.
+   */
+  place() {
+    if (!this.active) return;
     const g = this.game;
-    const m = g.meters;
-    if (!firing || m.overheated || !m.addHeat(HEAT_PER_SEC * dt)) {
-      if (firing && m.overheated && !this.warned) {
-        g.audio.play('overheat');
-        g.hud.toast('Laser overheated!', 'warn');
-        this.warned = true;
-      }
-      if (!firing) this.warned = false;
-      this.hide();
-      return;
-    }
-    if (!this.active) g.audio.startLoop('laser');
-    this.active = true;
-    const p = g.player;
-    p.aimTimer = 0.3;
-
-    // beams start at the hero model's actual eyes (correct even when flying horizontally)
-    const eyes = g.hero.eyes.children;
+    const aim = g.abilities.computeAim();
     const target = aim.point;
+    const eyes = g.hero.eyes.children;
     const fp = g.settings.firstPerson;
     if (fp) this.right.set(Math.cos(g.rig.yaw), 0, -Math.sin(g.rig.yaw));
+    else g.hero.root.updateMatrixWorld(true);
     for (let i = 0; i < 2; i++) {
       const b = this.beams[i];
       if (fp) {
@@ -87,6 +79,28 @@ export class Laser {
     }
     this.light.position.copy(target).addScaledVector(aim.dir, -0.4);
     this.light.intensity = 6 + Math.random() * 3;
+  }
+
+  update(dt, firing, aim) {
+    const g = this.game;
+    const m = g.meters;
+    if (!firing || m.overheated || !m.addHeat(HEAT_PER_SEC * dt)) {
+      if (firing && m.overheated && !this.warned) {
+        g.audio.play('overheat');
+        g.hud.toast('Laser overheated!', 'warn');
+        this.warned = true;
+      }
+      if (!firing) this.warned = false;
+      this.hide();
+      return;
+    }
+    if (!this.active) g.audio.startLoop('laser');
+    this.active = true;
+    const p = g.player;
+    p.aimTimer = 0.3;
+
+    const target = aim.point;
+    // (the beams themselves are drawn in place(), once the hero and camera have moved)
 
     // impact effects
     if (Math.random() < 0.6) g.effects.sparks(target, 2, aim.dir.clone().negate(), 0xff7a3a);

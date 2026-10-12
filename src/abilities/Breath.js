@@ -44,6 +44,8 @@ export class Breath {
       this.mouth.addScaledVector(dir, 0.6);
     } else {
       g.hero.head.getWorldPosition(this.mouth);
+      // the model is drawn later this frame: carry the head along by this frame's movement
+      this.mouth.addScaledVector(p.vel, dt);
       this.mouth.y += p.flying ? 0.1 : 0.12;
       this.mouth.addScaledVector(dir, 0.5);
     }
