@@ -558,6 +558,8 @@ export class Game {
       mode: p.mode,
       speed: p.vel.length(),
       hSpeed: Math.hypot(p.vel.x, p.vel.z),
+      vx: p.vel.x,
+      vz: p.vel.z,
       vy: p.vel.y,
       boost: p.boosting,
       supersonic: p.supersonic,

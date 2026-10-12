@@ -194,8 +194,11 @@ export class HeroModel {
     let armL = 0, armR = 0, legL = 0, legR = 0, cape = 0.12, armSpread = 0;
 
     if (s.mode === 'fly') {
-      const move = Math.min(1, s.speed / 12);
-      const ang = Math.atan2(s.hSpeed, s.vy); // 0 = straight up, PI/2 = level
+      // only movement along the way he faces lays the body flat; strafing sideways
+      // (e.g. while aiming the laser) or backwards keeps him upright, floating
+      const fwd = Math.max(0, (s.vx ?? 0) * Math.sin(this.yaw) + (s.vz ?? 0) * Math.cos(this.yaw));
+      const move = Math.min(1, Math.hypot(fwd, s.vy) / 12);
+      const ang = Math.atan2(fwd, s.vy); // 0 = straight up, PI/2 = level
       tiltTarget = Math.min(ang, 2.6) * move;
       // superhero pose: one fist forward, other arm tucked
       armR = -2.9 * move;
