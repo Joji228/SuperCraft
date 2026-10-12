@@ -440,6 +440,12 @@ const SOUNDS = {
     o.stop(at + dur + 0.05);
     a.noiseBurst({ dur, type: 'bandpass', freq: 600, q: 0.6, gain: 0.05, attack: dur * 0.45, dest: d });
   },
+  // superhero landing: a solid but short thump with a little grit
+  land(a, d) {
+    a.tone({ dur: 0.32, freq: 95, freqEnd: 38, gain: 0.55, dest: d });
+    a.noiseBurst({ dur: 0.28, type: 'lowpass', freq: 900, freqEnd: 120, gain: 0.3, dest: d });
+    a.noiseBurst({ t: 0.04, dur: 0.18, type: 'bandpass', freq: 2400, q: 1.2, gain: 0.06, dest: d });
+  },
   horn(a, d) {
     a.tone({ dur: 0.3, type: 'square', freq: 392, gain: 0.08, dest: d });
     a.tone({ dur: 0.3, type: 'square', freq: 494, gain: 0.06, dest: d });

@@ -217,6 +217,24 @@ export class HeroModel {
         legR = -0.05;
         cape = 0.2 + Math.sin(this.time * 2.5) * 0.08;
       }
+    } else if (s.mode === 'air' && s.flare) {
+      // about to touch down: swung upright, knees bent, arms out for balance
+      armL = -0.5;
+      armR = -0.5;
+      armSpread = 0.9;
+      legL = -0.9;
+      legR = 0.1;
+      cape = 1.6 + Math.sin(this.time * 30) * 0.15;
+      this.tiltRate = 16;
+    } else if (s.mode === 'air' && s.dive > 0) {
+      // long fall: tip from horizontal to head-first, fists leading
+      tiltTarget = Math.PI / 2 + s.dive * (Math.PI / 2 - 0.12);
+      armL = armR = -2.9;
+      armSpread = 0.05;
+      legL = 0.05 + Math.sin(this.time * 18) * 0.04;
+      legR = -0.05 - Math.sin(this.time * 18) * 0.04;
+      cape = 0.1 + Math.sin(this.time * 34) * 0.12;
+      this.tiltRate = 2.5;
     } else if (s.mode === 'air') {
       armL = -0.6;
       armR = -0.6;
@@ -224,6 +242,16 @@ export class HeroModel {
       legL = -0.5;
       legR = 0.3;
       cape = s.vy < 0 ? 1.2 : 0.4;
+    } else if (s.landT > 0) {
+      // superhero landing: one knee down, fist on the ground, head bowed
+      tiltTarget = 0.45;
+      legL = -1.6;
+      legR = 1.1;
+      armR = -0.55;
+      armL = 0.7;
+      armSpread = 0.35;
+      cape = 0.9;
+      this.tiltRate = 30;
     } else {
       const k = Math.min(1, s.hSpeed / 7);
       this.walkPhase += dt * (4 + s.hSpeed * 0.9);
@@ -259,7 +287,10 @@ export class HeroModel {
     }
     this.eyes.visible = !!s.laser;
 
-    this.tilt = damp(this.tilt, tiltTarget, 8, dt);
+    this.tilt = damp(this.tilt, tiltTarget, this.tiltRate || 8, dt);
+    this.tiltRate = 0;
+    // crouch for the landing pose, rising back up as it ends
+    this.crouch = damp(this.crouch || 0, s.landT > 0.12 ? 0.55 : 0, s.landT > 0.12 ? 40 : 7, dt);
     this.root.rotation.set(0, this.yaw, 0);
 
     // turning: lean into the turn, and do a barrel roll on a hard turn at speed
@@ -279,7 +310,7 @@ export class HeroModel {
     // hovering: drift gently up and down
     const hover = s.mode === 'fly' ? 1 - Math.min(1, s.speed / 6) : 0;
     this.bob = damp(this.bob, Math.sin(this.time * 1.8) * 0.12 * hover, 6, dt);
-    this.pivot.position.y = 1.0 + this.bob;
+    this.pivot.position.y = 1.0 + this.bob - this.crouch;
     // spin and bank around the body's own long axis (the flight direction when flying flat)
     this.pivot.rotation.set(this.tilt, this.bank + spin, 0, 'XYZ');
     // head looks forward even when the body is horizontal

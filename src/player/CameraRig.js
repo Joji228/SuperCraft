@@ -39,7 +39,9 @@ export class CameraRig {
     const cam = this.camera;
     // smooth the vertical focus so step-ups don't jolt the view
     const targetY = player.pos.y + EYE;
-    this.focusY = this.focusY === null ? targetY : player.flying ? targetY : damp(this.focusY, targetY, 18, dt);
+    // (only on the ground: in the air, a smoothed focus lags further and further behind a
+    // fast fall and then snaps back, which made the view jump up and down)
+    this.focusY = this.focusY === null || player.flying || !player.onGround ? targetY : damp(this.focusY, targetY, 18, dt);
     if (Math.abs(this.focusY - targetY) > 3) this.focusY = targetY;
     this.focus.set(player.pos.x, this.focusY, player.pos.z);
 

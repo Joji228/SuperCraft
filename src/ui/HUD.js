@@ -294,7 +294,7 @@ export class HUD {
       this.carHp.classList.toggle('low', hp < 0.35);
       this.speedoEl.classList.toggle('nitro', drv.nitro);
     }
-    const mode = driving ? (drv.nitro ? 'NITRO' : 'DRIVING') : player.supersonic ? 'SUPERSONIC' : player.boosting ? 'BOOST' : player.flying ? 'FLYING' : 'ON FOOT';
+    const mode = driving ? (drv.nitro ? 'NITRO' : 'DRIVING') : player.supersonic ? 'SUPERSONIC' : player.boosting ? 'BOOST' : player.flying ? 'FLYING' : player.diving ? 'DIVING' : 'ON FOOT';
     if (mode !== this.lastMode) {
       this.mode.textContent = mode;
       this.mode.className = 'hud-mode mode-' + mode.toLowerCase().replace(' ', '-');

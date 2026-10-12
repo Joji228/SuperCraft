@@ -15,6 +15,8 @@ export const MOVE = {
   supersonic: 75, // after the sonic boom
   boomDelay: 1.7, // seconds of boosting before breaking the sound barrier
   maxAltitude: 230,
+  terminal: 110, // free-fall speed limit (m/s): long drops keep picking up speed
+  heroLanding: 32, // landing faster than this (m/s) is a superhero landing
 };
 
 export class Player extends Body {
@@ -29,6 +31,13 @@ export class Player extends Body {
     this.supersonic = false;
     this.onSonicBoom = null;
     this.aimTimer = 0;
+    // free fall: how long, how far to the ground, head-down dive and the landing flip
+    this.fallTime = 0;
+    this.groundDist = 99;
+    this.diving = false;
+    this.flare = false;
+    this.landT = 0; // > 0 while holding the superhero-landing pose
+    this.onHeroLanding = null;
     // hooks set by the game: locked powers (tutorial) and the speed bar for boosting
     this.allowed = () => true;
     this.canBoost = () => true;
@@ -112,15 +121,25 @@ export class Player extends Body {
       this.vel.x += (wx * speed - this.vel.x) * k;
       this.vel.z += (wz * speed - this.vel.z) * k;
 
+      // just landed hard: hold the superhero-landing crouch for a moment
+      if (this.landT > 0) {
+        this.landT = Math.max(0, this.landT - dt);
+        const hold = 1 - Math.exp(-14 * dt);
+        this.vel.x -= this.vel.x * hold;
+        this.vel.z -= this.vel.z * hold;
+      }
       this.vel.y -= MOVE.gravity * dt;
-      this.vel.y = Math.max(this.vel.y, -70);
+      this.vel.y = Math.max(this.vel.y, -MOVE.terminal);
       if (this.onGround && input.pressed('jump') && this.allowed('jump')) {
         this.vel.y = MOVE.jump;
         this.onGround = false;
       }
     }
 
+    const vyBefore = this.vel.y;
+    const wasAir = !this.onGround;
     this.move(dt);
+    this.updateFall(dt, vyBefore, wasAir);
 
     // land when holding descend on the ground (but never on water)
     const below = this.world.get(Math.floor(this.pos.x), Math.floor(this.pos.y - 0.5), Math.floor(this.pos.z));
@@ -182,6 +201,35 @@ export class Player extends Body {
     const accel = want > cur ? (this.boosting ? 2.4 : 5) : 4;
     const speed = cur + (want - cur) * (1 - Math.exp(-accel * dt));
     v.set((dx / dl) * speed, (dy / dl) * speed, (dz / dl) * speed);
+  }
+
+  /**
+   * Long drops: after a moment of falling Aegis tips head-first into a dive, flips
+   * upright just before the ground, and a hard enough landing is a superhero landing.
+   */
+  updateFall(dt, vyBefore, wasAir) {
+    if (this.flying || this.onGround) {
+      if (!this.flying && wasAir && this.onGround && vyBefore < -MOVE.heroLanding) {
+        const under = this.world.get(Math.floor(this.pos.x), Math.floor(this.pos.y - 0.5), Math.floor(this.pos.z));
+        if (under !== B.WATER) {
+          this.landT = 0.65;
+          this.onHeroLanding?.(-vyBefore);
+        }
+      }
+      this.fallTime = 0;
+      this.diving = this.flare = false;
+      return;
+    }
+    if (this.vel.y < -6) this.fallTime += dt;
+    else this.fallTime = 0;
+    if (this.vel.y < -16) {
+      const hit = this.world.raycast(this.pos.x, this.pos.y + 0.1, this.pos.z, 0, -1, 0, 250);
+      this.groundDist = hit ? hit.t - 0.1 : 250;
+    } else this.groundDist = 99;
+    // only a proper drop turns into a dive (not hopping off a roof edge)
+    this.diving = this.diving ? this.vel.y < -16 : this.fallTime > 0.45 && this.vel.y < -22 && this.groundDist > 15;
+    // about a third of a second from impact: swing the feet down
+    this.flare = this.diving && this.groundDist < Math.max(3, -this.vel.y * 0.3);
   }
 
   /** Hold boost long enough at full speed and Aegis breaks the sound barrier. */

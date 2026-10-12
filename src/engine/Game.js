@@ -9,7 +9,7 @@ import { Input } from '../input/Input.js';
 import { World } from '../world/World.js';
 import { generateCity, spawnPoint, CITY } from '../world/CityGenerator.js';
 import { createAtlas } from '../world/Textures.js';
-import { B } from '../world/Blocks.js';
+import { B, SOLID, LASER_PROOF } from '../world/Blocks.js';
 import { ChunkRenderer } from '../world/ChunkRenderer.js';
 import { Sky } from '../world/Sky.js';
 import { createOcean } from '../world/Ocean.js';
@@ -115,6 +115,7 @@ export class Game {
     this.flightFX = new FlightFX(this.scene, this.particles, this.world);
     this.applySkin(this.settings.skin);
     this.player.onSonicBoom = () => this.sonicBoom();
+    this.player.onHeroLanding = (speed) => this.heroLanding(speed);
     this.meters = new Meters();
     this.player.allowed = (name) => this.allowed(name);
     this.player.canBoost = (already) => (this.player.boosting || already ? this.meters.speed > 0 : this.meters.speed > 12);
@@ -253,6 +254,37 @@ export class Game {
           if ((b >= B.GLASS_BLUE && b <= B.GLASS_DARK) || b === B.DOOR) w.edit(bx, by, bz, B.AIR);
         }
       }
+    }
+  }
+
+  /** A long fall ends in a superhero landing: a thud, a little crater, a small shove. */
+  heroLanding(speed) {
+    const p = this.player.pos;
+    const k = Math.min(1, (speed - 30) / 70); // 0 at a modest drop, 1 at terminal velocity
+    this.audio.play('land');
+    this.rig.shake = Math.max(this.rig.shake, 0.25 + k * 0.3);
+    this.effects.dust(tmpV.set(p.x, p.y + 0.1, p.z), 22, 1.8);
+    this.effects.shockwave(tmpV.set(p.x, p.y + 0.15, p.z), 2.5 + k * 1.5);
+    this.addDanger(p, 8, 1);
+    // cracks in the pavement right under the impact
+    const w = this.world;
+    const x = Math.floor(p.x), y = Math.floor(p.y - 0.5), z = Math.floor(p.z);
+    for (const [dx, dz] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      if (dx || dz ? Math.random() < 0.5 : true) {
+        const b = w.get(x + dx, y, z + dz);
+        if (SOLID[b] && !LASER_PROOF.has(b) && b !== B.WATER && b !== B.ICE) w.edit(x + dx, y, z + dz, B.SCORCH);
+      }
+    }
+    // small area hit, only right next to him
+    const r = 3.2;
+    for (const e of this.entities.query(tmpV.set(p.x, p.y + 0.5, p.z), r, (x) => !x.carried && x.alive)) {
+      const c = e.centerInto(new THREE.Vector3());
+      const d = Math.hypot(c.x - p.x, c.z - p.z);
+      if (d > r) continue;
+      const f = 1 - d / r;
+      const dir = new THREE.Vector3(c.x - p.x, 0, c.z - p.z).normalize();
+      const dealt = e.damage((8 + 10 * k) * (0.5 + f * 0.5), { type: 'impact', knock: dir.multiplyScalar(6 * f * Math.max(1, e.mass)).setY(4 * f * Math.max(1, e.mass)), source: this.player });
+      if (dealt > 0) this.markers.damageNumber(c, dealt, '#ffd34d');
     }
   }
 
@@ -532,6 +564,9 @@ export class Game {
       carrying: !!held,
       carryHeavy: held?.carryHeavy,
       laser: this.abilities.laser.active,
+      dive: p.diving ? Math.min(1, (-p.vel.y - 16) / 40) : 0,
+      flare: p.flare,
+      landT: p.landT,
     });
 
     if (this.cutscene) this.updateCutscene(realDt);
