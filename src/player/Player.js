@@ -78,6 +78,7 @@ export class Player extends Body {
         dz /= len;
       }
       const vert = (input.isDown('jump') ? 1 : 0) - (input.isDown('descend') ? 1 : 0);
+      this.sprinting = false; // on-foot super speed ends when you take off, so the SPEED bar can refill
       this.boosting = input.isDown('boost') && iz > 0 && this.allowed('boost') && this.canBoost();
       this.updateSupersonic(dt);
       const speed = this.supersonic ? MOVE.supersonic : this.boosting ? MOVE.boost : MOVE.fly;
@@ -88,7 +89,6 @@ export class Player extends Body {
     } else {
       this.boosting = false;
       this.supersonic = false;
-      if (this.flying) this.sprinting = false;
       this.boostTime = 0;
       // Shift on foot: super speed (if the SPEED bar allows), otherwise a normal run
       const wantsRun = input.isDown('boost') && (ix || iz);
