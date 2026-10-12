@@ -21,6 +21,9 @@ class GameEvent {
     this.entities = [];
     this.zones = [];
     this.tag = this.id;
+    // how it's marked: ground events get the light beam; fires and drones get their own look
+    this.beacon = true;
+    this.pinKind = 'event';
   }
 
   add(e) {
@@ -132,6 +135,8 @@ class BuildingFire extends GameEvent {
     this.title = 'Building fire';
     this.desc = 'A building is on fire! Put it out and rescue anyone on the roof.';
     this.timeLimit = 200;
+    this.beacon = false; // the smoke plume and flame marker show where it is
+    this.pinKind = 'fire';
     const g = game;
     const pts = facadePoints(g.world, building, 7, CITY.G + 3, Math.min(building.top - 2, CITY.G + 30));
     for (const p of pts) g.fires.ignite(p.pos, { intensity: 1, size: 1.2, spread: true, tag: this.tag, persistent: true });
@@ -172,6 +177,8 @@ class DroneAttack extends GameEvent {
     super(game, pos);
     this.title = 'Drone attack';
     this.desc = 'Rogue drones are attacking people!';
+    this.beacon = false; // each drone gets red target brackets instead
+    this.pinKind = 'drone';
     const g = game;
     const victims = [];
     for (let i = 0; i < 4; i++) {
@@ -298,7 +305,7 @@ export class EventDirector {
     for (const ev of [...this.events]) {
       ev.update(dt);
       if (ev.status === 'active') {
-        g.markers.setPin(ev.id, ev.pinPos(), ev.title, 'event');
+        g.markers.setPin(ev.id, ev.pinPos(), ev.title, ev.pinKind);
         continue;
       }
       if (ev.status === 'done') {

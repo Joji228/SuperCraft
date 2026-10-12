@@ -556,6 +556,7 @@ export class Game {
     cam.updateMatrixWorld();
     this.markers.update(realDt, p.pos);
     this.abilities.lockOn.updateMarker();
+    this.markers.setBrackets(this.droneTargets());
     this.hud.setGuide(this.guideTarget(), this.rig.yaw, p.pos);
     const mk = [...(this.mode?.markers?.() || [])];
     for (const e of this.entities.list) {
@@ -580,6 +581,21 @@ export class Game {
       particles: this.particles.count,
     });
     return p.pos;
+  }
+
+  /** Hostile drones worth bracketing: part of an emergency or mission, nearby, not already locked on. */
+  droneTargets() {
+    const out = this.tmpDrones || (this.tmpDrones = []);
+    out.length = 0;
+    if (this.cutscene) return out;
+    const p = this.player.pos;
+    const locked = this.abilities.lockOn.target;
+    for (const e of this.entities.list) {
+      if (e.kind !== 'drone' || e.removed || !e.alive || e === locked || !e.persistent) continue;
+      if (e.pos.distanceToSquared(p) > 140 * 140) continue;
+      out.push({ pos: e.centerInto(new THREE.Vector3()), size: 1.6 });
+    }
+    return out;
   }
 
   /** What the red guide arrow at the top of the screen points at: the main objective. */

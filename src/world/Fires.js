@@ -1,6 +1,7 @@
 // Fires: particle flames + smoke, a few shared point lights, damage nearby,
 // slow spreading, and extinguishing by super breath.
 import * as THREE from 'three';
+import { CITY } from './CityGenerator.js';
 
 const MAX_FIRES = 80;
 const LIGHTS = 3;
@@ -18,6 +19,37 @@ export class Fires {
       this.lights.push(l);
     }
     this.tmp = new THREE.Vector3();
+    this.plumes = new Map(); // tag -> { f: highest fire, acc }
+  }
+
+  /**
+   * A tall column of dark smoke over every burning building (one per fire group,
+   * from its highest flame), so you can spot the blaze from across the city.
+   */
+  updatePlumes(dt) {
+    const tops = new Map();
+    for (const f of this.list) {
+      if (!f.tag || f.intensity <= 0 || f.pos.y < CITY.G + 4) continue;
+      const t = tops.get(f.tag);
+      if (!t || f.pos.y > t.pos.y) tops.set(f.tag, f);
+    }
+    const p = this.game.particles;
+    for (const [tag, f] of tops) {
+      const pl = this.plumes.get(tag) || { acc: 0 };
+      this.plumes.set(tag, pl);
+      pl.acc += dt * 14;
+      while (pl.acc >= 1) {
+        pl.acc -= 1;
+        const g = 0.16 + Math.random() * 0.14;
+        p.emit({
+          x: f.pos.x + (Math.random() - 0.5) * 2.5, y: f.pos.y + 1.5, z: f.pos.z + (Math.random() - 0.5) * 2.5,
+          vx: (Math.random() - 0.5) * 1.2 + 0.8, vy: 7 + Math.random() * 3, vz: (Math.random() - 0.5) * 1.2,
+          life: 7 + Math.random() * 3, size: 3 + Math.random() * 1.5, grow: 4, alpha: 0.8,
+          r: g, g, b: g + 0.02, drag: 0.1,
+        });
+      }
+    }
+    for (const tag of this.plumes.keys()) if (!tops.has(tag)) this.plumes.delete(tag);
   }
 
   /**
@@ -143,6 +175,7 @@ export class Fires {
     }
     for (const [np, f] of spawn) this.ignite(np, { intensity: 0.5, spread: true, tag: f.tag, size: f.size * 0.9 });
     this.cleanup();
+    this.updatePlumes(dt);
     this.updateLights(camPos);
     if (this.list.length) {
       const near = this.nearest(camPos);

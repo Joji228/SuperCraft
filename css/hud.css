@@ -1049,3 +1049,67 @@ body.in-play .fullscreen-btn {
 body.booting .fullscreen-btn {
   display: none;
 }
+
+/* ---------- objective markers by kind: flames for fires, red brackets for drones ---------- */
+
+.pin-fire .pin-icon {
+  width: 22px;
+  height: 28px;
+  border: none;
+  transform: none;
+  background: linear-gradient(#fff3a0, #ffb02e 45%, #ff5a1a 75%, #c8200a);
+  clip-path: polygon(50% 0, 64% 22%, 80% 12%, 92% 42%, 100% 66%, 88% 92%, 62% 100%, 38% 100%, 12% 92%, 0 66%, 10% 40%, 26% 30%, 34% 48%);
+  box-shadow: none;
+  animation: pin-bob 1s ease-in-out infinite, flicker 0.18s steps(2) infinite;
+}
+
+@keyframes flicker {
+  50% {
+    filter: brightness(1.25);
+  }
+}
+
+.pin-fire .pin-label:not(:empty) {
+  color: #ffb36b;
+}
+
+.pin-fire.off .pin-icon {
+  background: #ff7a2a;
+  filter: drop-shadow(0 0 6px rgba(255, 122, 42, 0.9));
+}
+
+.pin-drone .pin-icon {
+  background: #ff4d4d;
+  box-shadow: 0 0 12px #ff4d4d;
+}
+
+.pin-drone .pin-label:not(:empty) {
+  color: #ff8a7a;
+}
+
+.pin-drone.off .pin-icon {
+  background: #ff4d4d;
+  filter: drop-shadow(0 0 6px rgba(255, 77, 77, 0.9));
+}
+
+.target-brackets {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  --size: 40px;
+  --c: #ff5a4a;
+  width: var(--size);
+  height: var(--size);
+  background:
+    linear-gradient(var(--c), var(--c)) top left / 28% 2px no-repeat,
+    linear-gradient(var(--c), var(--c)) top left / 2px 28% no-repeat,
+    linear-gradient(var(--c), var(--c)) top right / 28% 2px no-repeat,
+    linear-gradient(var(--c), var(--c)) top right / 2px 28% no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom left / 28% 2px no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom left / 2px 28% no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom right / 28% 2px no-repeat,
+    linear-gradient(var(--c), var(--c)) bottom right / 2px 28% no-repeat;
+  filter: drop-shadow(0 0 3px rgba(255, 60, 40, 0.9));
+  opacity: 0.9;
+}

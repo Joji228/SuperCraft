@@ -23,6 +23,33 @@ export class Markers {
     this.pins = new Map(); // id -> { el, pos, label, kind }
     this.acc = new Map(); // entity -> accumulated small damage (laser)
     this.v = new THREE.Vector3();
+    this.brackets = []; // red target brackets around hostile drones
+  }
+
+  /**
+   * Red corner brackets around each target in `list` ({ pos, size }), sized to how big
+   * it looks on screen. Off-screen targets get none (their pin arrow covers that).
+   */
+  setBrackets(list) {
+    let n = 0;
+    for (const t of list) {
+      const s = this.project(t.pos);
+      if (s.behind || s.x < 0 || s.y < 0 || s.x > s.w || s.y > s.h) continue;
+      let b = this.brackets[n];
+      if (!b) {
+        b = document.createElement('div');
+        b.className = 'target-brackets';
+        this.layer.appendChild(b);
+        this.brackets.push(b);
+      }
+      const dist = Math.max(3, t.pos.distanceTo(this.camera.position));
+      const px = Math.max(26, Math.min(120, (t.size * s.h * 0.9) / dist));
+      b.style.display = 'block';
+      b.style.setProperty('--size', px + 'px');
+      b.style.transform = `translate(${s.x}px, ${s.y}px) translate(-50%, -50%)`;
+      n++;
+    }
+    for (let i = n; i < this.brackets.length; i++) this.brackets[i].style.display = 'none';
   }
 
   damageNumber(pos, amount, color = '#ffffff') {
@@ -90,6 +117,7 @@ export class Markers {
 
   clear() {
     this.clearPins();
+    this.setBrackets([]);
     for (const n of this.numbers) n.el.style.display = 'none';
     this.acc.clear();
   }

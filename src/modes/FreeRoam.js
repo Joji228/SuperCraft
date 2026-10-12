@@ -148,12 +148,23 @@ export class FreeRoam {
     return out;
   }
 
-  /** Light beam over the nearest emergency (or the Tyrant during that fight). */
+  /** Light beam over the nearest ground-level emergency (or the Tyrant during that fight). */
   beaconPos() {
     if (this.tyrant && this.tyrant.alive && this.tyrant.state !== 'drop') return this.tyrant.pos.clone();
+    return this.nearestEvent(true);
+  }
+
+  /** The guide arrow points at the nearest emergency of any kind. */
+  guidePos() {
+    if (this.tyrant && this.tyrant.alive && this.tyrant.state !== 'drop') return this.tyrant.pos.clone();
+    return this.nearestEvent(false);
+  }
+
+  nearestEvent(beaconOnly) {
     const p = this.game.player.pos;
     let best = null, bd = Infinity;
     for (const ev of this.director.events) {
+      if (beaconOnly && !ev.beacon) continue;
       const d = ev.pos.distanceTo(p);
       if (d < bd) {
         bd = d;

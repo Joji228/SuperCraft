@@ -140,6 +140,15 @@ class Objective {
     if (d.type === 'protect') this.done = true;
   }
 
+  /** Marker style: flames for fires, red for drones and bosses, gold otherwise. */
+  pinKind() {
+    const d = this.def;
+    if (d.type === 'extinguish') return 'fire';
+    if (d.type === 'defeat' || (d.type === 'custom' && d.tag)) return 'boss';
+    if (d.type === 'destroy' && this.run.game.entities.list.some((e) => e.tags.has(d.tag) && e.kind === 'drone')) return 'drone';
+    return 'objective';
+  }
+
   /** Where to put the HUD pin for this objective (or null). */
   pin() {
     const g = this.run.game;
@@ -245,8 +254,7 @@ export class MissionRun {
     // pins
     this.objectives.forEach((o, i) => {
       const p = o.pin();
-      const boss = o.def.type === 'defeat' || (o.def.type === 'custom' && o.def.tag);
-      if (p) g.markers.setPin('obj' + i, p, o.def.pinLabel || '', boss ? 'boss' : 'objective');
+      if (p) g.markers.setPin('obj' + i, p, o.def.pinLabel || '', o.pinKind());
     });
 
     // HUD
