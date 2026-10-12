@@ -10,7 +10,7 @@ export const MOVE = {
   sprint: 36, // super speed on foot (Shift), uses the SPEED bar
   jump: 12.5,
   gravity: 32,
-  fly: 26.5,
+  fly: 37.5, // about 135 km/h cruising
   boost: 62,
   supersonic: 75, // after the sonic boom
   boomDelay: 1.7, // seconds of boosting before breaking the sound barrier
