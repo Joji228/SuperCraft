@@ -42,6 +42,42 @@ function heroStart(p, yaw = 0) {
   return { x: p.x, y: p.y, z: p.z, yaw };
 }
 
+/** Air all around a point (for the hero and the camera behind them). */
+function clearAround(w, x, y, z, r) {
+  for (let dy = -1; dy <= 2; dy++) for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) if (w.get(Math.floor(x + dx), Math.floor(y + dy), Math.floor(z + dz)) !== B.AIR) return false;
+  return true;
+}
+
+/**
+ * A flying start about `dist` metres from `target` at `height` above the street, from
+ * which the camera can actually see the target. Tries the preferred side first (an
+ * angle around the target), then swings round, moves closer/further and climbs.
+ */
+function clearStart(g, target, dist, height, prefer) {
+  const w = g.world;
+  const look = V(target.x, target.y + 3, target.z);
+  for (const up of [0, 12, 24, 40]) {
+    for (let i = 0; i < 16; i++) {
+      const a = prefer + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * (Math.PI / 8);
+      for (const k of [1, 0.75, 1.3]) {
+        const s = V(target.x + Math.sin(a) * dist * k, G + height + up, target.z + Math.cos(a) * dist * k);
+        // face a little to the left of the target so the hero doesn't block it on screen
+        const yaw = Math.atan2(-(look.x - s.x), -(look.z - s.z)) + 0.28;
+        const cam = V(s.x + Math.sin(yaw) * 8, s.y + 2.5, s.z + Math.cos(yaw) * 8);
+        if (!clearAround(w, s.x, s.y, s.z, 1) || !clearAround(w, cam.x, cam.y, cam.z, 1)) continue;
+        const d = look.clone().sub(cam);
+        const len = d.length();
+        d.divideScalar(len);
+        if (w.raycast(cam.x, cam.y, cam.z, d.x, d.y, d.z, len - 2)) continue;
+        const st = heroStart(s, yaw);
+        st.pitch = Math.max(-0.5, Math.atan2(look.y - s.y, Math.hypot(look.x - s.x, look.z - s.z)) * 0.8); // tilt down towards it
+        return st;
+      }
+    }
+  }
+  return heroStart(V(target.x, G + height + 40, target.z + dist), 0);
+}
+
 /**
  * The ring course: a diagonal climb out of the plaza down the open avenue, then a
  * gentle glide east along the open river. Each ring is in plain view from the one
@@ -225,10 +261,10 @@ export const MISSIONS = [
     timeOfDay: 0.42,
     population: true,
     rating: { par: 240, damage: 40, lostMax: 0 },
-    anchors() {
+    anchors(g) {
       const [x0, z0] = lotOrigin(6, 2);
       const front = V(x0 + 16, G, z0 + 31 + 4);
-      return { start: heroStart(V(x0 + 16, G + 30, z0 + 80), 0), bank: front, door: V(x0 + 16, G, z0 + 29) };
+      return { start: clearStart(g, front, 40, 22, 0), bank: front, door: V(x0 + 16, G, z0 + 29) };
     },
     stages: [
       {
@@ -322,11 +358,11 @@ export const MISSIONS = [
     timeOfDay: 0.3,
     population: true,
     rating: { par: 300, damage: 40, lostMax: 0 },
-    anchors() {
+    anchors(g) {
       const bx = CITY.O + CITY.BRIDGE_ROAD * CITY.CELL;
       const [rz0, rz1] = riverZ();
       return {
-        start: heroStart(V(bx + 4, G + 25, rz0 - 40), Math.PI),
+        start: clearStart(g, V(bx + 4, G, (rz0 + rz1) / 2), 45, 20, Math.PI),
         bx,
         rz0,
         rz1,
@@ -424,9 +460,9 @@ export const MISSIONS = [
     timeOfDay: 0.74,
     population: true,
     rating: { par: 420, damage: 60, lostMax: 1 },
-    anchors() {
+    anchors(g) {
       const pz = plaza();
-      return { start: heroStart(V(pz.cx, G + 20, pz.cz + 60), 0), arena: { x: pz.cx, z: pz.cz, r: 20 }, center: V(pz.cx, G, pz.cz) };
+      return { start: clearStart(g, V(pz.cx, G + 6, pz.cz - 13), 55, 20, 0), arena: { x: pz.cx, z: pz.cz, r: 20 }, center: V(pz.cx, G, pz.cz) };
     },
     stages: [
       {

@@ -194,6 +194,7 @@ export class MissionRun {
     def.setup?.(this.ctx);
     const s = this.ctx.a.start;
     g.placeHero(s.x, s.y, s.z, s.yaw ?? 0);
+    if (s.pitch != null) g.rig.pitch = s.pitch;
     const ev = (name) => (e) => this.objectives.forEach((o) => o.onEvent(name, e));
     this.offs.push(
       g.events.on('defeated', ev('defeated')),
