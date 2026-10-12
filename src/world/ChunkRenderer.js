@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { meshChunk } from './ChunkMesher.js';
 import { CX, CZ, CS } from './World.js';
 
-function toGeometry(d) {
+function toGeometry(d, top) {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(d.position, 3));
   g.setAttribute('normal', new THREE.BufferAttribute(d.normal, 3, true));
@@ -11,7 +11,8 @@ function toGeometry(d) {
   g.setAttribute('color', new THREE.BufferAttribute(d.color, 3, true));
   g.setAttribute('glow', new THREE.BufferAttribute(d.glow, 1, true));
   g.setIndex(new THREE.BufferAttribute(d.index, 1));
-  g.computeBoundingSphere();
+  // the chunk's box is known, so skip three.js walking every vertex to find it
+  g.boundingSphere = new THREE.Sphere(new THREE.Vector3(CS / 2, top / 2, CS / 2), Math.hypot(CS / 2, top / 2, CS / 2));
   return g;
 }
 
@@ -70,9 +71,10 @@ export class ChunkRenderer {
       }
     }
     const data = meshChunk(this.world, cx, cz);
+    const top = this.world.chunkMaxY[i] + 2;
     const entry = { solid: null, water: null, cx: (cx + 0.5) * CS, cz: (cz + 0.5) * CS };
     if (data.solid) {
-      const m = new THREE.Mesh(toGeometry(data.solid), this.material);
+      const m = new THREE.Mesh(toGeometry(data.solid, top), this.material);
       m.position.set(cx * CS, 0, cz * CS);
       m.castShadow = this.shadows;
       m.receiveShadow = true;
@@ -82,7 +84,7 @@ export class ChunkRenderer {
       entry.solid = m;
     }
     if (data.water) {
-      const m = new THREE.Mesh(toGeometry(data.water), this.waterMaterial);
+      const m = new THREE.Mesh(toGeometry(data.water, top), this.waterMaterial);
       m.position.set(cx * CS, -0.12, cz * CS);
       m.receiveShadow = true;
       m.matrixAutoUpdate = false;
@@ -105,11 +107,13 @@ export class ChunkRenderer {
 
   /** Remesh edited chunks (a few per frame) and cull by render distance. */
   update(camPos, renderDistance) {
-    let budget = this.world.dirty.size > 8 ? 6 : 2;
+    // at least one chunk a frame, more while there's time left (lots more after a big reset)
+    const start = performance.now();
+    const budgetMs = this.world.dirty.size > 8 ? 12 : 3;
     for (const i of this.world.dirty) {
-      if (budget-- <= 0) break;
       this.world.dirty.delete(i);
       this.build(i % CX, Math.floor(i / CX));
+      if (performance.now() - start > budgetMs) break;
     }
     const r = renderDistance + CS * 0.75;
     const r2 = r * r;
