@@ -55,6 +55,9 @@ const faceTex = () =>
     g.fillRect(5, 4, 2, 1);
   });
 
+// melee moves: how long each part of the combo takes (seconds)
+const MELEE = { 1: { dur: 0.22 }, 2: { dur: 0.38 }, 3: { dur: 0.45 } };
+
 const mat = (o) => new THREE.MeshLambertMaterial(typeof o === 'number' ? { color: o } : o);
 
 function part(w, h, d, material, x = 0, y = 0, z = 0) {
@@ -145,28 +148,71 @@ export class TetherModel {
     this.punchCombo = combo;
   }
 
-  /** s: { pos, yaw, mode, hSpeed, vy, carrying, landT, swing, swingSide, zip, climb, speed } */
+  /**
+   * s: { pos, yaw, mode, hSpeed, vy, carrying, landT, swing, swingSide, swingVariant,
+   *      webOut (0..1 while the web is flying), trick { type, t, dur, side }, skydive,
+   *      zip, climb, shotT }
+   */
   update(dt, s) {
     this.time += dt;
     this.root.position.copy(s.pos);
     this.yaw = s.yaw;
     this.root.rotation.set(0, s.yaw, 0);
 
-    let tilt = 0, roll = 0, crouch = 0;
+    let tilt = 0, roll = 0, crouch = 0, twist = 0;
     let armL = 0, armR = 0, spreadL = 0.06, spreadR = 0.06, legL = 0, legR = 0;
+    let spinX = 0, spinY = 0, spinZ = 0; // whole-body spins for tricks and kicks
 
     if (s.swing) {
-      // one arm up holding the line, the other out for balance, knees tucked;
-      // lean into the swing and roll towards the anchor side
+      // one arm up holding the line, the other out for balance; lean into the swing and
+      // roll towards the anchor side. Now and then a different pose.
       const up = s.swingSide < 0 ? 'L' : 'R';
-      armR = up === 'R' ? -3.0 : -0.5;
-      armL = up === 'L' ? -3.0 : -0.5;
+      const lineArm = s.webOut < 1 ? -2.2 - 0.8 * s.webOut : -3.0; // throwing, then holding
+      armR = up === 'R' ? lineArm : -0.5;
+      armL = up === 'L' ? lineArm : -0.5;
       spreadR = up === 'R' ? -0.25 : 0.7;
       spreadL = up === 'L' ? -0.25 : 0.7;
       legL = -1.1;
       legR = -0.35;
       tilt = Math.max(-0.5, Math.min(0.9, s.vy * -0.02 + 0.25));
       roll = (s.swingSide || 0) * 0.35;
+      const free = up === 'R' ? 'L' : 'R';
+      if (s.swingVariant === 1) {
+        // legs together, stretched out ahead like a diver
+        legL = legR = -1.5;
+        tilt -= 0.35;
+      } else if (s.swingVariant === 2) {
+        // turned side-on to the swing, free arm pointing the way
+        twist = (s.swingSide || 1) * 0.9;
+        if (free === 'L') { armL = -1.6; spreadL = 0.9; } else { armR = -1.6; spreadR = 0.9; }
+        legL = -0.6;
+        legR = 0.3;
+      } else if (s.swingVariant === 3) {
+        // one leg kicked out, free arm thrown back
+        legL = -1.8;
+        legR = 0.5;
+        if (free === 'L') { armL = 0.9; spreadL = 0.6; } else { armR = 0.9; spreadR = 0.6; }
+      }
+    } else if (s.trick) {
+      // a 360 after letting go: tucked tight while spinning
+      const k = Math.min(1, s.trick.t / s.trick.dur);
+      const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      armL = armR = -0.9;
+      spreadL = spreadR = 0.4;
+      legL = -1.6;
+      legR = -1.4;
+      tilt = 0.2;
+      if (s.trick.type === 'flip') spinX = e * Math.PI * 2;
+      else if (s.trick.type === 'spin') spinY = e * Math.PI * 2 * (s.trick.side || 1);
+      else spinZ = e * Math.PI * 2 * (s.trick.side || 1);
+    } else if (s.skydive) {
+      // dropping chest-first, arms spread wide, legs trailing
+      armL = armR = -0.25;
+      spreadL = spreadR = 1.45;
+      legL = 0.35;
+      legR = 0.2;
+      tilt = 1.25;
+      roll = Math.sin(this.time * 2.3) * 0.08;
     } else if (s.zip) {
       // pulled along the web: both arms forward, body stretched out
       armL = armR = -1.7;
@@ -241,28 +287,48 @@ export class TetherModel {
       spreadR = 0.02;
     }
 
+    // melee: a flowing three-move sequence (jab, spinning hook kick, flip kick)
     this.punchT += dt;
     let fast = '';
-    if (this.punchT < 0.22) {
-      const k = Math.sin((this.punchT / 0.22) * Math.PI);
-      if (this.punchCombo === 3) {
-        // flying kick
-        legL = -1.6 * k;
-        tilt = -0.35 * k;
-      } else if (this.punchCombo === 2) {
-        armL = -1.6 * k;
-        fast = 'L';
+    const P = MELEE[this.punchCombo] || MELEE[1];
+    if (this.punchT < P.dur) {
+      const k = this.punchT / P.dur;
+      const arc = Math.sin(k * Math.PI);
+      const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      if (this.punchCombo === 2) {
+        // spinning hook kick: a full turn with the right leg swinging out
+        spinY = e * Math.PI * 2;
+        legR = -1.5 * arc;
+        legL = 0.2;
+        armL = armR = -0.6;
+        spreadL = spreadR = 0.9 * arc + 0.2;
+        tilt = -0.25 * arc;
+        crouch = 0.1 * arc;
+        fast = 'legs';
+      } else if (this.punchCombo === 3) {
+        // front flip kick: tuck, flip, both feet driving out at the end
+        spinX = e * Math.PI * 2;
+        legL = legR = k < 0.6 ? -1.4 : -1.4 + (k - 0.6) * 2.5;
+        armL = armR = -1.0;
+        spreadL = spreadR = 0.5;
+        fast = 'legs';
       } else {
-        armR = -1.6 * k;
+        // a quick jab with a twist of the shoulders
+        armR = -1.65 * arc;
+        spreadR = 0.02;
+        armL = -0.5;
+        twist = -0.35 * arc;
+        legL = -0.4 * arc;
         fast = 'R';
       }
     }
 
     this.tilt = damp(this.tilt, tilt, s.landT > 0 ? 25 : 9, dt);
     this.roll = damp(this.roll, roll, 6, dt);
+    this.twist = damp(this.twist || 0, twist, 10, dt);
     this.crouch = damp(this.crouch, crouch, s.landT > 0 ? 40 : 10, dt);
     this.pivot.position.y = 1.0 - this.crouch;
-    this.pivot.rotation.set(this.tilt, 0, this.roll, 'XYZ');
+    this.pivot.rotation.set(this.tilt + spinX, this.twist + spinY, this.roll + spinZ, 'YXZ');
     this.head.rotation.x = damp(this.head.rotation.x, -this.tilt * 0.6, 10, dt);
 
     const L = 13;
@@ -270,7 +336,8 @@ export class TetherModel {
     this.armR.rotation.x = damp(this.armR.rotation.x, armR, fast === 'R' || s.shotT < 0.25 ? 60 : L, dt);
     this.armL.rotation.z = damp(this.armL.rotation.z, spreadL, L, dt);
     this.armR.rotation.z = damp(this.armR.rotation.z, -spreadR, L, dt);
-    this.legL.rotation.x = damp(this.legL.rotation.x, legL, this.punchT < 0.22 ? 60 : L, dt);
-    this.legR.rotation.x = damp(this.legR.rotation.x, legR, L, dt);
+    const legRate = fast === 'legs' || s.trick ? 40 : L;
+    this.legL.rotation.x = damp(this.legL.rotation.x, legL, legRate, dt);
+    this.legR.rotation.x = damp(this.legR.rotation.x, legR, legRate, dt);
   }
 }

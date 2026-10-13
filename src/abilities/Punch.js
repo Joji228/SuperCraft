@@ -44,14 +44,35 @@ export class Punch {
     // a bigger hero hits harder and a little slower, from higher up and further out
     const kit = g.heroKit;
     const power = kit?.punchPower ?? 1;
-    const knockMul = kit?.punchKnock ?? 1;
-    const big = !!kit;
-    this.cooldown = step.cooldown * (big ? 1.35 : 1);
+    // (Tether keeps the first hits light so the target stays in reach for the combo)
+    const knockMul = kit?.punchKnockSeq?.[this.combo - 1] ?? kit?.punchKnock ?? 1;
+    const big = !!kit && !kit.lunge; // Granite: a big, heavy hitter
+    this.cooldown = kit?.lunge ? [0.2, 0.32, 0.45][this.combo - 1] : step.cooldown * (big ? 1.35 : 1);
     this.window = 0.75;
     p.aimTimer = 0.45;
     g.hero.punch(this.combo);
     g.audio.play('whoosh');
+    // an agile hero dashes in to an enemy a few metres away, then strikes
+    if (kit?.lunge) {
+      const target = g.entities.raycast(new THREE.Vector3(p.pos.x, p.pos.y + 1.2, p.pos.z), aim.dir, 7, (e) => e.punchable && !e.carried && e.team === 'enemy' && e.alive)?.entity ||
+        g.entities.nearest(p.pos, 6, (e) => e.team === 'enemy' && e.alive && e.punchable && !e.carried && (e.pos.x - p.pos.x) * aim.dir.x + (e.pos.z - p.pos.z) * aim.dir.z > 0);
+      if (target && Math.hypot(target.pos.x - p.pos.x, target.pos.z - p.pos.z) > 1.8) {
+        const combo = this.combo;
+        kit.dashTo(target, () => {
+          const to = new THREE.Vector3(target.pos.x - p.pos.x, target.pos.y + target.height * 0.5 - (p.pos.y + 1.35), target.pos.z - p.pos.z).normalize();
+          this.strike({ dir: to }, COMBO[combo - 1], power, knockMul, false, combo);
+        });
+        return;
+      }
+    }
+    this.strike(aim, step, power, knockMul, big, this.combo);
+  }
 
+  /** Land the hit: enemies in reach take damage and knock-back; otherwise the block in front. */
+  strike(aim, step, power, knockMul, big, combo) {
+    const g = this.game;
+    const p = g.player;
+    this.combo = combo;
     const dir = aim.dir;
     this.origin.set(p.pos.x, p.pos.y + (big ? 1.8 : 1.35), p.pos.z);
     this.center.copy(this.origin).addScaledVector(dir, big ? 1.9 : 1.5);

@@ -26,7 +26,7 @@ export const HEROES = [
     name: 'Tether',
     alias: 'The web runner',
     tagline: 'Swings across the skyline on silk lines',
-    powers: ['Hold Space in the air to web-swing', 'Q: web zip', 'RMB: web shot that pins enemies', 'Shift + W: run up walls'],
+    powers: ['Space in the air: throw a web and swing', 'Q: web zip', 'RMB: web ball that wraps enemies up', 'Flowing kick combos', 'Shift + W: run up walls'],
     playable: true,
     note: 'Free Roam',
   },
