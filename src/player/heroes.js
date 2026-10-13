@@ -26,9 +26,9 @@ export const HEROES = [
     name: 'Tether',
     alias: 'The web runner',
     tagline: 'Swings across the skyline on silk lines',
-    powers: ['Web-swing between buildings', 'Web shots that pin enemies', 'Wall running'],
-    playable: false,
-    next: true,
+    powers: ['Hold Space in the air to web-swing', 'Q: web zip', 'RMB: web shot that pins enemies', 'Shift + W: run up walls'],
+    playable: true,
+    note: 'Free Roam',
   },
   {
     id: 'forge',
@@ -37,6 +37,7 @@ export const HEROES = [
     tagline: 'A flying suit of armour with thrusters on hands and feet',
     powers: ['Thruster flight', 'Repulsor blasts from the palms', 'Shoulder micro-missiles'],
     playable: false,
+    next: true,
   },
   {
     id: 'flux',

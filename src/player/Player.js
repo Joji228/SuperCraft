@@ -48,6 +48,7 @@ export class Player extends Body {
     this.charging = false;
     this.wading = false;
     this.noTrail = false; // no super-speed running trail
+    this.modeLabel = null; // HUD mode text set by a hero kit (e.g. SWINGING)
     // hooks set by the game: locked powers (tutorial) and the speed bar for boosting
     this.allowed = () => true;
     this.canBoost = () => true;

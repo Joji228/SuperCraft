@@ -138,6 +138,11 @@ export class HUD {
         hint: '<b>WASD</b> move &nbsp; <b>SPACE</b> jump &nbsp; <b>F</b> fly &nbsp; <b>SHIFT</b> boost<br>Flying: <b>SPACE</b> up &nbsp; <b>C/CTRL</b> down<br><b>V</b> camera &nbsp; <b>ESC</b> pause &nbsp; <b>F3</b> debug',
         heat: true,
       },
+      tether: {
+        ab: { boost: ['SHIFT', 'Run'], punch: ['LMB', 'Punch'], senses: ['SPACE', 'Swing'], laser: ['RMB', 'Web'], breath: ['Q', 'Zip'], carry: ['G', 'Carry'], fly: null },
+        hint: 'In the air, hold <b>SPACE</b> to swing, let go to fling<br><b>Q</b> web zip &nbsp; <b>RMB</b> web shot &nbsp; <b>LMB</b> punch<br><b>SHIFT</b>+<b>W</b> into a wall to run up it',
+        heat: false,
+      },
       granite: {
         ab: { boost: ['SHIFT', 'Run'], punch: ['LMB', 'Punch'], laser: ['SPACE', 'Leap'], breath: ['Q', 'Clap'], senses: ['RMB', 'Smash'], carry: ['G', 'Carry'], fly: null },
         hint: '<b>WASD</b> move &nbsp; <b>SHIFT</b> run &nbsp; <b>LMB</b> punch<br>Hold <b>SPACE</b> to charge a leap, let go to jump<br><b>RMB</b> smash (in the air: dive slam) &nbsp; <b>Q</b> clap',
@@ -333,7 +338,7 @@ export class HUD {
       this.carHp.classList.toggle('low', hp < 0.35);
       this.speedoEl.classList.toggle('nitro', drv.nitro);
     }
-    const mode = driving ? (drv.nitro ? 'NITRO' : 'DRIVING') : player.supersonic ? 'SUPERSONIC' : player.boosting ? 'BOOST' : player.flying ? 'FLYING' : player.diving ? 'DIVING' : 'ON FOOT';
+    const mode = driving ? (drv.nitro ? 'NITRO' : 'DRIVING') : player.modeLabel ? player.modeLabel : player.supersonic ? 'SUPERSONIC' : player.boosting ? 'BOOST' : player.flying ? 'FLYING' : player.diving ? 'DIVING' : 'ON FOOT';
     if (mode !== this.lastMode) {
       this.mode.textContent = mode;
       this.mode.className = 'hud-mode mode-' + mode.toLowerCase().replace(' ', '-');

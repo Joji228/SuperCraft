@@ -22,6 +22,8 @@ import { FirstPersonArms } from '../player/FirstPersonArms.js';
 import { Driving } from '../player/Driving.js';
 import { GraniteModel } from '../heroes/granite/GraniteModel.js';
 import { GraniteKit, GRANITE } from '../heroes/granite/GraniteKit.js';
+import { TetherModel } from '../heroes/tether/TetherModel.js';
+import { TetherKit, TETHER } from '../heroes/tether/TetherKit.js';
 import { skinById } from '../player/skins.js';
 import { Meters } from '../abilities/Meters.js';
 import { Abilities } from '../abilities/Abilities.js';
@@ -108,7 +110,7 @@ export class Game {
     this.ocean = createOcean(this.scene);
     this.player = new Player(this.world);
     // one model per hero; this.hero is whichever is in play
-    this.models = { sky: new HeroModel(), granite: new GraniteModel() };
+    this.models = { sky: new HeroModel(), granite: new GraniteModel(), tether: new TetherModel() };
     for (const m of Object.values(this.models)) {
       m.setVisible(false);
       this.scene.add(m.root);
@@ -206,26 +208,28 @@ export class Game {
   setHero(id) {
     if (!this.models[id]) id = 'sky';
     const p = this.player;
-    if (!this.graniteKit) this.graniteKit = new GraniteKit(this);
+    if (!this.kits) this.kits = { granite: new GraniteKit(this), tether: new TetherKit(this) };
     this.heroKit?.reset?.();
     this.hero.setVisible(false);
     this.heroId = id;
     this.hero = this.models[id];
-    this.heroKit = id === 'granite' ? this.graniteKit : null;
+    this.heroKit = this.kits[id] || null;
     const big = id === 'granite';
+    const tether = id === 'tether';
     p.halfW = big ? GRANITE.body.halfW : 0.38;
     p.height = big ? GRANITE.body.height : 1.9;
-    p.stats = big ? { ...GRANITE.stats } : { walk: 7, run: 13, sprint: 36, jump: 12.5 };
+    p.stats = big ? { ...GRANITE.stats } : tether ? { ...TETHER.stats } : { walk: 7, run: 13, sprint: 36, jump: 12.5 };
     p.chargeJump = big;
-    p.wades = big;
+    p.wades = big || tether;
+    p.modeLabel = null;
     p.stepHeight = big ? 2.01 : 1.01; // he strides up two-block ledges
     p.airControl = big ? GRANITE.airControl : 3;
     p.waterSolid = !big; // Granite sinks and wades; Aegis treats water as a floor (and hovers)
-    p.noTrail = big;
-    if (big) p.flying = false;
+    p.noTrail = big || tether;
+    if (big || tether) p.flying = false;
     this.rig.eye = big ? GRANITE.eye : 1.72;
-    this.rig.distScale = big ? GRANITE.camScale : 1;
-    const pal = big ? GRANITE.palette : null;
+    this.rig.distScale = big ? GRANITE.camScale : tether ? 1.15 : 1;
+    const pal = big ? GRANITE.palette : tether ? TETHER.palette : null;
     if (pal) {
       this.fpArms.applySkin(pal);
       this.flightFX.setPalette(pal.suit, pal.accent, pal.belt);
@@ -570,7 +574,9 @@ export class Game {
       drv.update(dt, canAct ? input : NO_INPUT, Math.abs(dx) + Math.abs(dy));
       if (drv.active && ko) drv.exit();
     } else {
-      p.update(dt, canAct ? input : NO_INPUT, this.rig.yaw, this.rig.pitch);
+      // a hero kit can take over movement for the frame (Tether swinging on a web)
+      const kitMoved = this.heroKit?.drives?.(dt, canAct ? input : NO_INPUT, canAct);
+      if (!kitMoved) p.update(dt, canAct ? input : NO_INPUT, this.rig.yaw, this.rig.pitch);
       if (p.boosting) this.meters.drainSpeed(dt);
       else if (p.sprinting) this.meters.drainSpeed(dt * 0.6); // running is cheaper than flying
       this.heroKit?.update(dt, canAct ? input : NO_INPUT, canAct);
@@ -619,6 +625,11 @@ export class Game {
       clapT: this.heroKit?.clapT ?? 9,
       smashT: this.heroKit?.smashT ?? 9,
       diveSmash: this.heroKit?.diveSmash,
+      swing: this.heroKit?.swinging,
+      swingSide: this.heroKit?.side,
+      zip: !!this.heroKit?.zip,
+      climb: this.heroKit?.climbing,
+      shotT: this.heroKit?.shotT ?? 9,
       wading: p.wading,
     });
 
@@ -659,6 +670,7 @@ export class Game {
     // HUD
     cam.updateMatrixWorld();
     this.abilities.laser.place();
+    this.heroKit?.place?.();
     this.markers.update(realDt, p.pos);
     this.abilities.lockOn.updateMarker();
     this.markers.setBrackets(this.droneTargets());
