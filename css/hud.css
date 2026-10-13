@@ -1229,3 +1229,11 @@ body.driving .crosshair {
   color: #ffd34d;
   font-weight: normal;
 }
+
+.hero-note {
+  padding: 2px 5px;
+  font-size: 7px;
+  color: #10203a;
+  background: #8fe0b0;
+  text-shadow: none;
+}

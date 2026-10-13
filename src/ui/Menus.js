@@ -20,6 +20,7 @@ const CONTROLS = [
   ['Middle mouse', 'Lock on to the target nearest the crosshair (again to release)'],
   ['T', 'Free Roam: summon the Iron Tyrant from the red plaza circle'],
   ['R', 'Free Roam: steal a car / get out (W S drive, A D steer, Shift nitro, Space handbrake, H horn)'],
+  ['Granite', 'Hold Space to charge a leap (release to jump) · Q thunder clap · punches smash walls'],
   ['V', 'Camera: close / medium / far / first person'],
   ['Esc', 'Pause'],
   ['F3', 'Debug info (FPS)'],
@@ -151,12 +152,13 @@ export class Menus {
         <img class="hero-portrait" src="${heroPortrait(h.id)}" alt="">
         <span class="hero-name">${h.name}</span>
         <span class="hero-alias">${h.alias}</span>
+        ${h.note ? `<span class="hero-note">${h.note}</span>` : ''}
         <ul class="hero-powers">${h.powers.map((p) => `<li>${p}</li>`).join('')}</ul>
       </button>`;
     }).join('');
     this.render(
       'heroes',
-      `<h2>Heroes</h2><p class="small hero-sub">More heroes are on the way. Each one plays differently in the same Brightport.</p>
+      `<h2>Heroes</h2><p class="small hero-sub">Pick who you play in Free Roam (the Campaign is always Sky Guardian). More heroes are on the way.</p>
        <div class="hero-cards">${cards}</div>
        <div class="menu"><button data-action="main">Back</button></div>`,
       'screen wide heroes',

@@ -440,6 +440,12 @@ const SOUNDS = {
     o.stop(at + dur + 0.05);
     a.noiseBurst({ dur, type: 'bandpass', freq: 600, q: 0.6, gain: 0.05, attack: dur * 0.45, dest: d });
   },
+  // Granite's thunder clap: a sharp crack over a deep boom
+  clap(a, d) {
+    a.noiseBurst({ dur: 0.12, type: 'highpass', freq: 1800, gain: 0.5, attack: 0.002, dest: d });
+    a.tone({ dur: 0.5, freq: 80, freqEnd: 32, gain: 0.7, dest: d });
+    a.noiseBurst({ t: 0.02, dur: 0.6, type: 'lowpass', freq: 700, freqEnd: 90, gain: 0.45, dest: d });
+  },
   // superhero landing: a solid but short thump with a little grit
   land(a, d) {
     a.tone({ dur: 0.32, freq: 95, freqEnd: 38, gain: 0.55, dest: d });

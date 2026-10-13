@@ -116,6 +116,31 @@ export class HUD {
     window.addEventListener('resize', () => this.resize());
   }
 
+  /** Ability bar, controls hint and meters for the hero in play. */
+  setHeroLayout(id) {
+    const LAYOUTS = {
+      sky: {
+        ab: { boost: ['SHIFT', 'Boost'], punch: ['LMB', 'Punch'], laser: ['RMB', 'Laser'], breath: ['Q', 'Breath'], senses: ['E', 'Senses'], carry: ['G', 'Carry'], fly: ['F', 'Fly'] },
+        hint: '<b>WASD</b> move &nbsp; <b>SPACE</b> jump &nbsp; <b>F</b> fly &nbsp; <b>SHIFT</b> boost<br>Flying: <b>SPACE</b> up &nbsp; <b>C/CTRL</b> down<br><b>V</b> camera &nbsp; <b>ESC</b> pause &nbsp; <b>F3</b> debug',
+        heat: true,
+      },
+      granite: {
+        ab: { boost: ['SHIFT', 'Run'], punch: ['LMB', 'Smash'], laser: ['SPACE', 'Leap'], breath: ['Q', 'Clap'], senses: null, carry: ['G', 'Carry'], fly: null },
+        hint: '<b>WASD</b> move &nbsp; <b>SHIFT</b> run &nbsp; <b>LMB</b> smash<br>Hold <b>SPACE</b> to charge a leap, let go to jump<br><b>Q</b> thunder clap &nbsp; <b>G</b> carry &nbsp; <b>V</b> camera',
+        heat: false,
+      },
+    };
+    const L = LAYOUTS[id] || LAYOUTS.sky;
+    for (const [k, el] of Object.entries(this.ab)) {
+      const v = L.ab[k];
+      el.style.display = v ? '' : 'none';
+      if (v) el.innerHTML = `<b>${v[0]}</b>${v[1]}`;
+      el.classList.remove('active', 'disabled');
+    }
+    this.hint.innerHTML = L.hint;
+    this.heatRow.style.display = L.heat ? '' : 'none';
+  }
+
   resize() {
     this.fx.width = window.innerWidth;
     this.fx.height = window.innerHeight;
@@ -324,6 +349,7 @@ export class HUD {
     this.ab.laser.classList.toggle('disabled', m.overheated);
     this.ab.breath.classList.toggle('active', ab.breath.active);
     this.ab.breath.classList.toggle('disabled', m.energy < 1);
+    game.heroKit?.hud?.(this);
 
     this.hurt = Math.max(0, this.hurt - dt * 1.2);
     this.hurtEl.style.opacity = String(Math.min(0.85, this.hurt + (m.health < 30 ? 0.25 + 0.1 * Math.sin(performance.now() / 200) : 0)));

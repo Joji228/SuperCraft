@@ -16,7 +16,7 @@ Fly over a voxel city, break the sound barrier and save Brightport.
 - 🦸 **Five powers:** flight with a sonic boom, laser eyes, freezing super breath, x-ray super senses and super strength (carry and throw cars).
 - 🏙️ **An open city** with traffic, pedestrians and random emergencies: robberies, fires, crashes and drone attacks.
 - 🎬 **A five-mission campaign** ending in a fight with a giant mech, rated with up to three stars.
-- 🦸‍♂️ **Heroes menu:** Sky Guardian today, with Granite, Tether, Forge and Flux on the way. Every texture and sound is made in code.
+- 🦸‍♂️ **Heroes menu:** Sky Guardian, and Granite in Free Roam (charged leaps, wall-smashing punches, thunder clap), with Tether, Forge and Flux on the way. Every texture and sound is made in code.
 
 <table>
 <tr>

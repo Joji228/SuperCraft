@@ -95,7 +95,7 @@ export class FlightFX {
     const d = this.dir;
 
     // ---- super-speed running trail: glowing streaks and crackling sparks ----
-    if (!player.flying && player.sprinting) {
+    if (!player.flying && player.sprinting && !player.noTrail) {
       const hs = Math.hypot(player.vel.x, player.vel.z);
       if (hs > 14) {
         const k = Math.min(1, (hs - 14) / 20);
@@ -243,7 +243,7 @@ export class FlightFX {
       this.boltTimer = 0;
     }
     const hs = Math.hypot(player.vel.x, player.vel.z);
-    const on = !player.flying && player.sprinting && hs > 18;
+    const on = !player.flying && player.sprinting && !player.noTrail && hs > 18;
     this.bolts.visible = on;
     if (!on) return;
     this.boltTimer -= dt;

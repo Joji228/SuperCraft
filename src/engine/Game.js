@@ -20,6 +20,8 @@ import { HeroModel } from '../player/HeroModel.js';
 import { CameraRig } from '../player/CameraRig.js';
 import { FirstPersonArms } from '../player/FirstPersonArms.js';
 import { Driving } from '../player/Driving.js';
+import { GraniteModel } from '../heroes/granite/GraniteModel.js';
+import { GraniteKit, GRANITE } from '../heroes/granite/GraniteKit.js';
 import { skinById } from '../player/skins.js';
 import { Meters } from '../abilities/Meters.js';
 import { Abilities } from '../abilities/Abilities.js';
@@ -104,9 +106,15 @@ export class Game {
     this.sky = new Sky(this.scene);
     this.ocean = createOcean(this.scene);
     this.player = new Player(this.world);
-    this.hero = new HeroModel();
-    this.hero.setVisible(false);
-    this.scene.add(this.hero.root);
+    // one model per hero; this.hero is whichever is in play
+    this.models = { sky: new HeroModel(), granite: new GraniteModel() };
+    for (const m of Object.values(this.models)) {
+      m.setVisible(false);
+      this.scene.add(m.root);
+    }
+    this.hero = this.models.sky;
+    this.heroId = 'sky';
+    this.heroKit = null; // extra powers of a non-default hero (Granite's leap and clap)
     this.rig = new CameraRig(this.camera, this.world, this.settings);
     this.scene.add(this.camera); // so the first-person arms (children of the camera) render
     this.fpArms = new FirstPersonArms(this.camera);
@@ -115,7 +123,7 @@ export class Game {
     this.flightFX = new FlightFX(this.scene, this.particles, this.world);
     this.applySkin('sky'); // Sky Guardian's colours (costume choice was retired for the Heroes menu)
     this.player.onSonicBoom = () => this.sonicBoom();
-    this.player.onHeroLanding = (speed) => this.heroLanding(speed);
+    this.player.onHeroLanding = (speed) => (this.heroKit?.onLand ? this.heroKit.onLand(speed) : this.heroLanding(speed));
     this.meters = new Meters();
     this.player.allowed = (name) => this.allowed(name);
     this.player.canBoost = (already) => (this.player.boosting || already ? this.meters.speed > 0 : this.meters.speed > 12);
@@ -186,7 +194,40 @@ export class Game {
   // ---------- shared gameplay services ----------
 
   allowed(name) {
-    return !this.locks.has(name);
+    return !this.locks.has(name) && !this.heroKit?.disallow.has(name);
+  }
+
+  /**
+   * Switch the playable hero: model, body size, movement, camera height and HUD.
+   * The campaign is always Sky Guardian; Free Roam uses the hero picked in the Heroes menu.
+   */
+  setHero(id) {
+    if (!this.models[id]) id = 'sky';
+    const p = this.player;
+    if (!this.graniteKit) this.graniteKit = new GraniteKit(this);
+    this.heroKit?.reset?.();
+    this.hero.setVisible(false);
+    this.heroId = id;
+    this.hero = this.models[id];
+    this.heroKit = id === 'granite' ? this.graniteKit : null;
+    const big = id === 'granite';
+    p.halfW = big ? GRANITE.body.halfW : 0.38;
+    p.height = big ? GRANITE.body.height : 1.9;
+    p.stats = big ? { ...GRANITE.stats } : { walk: 7, run: 13, sprint: 36, jump: 12.5 };
+    p.chargeJump = big;
+    p.wades = big;
+    p.stepHeight = big ? 2.01 : 1.01; // he strides up two-block ledges
+    p.waterSolid = !big; // Granite sinks and wades; Aegis treats water as a floor (and hovers)
+    p.noTrail = big;
+    if (big) p.flying = false;
+    this.rig.eye = big ? GRANITE.eye : 1.72;
+    this.rig.distScale = big ? GRANITE.camScale : 1;
+    const pal = big ? GRANITE.palette : null;
+    if (pal) {
+      this.fpArms.applySkin(pal);
+      this.flightFX.setPalette(pal.suit, pal.accent, pal.belt);
+    } else this.applySkin('sky');
+    this.hud.setHeroLayout(id);
   }
 
   /** Lock powers (tutorial). names: array of 'jump'|'fly'|'boost'|'punch'|'laser'|'breath'|'senses'|'carry' */
@@ -344,6 +385,7 @@ export class Game {
     this.mode?.end();
     this.resetSession();
     this.mode = mode;
+    this.setHero(mode instanceof MissionRun ? 'sky' : this.settings.hero);
     if (!(mode instanceof MissionRun)) this.setTimeOfDay(0.36);
     mode.start();
     this.hero.setVisible(!this.settings.firstPerson);
@@ -528,6 +570,7 @@ export class Game {
       p.update(dt, canAct ? input : NO_INPUT, this.rig.yaw, this.rig.pitch);
       if (p.boosting) this.meters.drainSpeed(dt);
       else if (p.sprinting) this.meters.drainSpeed(dt * 0.6); // running is cheaper than flying
+      this.heroKit?.update(dt, canAct ? input : NO_INPUT, canAct);
     }
     this.abilities.update(dt, input, canAct && !drv.active);
     this.meters.update(dt);
@@ -569,6 +612,9 @@ export class Game {
       dive: p.diving ? Math.min(1, (-p.vel.y - 16) / 40) : 0,
       flare: p.flare,
       landT: p.landT,
+      charge: this.heroKit?.charge ?? 0,
+      clapT: this.heroKit?.clapT ?? 9,
+      wading: p.wading,
     });
 
     if (this.cutscene) this.updateCutscene(realDt);

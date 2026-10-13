@@ -1,6 +1,7 @@
 // Left mouse: three-hit punch combo with knockback. Smashes small blocks and props, dents cars.
 import * as THREE from 'three';
-import { B, PUNCH_BREAKABLE } from '../world/Blocks.js';
+import { B, PUNCH_BREAKABLE, SOLID, LASER_PROOF } from '../world/Blocks.js';
+import { CITY } from '../world/CityGenerator.js';
 
 const COMBO = [
   { dmg: 18, knock: 7, lift: 2, cooldown: 0.22, shake: 0.25 },
@@ -40,18 +41,23 @@ export class Punch {
     const p = g.player;
     this.combo = this.combo >= 3 ? 1 : this.combo + 1;
     const step = COMBO[this.combo - 1];
-    this.cooldown = step.cooldown;
+    // a bigger hero hits harder and a little slower, from higher up and further out
+    const kit = g.heroKit;
+    const power = kit?.punchPower ?? 1;
+    const knockMul = kit?.punchKnock ?? 1;
+    const big = !!kit;
+    this.cooldown = step.cooldown * (big ? 1.35 : 1);
     this.window = 0.75;
     p.aimTimer = 0.45;
     g.hero.punch(this.combo);
     g.audio.play('whoosh');
 
     const dir = aim.dir;
-    this.origin.set(p.pos.x, p.pos.y + 1.35, p.pos.z);
-    this.center.copy(this.origin).addScaledVector(dir, 1.5);
+    this.origin.set(p.pos.x, p.pos.y + (big ? 1.8 : 1.35), p.pos.z);
+    this.center.copy(this.origin).addScaledVector(dir, big ? 1.9 : 1.5);
     // entities in the fist's reach, plus whatever the crosshair touches just beyond
-    const hits = g.entities.query(this.center, 1.7, (e) => e.punchable && !e.carried && e.team !== 'civ' && !e.removed);
-    const far = g.entities.raycast(this.origin, dir, 3.2, (e) => e.punchable && !e.carried && e.team !== 'civ');
+    const hits = g.entities.query(this.center, big ? 2.3 : 1.7, (e) => e.punchable && !e.carried && e.team !== 'civ' && !e.removed);
+    const far = g.entities.raycast(this.origin, dir, big ? 4 : 3.2, (e) => e.punchable && !e.carried && e.team !== 'civ');
     if (far && !hits.includes(far.entity)) hits.push(far.entity);
     // big shields: a punch lands if the fist reaches the bubble's surface
     for (const e of g.entities.list) {
@@ -61,11 +67,12 @@ export class Punch {
 
     if (hits.length) {
       for (const e of hits) {
-        this.knock.copy(dir).setY(0).normalize().multiplyScalar(step.knock);
-        this.knock.y = step.lift;
-        if (e.mass > 3) this.knock.multiplyScalar(Math.min(1, 6 / e.mass) + 0.4);
+        this.knock.copy(dir).setY(0).normalize().multiplyScalar(step.knock * knockMul);
+        this.knock.y = step.lift * knockMul;
+        if (e.mass > 3) this.knock.multiplyScalar(Math.min(1, 6 / e.mass) + 0.4 * knockMul);
+        if (big && e.kind === 'car') e.driving = false;
         const wasAlive = e.alive;
-        const dealt = e.damage(step.dmg, { type: 'punch', knock: this.knock, source: p });
+        const dealt = e.damage(step.dmg * power, { type: 'punch', knock: this.knock, source: p });
         const at = e.centerInto(new THREE.Vector3());
         g.effects.impact(at, dir, this.combo === 3 ? 1.6 : 1);
         if (dealt > 0) g.markers.damageNumber(at, dealt, this.combo === 3 ? '#ffd34d' : '#ffffff');
@@ -73,16 +80,18 @@ export class Punch {
         else g.hud.hitMarker(false);
       }
       g.audio.play(this.combo === 3 ? 'punchHeavy' : 'punchHit');
-      g.hitStop(this.combo === 3 ? 0.09 : 0.045);
-      g.rig.shake = Math.max(g.rig.shake, step.shake);
+      g.hitStop((this.combo === 3 ? 0.09 : 0.045) * (big ? 1.4 : 1));
+      g.rig.shake = Math.max(g.rig.shake, step.shake * (big ? 1.4 : 1));
       return;
     }
 
     // nothing alive in reach: try the block in front of the fist
-    const hit = g.world.raycast(this.origin.x, this.origin.y, this.origin.z, dir.x, dir.y, dir.z, 2.8);
+    const hit = g.world.raycast(this.origin.x, this.origin.y, this.origin.z, dir.x, dir.y, dir.z, big ? 3.6 : 2.8);
     if (hit) {
       const pos = new THREE.Vector3(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
-      if (PUNCH_BREAKABLE.has(hit.block)) {
+      if (big && hit.y >= CITY.G && !LASER_PROOF.has(hit.block)) {
+        this.smashWall(hit, dir);
+      } else if (PUNCH_BREAKABLE.has(hit.block)) {
         this.smash(hit, pos);
       } else {
         g.effects.impact(pos.addScaledVector(dir, -0.5), dir, 0.6);
@@ -90,6 +99,37 @@ export class Punch {
         g.rig.shake = Math.max(g.rig.shake, 0.15);
       }
     }
+  }
+
+  /** A big hero's punch knocks a chunk out of any wall (bigger on the third hit). */
+  smashWall(hit, dir) {
+    const g = this.game;
+    const w = g.world;
+    const r = this.combo === 3 ? 2 : 1;
+    let glass = false;
+    for (let y = -r; y <= r; y++) {
+      for (let a = -r; a <= r; a++) {
+        for (let d = 0; d <= 1; d++) {
+          // ragged edges: corners and the far layer only sometimes give way
+          if ((Math.abs(a) === r && Math.abs(y) === r) || (d === 1 && Math.random() < 0.5)) continue;
+          // spread sideways across the wall, and a little into it
+          const sx = Math.abs(dir.z) > Math.abs(dir.x) ? a : 0;
+          const sz = Math.abs(dir.z) > Math.abs(dir.x) ? 0 : a;
+          const x = hit.x + sx + Math.round(dir.x) * d, z = hit.z + sz + Math.round(dir.z) * d, yy = hit.y + y;
+          const b = w.get(x, yy, z);
+          if (!SOLID[b] || LASER_PROOF.has(b) || yy < CITY.G) continue;
+          if ((b >= B.GLASS_BLUE && b <= B.GLASS_DARK) || b === B.DOOR) glass = true;
+          w.edit(x, yy, z, B.AIR);
+        }
+      }
+    }
+    const pos = new THREE.Vector3(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
+    g.effects.debris(pos, 0xa8a49c, 22, 8);
+    g.effects.dust(pos, 10, 1.2);
+    g.audio.play('crunch');
+    if (glass) g.audio.play('glass');
+    g.hitStop(0.05);
+    g.rig.shake = Math.max(g.rig.shake, this.combo === 3 ? 0.6 : 0.35);
   }
 
   smash(hit, pos) {

@@ -17,9 +17,9 @@ export const HEROES = [
     name: 'Granite',
     alias: 'The walking landslide',
     tagline: 'Huge, stone-skinned and very, very strong',
-    powers: ['Hold Space to charge a giant leap', 'Building-cracking punches', 'Thunder clap shockwave'],
-    playable: false,
-    next: true,
+    powers: ['Hold Space to charge a giant leap', 'Wall-smashing punches', 'Q: thunder clap shockwave'],
+    playable: true,
+    note: 'Free Roam',
   },
   {
     id: 'tether',
@@ -28,6 +28,7 @@ export const HEROES = [
     tagline: 'Swings across the skyline on silk lines',
     powers: ['Web-swing between buildings', 'Web shots that pin enemies', 'Wall running'],
     playable: false,
+    next: true,
   },
   {
     id: 'forge',

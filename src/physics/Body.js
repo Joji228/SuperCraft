@@ -15,6 +15,7 @@ export class Body {
     this.onGround = false;
     this.flying = false; // no step-up and no "stick to floor" when true
     this.canStep = true;
+    this.stepHeight = 1.01; // tallest ledge it walks up without jumping
     this.waterSolid = true; // water is a floor for everyone in Brightport
     this.hitWall = false; // horizontal collision during the last move
     this.impact = 0; // speed lost in the last collision (for crash damage)
@@ -65,8 +66,13 @@ export class Body {
     // try stepping up one block
     const saved = this.pos.clone();
     this.pos[axis] = before;
-    this.pos.y += 1.01;
-    if (!this.overlaps() && !this.moveAxis(axis, d)) return;
+    // try one block, then (for big bodies) two
+    for (let h = 1.01; h <= this.stepHeight + 0.001; h += 1) {
+      this.pos.copy(saved);
+      this.pos[axis] = before;
+      this.pos.y += h;
+      if (!this.overlaps() && !this.moveAxis(axis, d)) return;
+    }
     this.pos.copy(saved);
     this.impact = Math.max(this.impact, Math.abs(this.vel[axis]));
     this.vel[axis] = 0;

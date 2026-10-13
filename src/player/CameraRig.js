@@ -17,6 +17,8 @@ export class CameraRig {
     this.shake = 0;
     this.fovPunch = 0;
     this.focus = new THREE.Vector3();
+    this.eye = EYE; // focus height above the feet (bigger heroes sit higher)
+    this.distScale = 1; // bigger heroes get a camera further back
   }
 
   get firstPerson() {
@@ -38,7 +40,7 @@ export class CameraRig {
   update(dt, player) {
     const cam = this.camera;
     // smooth the vertical focus so step-ups don't jolt the view
-    const targetY = player.pos.y + EYE;
+    const targetY = player.pos.y + this.eye;
     // (only on the ground: in the air, a smoothed focus lags further and further behind a
     // fast fall and then snaps back, which made the view jump up and down)
     this.focusY = this.focusY === null || player.flying || !player.onGround ? targetY : damp(this.focusY, targetY, 18, dt);
@@ -54,7 +56,7 @@ export class CameraRig {
       cam.position.copy(this.focus);
     } else {
       // V cycles close / medium / far third-person views (then first person)
-      const base = [4.2, 5.6, 7.4][this.settings.cameraMode] ?? 4.2;
+      const base = ([4.2, 5.6, 7.4][this.settings.cameraMode] ?? 4.2) * this.distScale;
       const want = player.flying ? base + 0.6 + boost * 0.8 : base; // only slightly further back at speed
       this.dist = damp(this.dist, want, 4, dt);
       const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));

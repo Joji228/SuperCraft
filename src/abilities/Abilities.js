@@ -62,6 +62,7 @@ export class Abilities {
     // in the tutorial, powers unlock one at a time
     const ok = (name) => {
       if (g.allowed(name)) return true;
+      if (g.heroKit?.disallow.has(name)) return false; // this hero simply doesn't have that power
       if (input.pressed(name)) g.hud.toast('You will learn that power later in training', 'info', 1.5);
       return false;
     };

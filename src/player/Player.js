@@ -38,6 +38,15 @@ export class Player extends Body {
     this.flare = false;
     this.landT = 0; // > 0 while holding the superhero-landing pose
     this.onHeroLanding = null;
+    // per-hero movement (Granite is slower on foot and charges his jump instead)
+    this.stats = { walk: MOVE.walk, run: MOVE.run, sprint: MOVE.sprint, jump: MOVE.jump };
+    this.chargeJump = false; // Space charges a leap (handled by the hero's kit) instead of jumping
+    this.wades = false; // walks through water instead of hovering over it
+    this.leaping = false;
+    this.leapVel = { x: 0, z: 0 };
+    this.charging = false;
+    this.wading = false;
+    this.noTrail = false; // no super-speed running trail
     // hooks set by the game: locked powers (tutorial) and the speed bar for boosting
     this.allowed = () => true;
     this.canBoost = () => true;
@@ -108,7 +117,8 @@ export class Player extends Body {
       // Shift on foot: super speed (if the SPEED bar allows), otherwise a normal run
       const wantsRun = input.isDown('boost') && (ix || iz);
       this.sprinting = wantsRun && this.onGround && this.allowed('boost') && this.canBoost(this.sprinting);
-      const speed = this.sprinting ? MOVE.sprint : wantsRun ? MOVE.run : MOVE.walk;
+      const st = this.stats;
+      const speed = this.charging ? 1.5 : this.sprinting ? st.sprint : wantsRun ? st.run : this.wading ? st.walk * 0.6 : st.walk;
       let wx = fx * iz + rx * ix;
       let wz = fz * iz + rz * ix;
       const wl = Math.hypot(wx, wz);
@@ -117,9 +127,16 @@ export class Player extends Body {
         wz /= wl;
       }
       const accel = this.sprinting ? 5 : this.onGround ? 16 : 5;
-      const k = 1 - Math.exp(-accel * dt);
-      this.vel.x += (wx * speed - this.vel.x) * k;
-      this.vel.z += (wz * speed - this.vel.z) * k;
+      // mid-leap there's only a little air control: the leap carries him
+      const k = 1 - Math.exp(-(this.leaping ? 0.4 : accel) * dt);
+      if (this.leaping) {
+        // the leap carries him (even if he scrapes a wall on the way up), with a little steering
+        this.vel.x = this.leapVel.x + wx * 3;
+        this.vel.z = this.leapVel.z + wz * 3;
+      } else {
+        this.vel.x += (wx * speed - this.vel.x) * k;
+        this.vel.z += (wz * speed - this.vel.z) * k;
+      }
 
       // just landed hard: hold the superhero-landing crouch for a moment
       if (this.landT > 0) {
@@ -130,8 +147,8 @@ export class Player extends Body {
       }
       this.vel.y -= MOVE.gravity * dt;
       this.vel.y = Math.max(this.vel.y, -MOVE.terminal);
-      if (this.onGround && input.pressed('jump') && this.allowed('jump')) {
-        this.vel.y = MOVE.jump;
+      if (this.onGround && input.pressed('jump') && this.allowed('jump') && !this.chargeJump) {
+        this.vel.y = this.stats.jump;
         this.onGround = false;
       }
     }
@@ -145,7 +162,9 @@ export class Player extends Body {
     const below = this.world.get(Math.floor(this.pos.x), Math.floor(this.pos.y - 0.5), Math.floor(this.pos.z));
     if (this.flying && this.onGround && input.isDown('descend') && below !== B.WATER) this.flying = false;
     // touching the water: Aegis can't stand on it, so he hovers over it instead
-    if (!this.flying && this.onGround && below === B.WATER) {
+    // a hero who wades walks along the bottom instead (slowly, with splashes)
+    this.wading = this.wades && !this.flying && this.world.get(Math.floor(this.pos.x), Math.floor(this.pos.y + 0.3), Math.floor(this.pos.z)) === B.WATER;
+    if (!this.flying && this.onGround && below === B.WATER && !this.wades) {
       this.flying = true;
       this.vel.y = 3;
     }
