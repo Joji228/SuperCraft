@@ -835,6 +835,7 @@ button.hero-card {
   font-size: 8px;
   text-align: center;
   cursor: pointer;
+  text-shadow: 1px 1px 0 var(--shadow);
 }
 
 button.hero-card.selected {
@@ -904,11 +905,13 @@ button.hero-card.soon .hero-portrait {
   top: 6px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 3px 6px;
+  padding: 4px 7px 3px;
   font-size: 7px;
+  line-height: 1;
   white-space: nowrap;
   background: #2f7a45;
   color: #fff;
+  text-shadow: none; /* the menu's pixel shadow smeared these tiny letters */
 }
 
 .hero-badge.selected {
