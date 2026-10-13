@@ -44,6 +44,7 @@ export class Player extends Body {
     this.wades = false; // walks through water instead of hovering over it
     this.leaping = false;
     this.leapVel = { x: 0, z: 0 };
+    this.airControl = 3;
     this.charging = false;
     this.wading = false;
     this.noTrail = false; // no super-speed running trail
@@ -131,8 +132,8 @@ export class Player extends Body {
       const k = 1 - Math.exp(-(this.leaping ? 0.4 : accel) * dt);
       if (this.leaping) {
         // the leap carries him (even if he scrapes a wall on the way up), with a little steering
-        this.vel.x = this.leapVel.x + wx * 3;
-        this.vel.z = this.leapVel.z + wz * 3;
+        this.vel.x = this.leapVel.x + wx * this.airControl;
+        this.vel.z = this.leapVel.z + wz * this.airControl;
       } else {
         this.vel.x += (wx * speed - this.vel.x) * k;
         this.vel.z += (wz * speed - this.vel.z) * k;

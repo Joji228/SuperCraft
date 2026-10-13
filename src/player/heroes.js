@@ -17,7 +17,7 @@ export const HEROES = [
     name: 'Granite',
     alias: 'The walking landslide',
     tagline: 'Huge, stone-skinned and very, very strong',
-    powers: ['Hold Space to charge a giant leap', 'Wall-smashing punches', 'Q: thunder clap shockwave'],
+    powers: ['Hold Space to charge a giant leap', 'RMB: Granite Smash', 'Q: thunder clap shockwave', 'Wall-smashing punches'],
     playable: true,
     note: 'Free Roam',
   },

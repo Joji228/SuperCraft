@@ -39,6 +39,7 @@ export class HUD {
         <div class="speedo-keys"><span><b>R</b> get out</span><span><b>F</b> fly out</span><span><b>SHIFT</b> nitro</span><span><b>SPACE</b> drift</span><span><b>H</b> horn</span></div>
       </div>
       <div class="prompt hidden" id="hud-prompt"></div>
+      <div class="charge hidden" id="hud-charge"><span>LEAP</span><div class="charge-bar"><div class="charge-fill" id="hud-charge-fill"></div></div></div>
       <div class="banner hidden" id="hud-banner"></div>
       <div class="idle-hint hidden" id="hud-idle"></div>
       <div class="abilities">
@@ -92,6 +93,8 @@ export class HUD {
     this.carHp = q('hud-carhp');
     this.wasDriving = false;
     this.promptEl = q('hud-prompt');
+    this.chargeEl = q('hud-charge');
+    this.chargeFill = q('hud-charge-fill');
     this.bannerEl = q('hud-banner');
     this.idleEl = q('hud-idle');
     this.guideEl = q('hud-guide');
@@ -116,6 +119,17 @@ export class HUD {
     window.addEventListener('resize', () => this.resize());
   }
 
+  /** Leap charge bar under the crosshair (k 0..1, or null to hide). */
+  setCharge(k) {
+    if (k === null) {
+      if (!this.chargeEl.classList.contains('hidden')) this.chargeEl.classList.add('hidden');
+      return;
+    }
+    this.chargeEl.classList.remove('hidden');
+    this.chargeFill.style.width = `${Math.round(k * 100)}%`;
+    this.chargeEl.classList.toggle('full', k >= 1);
+  }
+
   /** Ability bar, controls hint and meters for the hero in play. */
   setHeroLayout(id) {
     const LAYOUTS = {
@@ -125,8 +139,8 @@ export class HUD {
         heat: true,
       },
       granite: {
-        ab: { boost: ['SHIFT', 'Run'], punch: ['LMB', 'Smash'], laser: ['SPACE', 'Leap'], breath: ['Q', 'Clap'], senses: null, carry: ['G', 'Carry'], fly: null },
-        hint: '<b>WASD</b> move &nbsp; <b>SHIFT</b> run &nbsp; <b>LMB</b> smash<br>Hold <b>SPACE</b> to charge a leap, let go to jump<br><b>Q</b> thunder clap &nbsp; <b>G</b> carry &nbsp; <b>V</b> camera',
+        ab: { boost: ['SHIFT', 'Run'], punch: ['LMB', 'Punch'], laser: ['SPACE', 'Leap'], breath: ['Q', 'Clap'], senses: ['RMB', 'Smash'], carry: ['G', 'Carry'], fly: null },
+        hint: '<b>WASD</b> move &nbsp; <b>SHIFT</b> run &nbsp; <b>LMB</b> punch<br>Hold <b>SPACE</b> to charge a leap, let go to jump<br><b>RMB</b> smash (in the air: dive slam) &nbsp; <b>Q</b> clap',
         heat: false,
       },
     };

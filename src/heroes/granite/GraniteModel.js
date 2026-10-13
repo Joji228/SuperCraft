@@ -205,6 +205,27 @@ export class GraniteModel {
       if (t > 0.12) tilt = 0.15;
     }
 
+    // Granite Smash: both fists raised high, then hammered into the ground
+    if (s.smashT < 0.65) {
+      if (s.smashT < 0.3) {
+        const k = s.smashT / 0.3;
+        armL = armR = -3.0;
+        spreadL = spreadR = 0.15;
+        tilt = -0.2 * k;
+        crouch = 0.1 * k;
+      } else {
+        armL = armR = -0.45;
+        spreadL = spreadR = 0.3;
+        tilt = 0.65;
+        crouch = 0.6;
+      }
+    } else if (s.diveSmash) {
+      armL = armR = -3.0;
+      spreadL = spreadR = 0.1;
+      legL = -0.5;
+      legR = -0.5;
+    }
+
     // punches: big hooks, the third is a two-fisted hammer blow
     this.punchT += dt;
     let fast = '';
@@ -228,16 +249,17 @@ export class GraniteModel {
       }
     }
 
-    this.tilt = damp(this.tilt, tilt, s.landT > 0 ? 25 : 9, dt);
+    this.tilt = damp(this.tilt, tilt, s.landT > 0 || s.smashT > 0.3 ? 25 : 9, dt);
     this.twist = damp(this.twist, twist, 12, dt);
-    this.crouch = damp(this.crouch, crouch, s.landT > 0 ? 40 : 10, dt);
+    const slam = s.landT > 0 || (s.smashT > 0.3 && s.smashT < 0.4);
+    this.crouch = damp(this.crouch, crouch, slam ? 40 : 10, dt);
     this.pivot.position.y = HIP - this.crouch + bob;
     this.torso.rotation.set(this.tilt, this.twist, 0);
     // head stays roughly level while the body leans
     this.head.rotation.x = damp(this.head.rotation.x, -this.tilt * 0.7, 10, dt);
 
     const L = 12;
-    const r = (fast, side) => (fast === 'both' || fast === side ? 60 : L);
+    const r = (fast, side) => (fast === 'both' || fast === side || (s.smashT > 0.22 && s.smashT < 0.4) ? 60 : L);
     this.armL.rotation.x = damp(this.armL.rotation.x, armL, r(fast, 'L'), dt);
     this.armR.rotation.x = damp(this.armR.rotation.x, armR, r(fast, 'R'), dt);
     this.armL.rotation.z = damp(this.armL.rotation.z, spreadL, s.clapT < 0.45 ? 40 : L, dt);

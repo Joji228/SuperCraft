@@ -1,9 +1,11 @@
 // Granite's powers: hold Space to charge a giant leap (landing slams the ground),
-// heavier punches that break walls, and Q for a thunder clap shockwave.
+// heavier punches that break walls, Q for a thunder clap shockwave and right
+// mouse for Granite Smash: both fists into the ground (or, in mid-air, a dive slam).
 // No flight, laser, breath or senses.
 import * as THREE from 'three';
 import { B, SOLID, LASER_PROOF } from '../../world/Blocks.js';
 import { CITY } from '../../world/CityGenerator.js';
+import { LeapPreview } from './LeapPreview.js';
 
 export const GRANITE = {
   body: { halfW: 0.55, height: 2.6 },
@@ -14,8 +16,12 @@ export const GRANITE = {
   chargeTime: 1.1, // seconds to a full leap
   clapCost: 22, // energy
   clapCooldown: 1.4,
-  clapRange: 17,
-  clapCone: Math.cos(0.62),
+  clapRange: 22,
+  clapCone: Math.cos(0.66),
+  smashCost: 30,
+  smashCooldown: 2.2,
+  smashRadius: 8.5,
+  airControl: 4.5, // how much you can steer mid-leap (m/s); was 3
   punchPower: 2.2,
   punchKnock: 1.7,
 };
@@ -37,6 +43,22 @@ export class GraniteKit {
     this.lastVy = 0;
     this.punchPower = GRANITE.punchPower;
     this.punchKnock = GRANITE.punchKnock;
+    this.smashT = 9;
+    this.smashCd = 0;
+    this.smashFired = true;
+    this.diveSmash = false;
+    this.preview = new LeapPreview(game.scene, game.world);
+  }
+
+  /** The launch velocity for a charge k (also used to draw the preview arc). */
+  leapVelocity(k, out = new THREE.Vector3()) {
+    const g = this.game;
+    const yaw = g.rig.yaw;
+    const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+    // leap where the camera looks (looking up throws the leap higher)
+    const up = Math.max(-0.1, Math.sin(g.rig.pitch));
+    const h = 6 + 26 * k;
+    return out.set(fx * h * (1 - up * 0.5), 16 + 30 * k + up * 14 * k, fz * h * (1 - up * 0.5));
   }
 
   reset() {
@@ -46,6 +68,12 @@ export class GraniteKit {
     this.clapT = 9;
     this.clapFired = true;
     this.clapCd = 0;
+    this.smashT = 9;
+    this.smashCd = 0;
+    this.smashFired = true;
+    this.diveSmash = false;
+    this.preview.hide();
+    this.game.hud.setCharge(null);
     p.leaping = false;
     p.charging = false;
   }
@@ -55,6 +83,7 @@ export class GraniteKit {
     const g = this.game;
     const p = g.player;
     this.clapCd = Math.max(0, this.clapCd - dt);
+    this.smashCd = Math.max(0, this.smashCd - dt);
 
     // a leap that ends in a soft landing (hard ones come through onLand from the player)
     if (p.leaping && p.onGround) this.onLand(-this.lastVy);
@@ -85,6 +114,44 @@ export class GraniteKit {
       this.fullRumble = false;
     }
     p.charging = this.charging;
+    // charge bar and the arc of where he'll land
+    if (this.charging && this.charge > 0.04) {
+      const k = Math.max(0.15, this.charge);
+      this.preview.show(p.pos, this.leapVelocity(k, tmp2), this.slamRadius(k * 0.8), dt);
+      g.hud.setCharge(this.charge);
+    } else {
+      this.preview.hide();
+      g.hud.setCharge(null);
+    }
+
+    // ---- Granite Smash: right mouse ----
+    if (canAct && input.pressed('laser') && !g.abilities.carry.held && !this.charging) {
+      if (this.smashCd > 0) {
+        // recovering
+      } else if (g.meters.energy < GRANITE.smashCost) {
+        g.hud.toast('Not enough energy to smash', 'warn', 1);
+      } else if (p.onGround) {
+        g.meters.drain(GRANITE.smashCost);
+        this.smashCd = GRANITE.smashCooldown;
+        this.smashT = 0;
+        this.smashFired = false;
+        g.audio.play('whoosh');
+      } else if (!this.diveSmash) {
+        // in mid-air: plunge straight down and slam
+        g.meters.drain(GRANITE.smashCost);
+        this.smashCd = GRANITE.smashCooldown;
+        this.diveSmash = true;
+        p.vel.y = Math.min(p.vel.y, -45);
+        p.leapVel.x *= 0.4;
+        p.leapVel.z *= 0.4;
+        g.audio.play('whoosh');
+      }
+    }
+    this.smashT += dt;
+    if (!this.smashFired && this.smashT >= 0.3) {
+      this.smashFired = true;
+      this.smash(1);
+    }
 
     // ---- thunder clap ----
     if (canAct && input.pressed('breath') && !g.abilities.carry.held) {
@@ -122,11 +189,7 @@ export class GraniteKit {
       return;
     }
     // leap where the camera looks (looking up throws the leap higher)
-    const yaw = g.rig.yaw;
-    const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
-    const up = Math.max(-0.1, Math.sin(g.rig.pitch));
-    const h = 6 + 26 * k;
-    p.vel.set(fx * h * (1 - up * 0.5), 16 + 30 * k + up * 14 * k, fz * h * (1 - up * 0.5));
+    this.leapVelocity(k, p.vel);
     p.leaping = true;
     p.leapVel.x = p.vel.x;
     p.leapVel.z = p.vel.z;
@@ -139,10 +202,23 @@ export class GraniteKit {
     this.crack(p.pos, k > 0.5 ? 1 : 0);
   }
 
+  /** Slam radius for a landing strength k (0..1). */
+  slamRadius(k) {
+    return 3 + 5 * k;
+  }
+
   /** Touchdown (from a leap or any fall): the harder he lands, the bigger the slam. */
   onLand(speed) {
     const g = this.game;
     const p = g.player;
+    if (this.diveSmash) {
+      // the mid-air smash: always a full-power slam
+      this.diveSmash = false;
+      p.leaping = false;
+      p.landT = 0.6;
+      this.smash(1.25);
+      return;
+    }
     const k = Math.max(p.leaping ? this.leapK * 0.8 : 0, Math.min(1, (speed - 14) / 50));
     p.leaping = false;
     if (k <= 0.05) return;
@@ -152,13 +228,23 @@ export class GraniteKit {
     if (k > 0.55) g.audio.play('stomp');
     g.rig.shake = Math.max(g.rig.shake, 0.3 + 0.5 * k);
     g.effects.dust(at, 20 + 40 * k, 2 + 2 * k);
-    g.effects.shockwave(at, 3 + 5 * k);
+    g.rings.spawn({ pos: at.clone().setY(at.y + 0.1), r0: 0.5, r1: this.slamRadius(k) * 1.2, life: 0.45, opacity: 0.6, color: 0xfff1d0, thick: true });
     g.addDanger(p.pos, 10 + 10 * k, 1.5);
     if (k > 0.3) g.hitStop(0.05);
     this.crack(p.pos, Math.round(1 + 2 * k));
-    // knock everything nearby off its feet
-    const r = 3 + 5 * k;
+    this.blast(this.slamRadius(k), 15 + 45 * k, 6 + 14 * k, 5 + 8 * k);
+  }
+
+  /** Radial knock-back + damage around Granite (slams and smashes). */
+  blast(r, dmgMax, out, up) {
+    const g = this.game;
+    const p = g.player;
     for (const e of g.entities.query(tmp2.set(p.pos.x, p.pos.y + 0.5, p.pos.z), r + 1, (x) => !x.carried && !x.removed)) {
+      const sp = e.sphere?.();
+      if (sp) {
+        if (sp.c.distanceTo(p.pos) - sp.r < r) e.onBreath?.(0.5, 1);
+        continue;
+      }
       const c = e.centerInto(new THREE.Vector3());
       const d = Math.hypot(c.x - p.pos.x, c.z - p.pos.z);
       if (d > r || Math.abs(c.y - p.pos.y) > 4) continue;
@@ -166,10 +252,53 @@ export class GraniteKit {
       const dir = new THREE.Vector3(c.x - p.pos.x, 0, c.z - p.pos.z).normalize();
       const m = Math.max(1, e.mass);
       if (e.kind === 'car') e.driving = false;
-      const dmg = e.team === 'civ' ? 4 * f : (15 + 45 * k) * (0.4 + 0.6 * f);
-      const dealt = e.damage(dmg, { type: 'impact', knock: dir.multiplyScalar((6 + 14 * k) * f * m).setY((5 + 8 * k) * f * m), source: p });
+      const dmg = e.team === 'civ' ? 4 * f : dmgMax * (0.4 + 0.6 * f);
+      const dealt = e.damage(dmg, { type: 'impact', knock: dir.multiplyScalar(out * f * m).setY(up * (0.4 + 0.6 * f) * m), source: p });
       if (dealt > 1 && e.team !== 'civ') g.markers.damageNumber(c, dealt, '#ffd34d');
     }
+  }
+
+  /** Granite Smash: both fists into the ground. power 1 = standing smash, more for the dive. */
+  smash(power) {
+    const g = this.game;
+    const p = g.player;
+    const R = GRANITE.smashRadius * power;
+    const at = new THREE.Vector3(p.pos.x, p.pos.y + 0.12, p.pos.z);
+    p.landT = Math.max(p.landT, 0.45);
+    g.audio.play('stomp');
+    g.audio.play('land');
+    g.rig.shake = Math.max(g.rig.shake, 0.85);
+    g.rig.fovPunch = 6;
+    g.hitStop(0.08);
+    g.addDanger(p.pos, R * 2.5, 2);
+    // a fast bright ring, a slower wide one, and a burst of rubble
+    g.rings.spawn({ pos: at, r0: 0.6, r1: R * 1.15, life: 0.4, opacity: 0.85, color: 0xffffff, thick: true });
+    g.rings.spawn({ pos: at.clone().setY(at.y + 0.04), r0: 1, r1: R * 1.6, life: 0.75, opacity: 0.45, color: 0xffc27a });
+    g.effects.dust(at, 70, R * 0.45);
+    for (let i = 0; i < 4; i++) {
+      const a = Math.random() * Math.PI * 2, d = 1 + Math.random() * 2;
+      g.effects.debris(new THREE.Vector3(p.pos.x + Math.cos(a) * d, p.pos.y + 0.3, p.pos.z + Math.sin(a) * d), 0x8d8a82, 8, 9);
+    }
+    this.crack(p.pos, Math.round(2 + power));
+    // windows rattle out on the lower floors nearby
+    const w = g.world;
+    const x0 = Math.floor(p.pos.x), y0 = Math.floor(p.pos.y), z0 = Math.floor(p.pos.z);
+    let glass = 0;
+    for (let y = 0; y <= 3; y++) {
+      for (let dz = -5; dz <= 5; dz++) {
+        for (let dx = -5; dx <= 5; dx++) {
+          if (dx * dx + dz * dz > 26 || Math.random() < 0.5) continue;
+          const b = w.get(x0 + dx, y0 + y, z0 + dz);
+          if ((b >= B.GLASS_BLUE && b <= B.GLASS_DARK) || b === B.DOOR) {
+            w.edit(x0 + dx, y0 + y, z0 + dz, B.AIR);
+            glass++;
+          }
+        }
+      }
+    }
+    if (glass) g.audio.play('glass');
+    // everything around gets thrown up into the air
+    this.blast(R, 70 * power, 9, 15);
   }
 
   /** Cracked, scorched pavement around a point (radius in blocks). */
@@ -194,12 +323,18 @@ export class GraniteKit {
     const origin = new THREE.Vector3(p.pos.x, p.pos.y + 2.0, p.pos.z).addScaledVector(tmp.set(dir.x, 0, dir.z).normalize(), 0.8);
     const R = GRANITE.clapRange;
     g.audio.play('clap');
-    g.rig.shake = Math.max(g.rig.shake, 0.55);
-    g.rig.fovPunch = 8;
-    g.hitStop(0.05);
+    g.rig.shake = Math.max(g.rig.shake, 0.7);
+    g.rig.fovPunch = 10;
+    g.hitStop(0.06);
     g.addDanger(origin, R, 1.5);
-    // the visible blast: a ring at the hands and a fan of dust flying forward
-    g.effects.shockwave(origin.clone().addScaledVector(dir, 1.5), 3);
+    // the visible blast: a flash at the hands, then rings racing forward and widening
+    // like a cone of air, plus a fan of dust
+    g.rings.spawn({ pos: origin.clone().addScaledVector(dir, 0.6), normal: dir, r0: 0.2, r1: 2.4, life: 0.18, opacity: 1, color: 0xffffff, thick: true });
+    const coneR = R * Math.tan(Math.acos(GRANITE.clapCone));
+    for (let i = 0; i < 4; i++) {
+      const life = 0.42 + i * 0.07;
+      g.rings.spawn({ pos: origin.clone().addScaledVector(dir, 0.8 + i * 0.6), normal: dir, r0: 0.6 + i * 0.3, r1: coneR * (1 - i * 0.12), life, speed: (R / life) * (1 - i * 0.15), opacity: 0.55 - i * 0.1, color: i % 2 ? 0xcfe9ff : 0xffffff, thick: i === 0 });
+    }
     for (let i = 0; i < 60; i++) {
       const spread = 0.55;
       const vx = dir.x + (Math.random() - 0.5) * spread * 2, vy = dir.y + (Math.random() - 0.5) * spread, vz = dir.z + (Math.random() - 0.5) * spread * 2;
@@ -227,10 +362,10 @@ export class GraniteKit {
       const f = 1 - d / R;
       const m = Math.max(1, e.mass);
       const car = e.kind === 'car';
-      const knock = dir.clone().multiplyScalar((10 + 22 * f) * m * (car ? 1.4 : 1));
+      const knock = dir.clone().multiplyScalar((14 + 26 * f) * m * (car ? 1.4 : 1));
       knock.y += (car ? 7 + 6 * f : 4 + 6 * f) * m;
       if (e.kind === 'car') e.driving = false;
-      const dmg = e.team === 'civ' ? 0 : e.kind === 'car' ? 12 * f : 14 + 30 * f;
+      const dmg = e.team === 'civ' ? 0 : e.kind === 'car' ? 18 * f : 22 + 40 * f;
       const dealt = e.damage(dmg || 0.01, { type: 'impact', knock, source: p });
       if (dealt > 1 && e.team !== 'civ') g.markers.damageNumber(c.clone(), dealt, '#ffffff');
       if (e.canFreeze) e.stun = Math.max(e.stun || 0, 1.2 * f + 0.4);
@@ -259,5 +394,7 @@ export class GraniteKit {
     hud.ab.laser.classList.toggle('active', this.charging);
     hud.ab.breath.classList.toggle('active', this.clapT < 0.3);
     hud.ab.breath.classList.toggle('disabled', this.clapCd > 0 || this.game.meters.energy < GRANITE.clapCost);
+    hud.ab.senses.classList.toggle('active', this.smashT < 0.6 || this.diveSmash);
+    hud.ab.senses.classList.toggle('disabled', this.smashCd > 0 || this.game.meters.energy < GRANITE.smashCost);
   }
 }

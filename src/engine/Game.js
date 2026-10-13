@@ -39,6 +39,7 @@ import { Minimap } from '../ui/Minimap.js';
 import { Particles } from '../fx/Particles.js';
 import { Effects } from '../fx/Effects.js';
 import { FlightFX } from '../fx/FlightFX.js';
+import { ShockRings } from '../fx/ShockRings.js';
 import { Audio } from '../audio/Audio.js';
 import { FreeRoam } from '../modes/FreeRoam.js';
 import { MissionRun, loadProgress } from '../missions/MissionManager.js';
@@ -121,6 +122,7 @@ export class Game {
     this.particles = new Particles(this.scene, 7000);
     this.effects = new Effects(this.particles);
     this.flightFX = new FlightFX(this.scene, this.particles, this.world);
+    this.rings = new ShockRings(this.scene);
     this.applySkin('sky'); // Sky Guardian's colours (costume choice was retired for the Heroes menu)
     this.player.onSonicBoom = () => this.sonicBoom();
     this.player.onHeroLanding = (speed) => (this.heroKit?.onLand ? this.heroKit.onLand(speed) : this.heroLanding(speed));
@@ -217,6 +219,7 @@ export class Game {
     p.chargeJump = big;
     p.wades = big;
     p.stepHeight = big ? 2.01 : 1.01; // he strides up two-block ledges
+    p.airControl = big ? GRANITE.airControl : 3;
     p.waterSolid = !big; // Granite sinks and wades; Aegis treats water as a floor (and hovers)
     p.noTrail = big;
     if (big) p.flying = false;
@@ -614,6 +617,8 @@ export class Game {
       landT: p.landT,
       charge: this.heroKit?.charge ?? 0,
       clapT: this.heroKit?.clapT ?? 9,
+      smashT: this.heroKit?.smashT ?? 9,
+      diveSmash: this.heroKit?.diveSmash,
       wading: p.wading,
     });
 
@@ -636,6 +641,7 @@ export class Game {
       this.flightFX.shake = 0;
     }
     this.particles.update(dt, cam, this.renderer.domElement.height);
+    this.rings.update(dt);
 
     // audio
     const speed = p.vel.length();

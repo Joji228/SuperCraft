@@ -1237,3 +1237,34 @@ body.driving .crosshair {
   background: #8fe0b0;
   text-shadow: none;
 }
+
+/* Granite: leap charge bar under the crosshair */
+.charge {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 46px);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 8px;
+  color: #ffd9a8;
+  text-shadow: 1px 1px 0 #10203a;
+}
+
+.charge-bar {
+  width: 150px;
+  height: 10px;
+  background: rgba(13, 24, 48, 0.75);
+  border: 2px solid #0d1830;
+}
+
+.charge-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #ffd34d, #ff8a2a 70%, #ff4d2a);
+}
+
+.charge.full .charge-fill {
+  animation: blink 0.25s steps(2) infinite;
+}
