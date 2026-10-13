@@ -16,7 +16,7 @@ Fly over a voxel city, break the sound barrier and save Brightport.
 - 🦸 **Five powers:** flight with a sonic boom, laser eyes, freezing super breath, x-ray super senses and super strength (carry and throw cars).
 - 🏙️ **An open city** with traffic, pedestrians and random emergencies: robberies, fires, crashes and drone attacks.
 - 🎬 **A five-mission campaign** ending in a fight with a giant mech, rated with up to three stars.
-- 🎨 **Five costumes**, and every texture and sound is made in code.
+- 🦸‍♂️ **Heroes menu:** Sky Guardian today, with Granite, Tether, Forge and Flux on the way. Every texture and sound is made in code.
 
 <table>
 <tr>
@@ -25,7 +25,7 @@ Fly over a voxel city, break the sound barrier and save Brightport.
 </tr>
 <tr>
 <td><img src="docs/screenshots/tower-inferno.jpg" alt="Tower Inferno mission" width="400" height="225"></td>
-<td><img src="docs/screenshots/costume-picker.jpg" alt="Choosing a costume" width="400" height="225"></td>
+<td><img src="docs/screenshots/heroes.jpg" alt="The Heroes menu" width="400" height="225"></td>
 </tr>
 </table>
 

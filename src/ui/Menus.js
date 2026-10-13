@@ -3,7 +3,7 @@
 import { RENDER_DISTANCES } from '../engine/Settings.js';
 import { MISSIONS } from '../missions/missions.js';
 import { loadProgress, fmt } from '../missions/MissionManager.js';
-import { SKINS, hex } from '../player/skins.js';
+import { HEROES, heroPortrait } from '../player/heroes.js';
 
 const CONTROLS = [
   ['W A S D', 'Move'],
@@ -80,11 +80,11 @@ export class Menus {
         return this.showMain();
       case 'resetAll':
         return this.resetAll();
-      case 'customize':
-        return this.showCustomize();
-      case 'skin':
-        this.settings.set('skin', arg);
-        return this.showCustomize();
+      case 'heroes':
+        return this.showHeroes();
+      case 'hero':
+        this.settings.set('hero', arg);
+        return this.showHeroes();
       case 'back':
         return this.back === 'pause' ? this.showPause(this.pauseInfo) : this.showMain();
     }
@@ -124,7 +124,7 @@ export class Menus {
        <div class="menu">
          <button data-action="campaign" class="primary">Campaign <small>${total}/${MISSIONS.length * 3} ★</small></button>
          ${this.freeRoamOpen() ? '<button data-action="freeroam" class="primary">Free Roam</button>' : '<button disabled class="locked-mode" title="Complete First Flight in the Campaign to unlock Free Roam">&#128274; Free Roam<span class="unlock-hint">Complete the first Campaign mission, First Flight, to unlock</span></button>'}
-         <button data-action="customize">Customize</button>
+         <button data-action="heroes">Heroes</button>
          <button data-action="controls">Controls</button>
          <button data-action="settings">Settings</button>
          <button data-action="credits">Credits</button>
@@ -140,31 +140,26 @@ export class Menus {
     return this.settings.unlockAll || (prog.stars['first-flight'] || 0) > 0;
   }
 
-  /** Costume picker: five colour schemes, shown as little blocky figures. */
-  showCustomize() {
-    const cur = this.settings.skin;
-    const cards = SKINS.map((s) => {
-      const cape = s.cape !== null ? `<i class="fig-cape" style="background:${hex(s.cape)}"></i>` : '';
-      const mask = s.mask !== null ? `<i class="fig-mask" style="background:${hex(s.mask)}"></i>` : '';
-      return `<button class="skin ${s.id === cur ? 'selected' : ''}" data-action="skin" data-arg="${s.id}">
-        <span class="fig">
-          ${cape}
-          <i class="fig-head"></i>${mask}
-          <i class="fig-body" style="background:${hex(s.suit)}"><i class="fig-emblem" style="background:${hex(s.emblemBg)}"></i></i>
-          <i class="fig-belt" style="background:${hex(s.belt)}"></i>
-          <i class="fig-arm l" style="background:${hex(s.suit)}"><i style="background:${hex(s.accent)}"></i></i>
-          <i class="fig-arm r" style="background:${hex(s.suit)}"><i style="background:${hex(s.accent)}"></i></i>
-          <i class="fig-leg l" style="background:${hex(s.suit)}"><i style="background:${hex(s.accent)}"></i></i>
-          <i class="fig-leg r" style="background:${hex(s.suit)}"><i style="background:${hex(s.accent)}"></i></i>
-        </span>
-        <span class="skin-name">${s.name}</span>
+  /** Hero select: Sky Guardian is playable, the rest are coming soon. */
+  showHeroes() {
+    const cur = this.settings.hero || 'sky';
+    const cards = HEROES.map((h) => {
+      const sel = h.playable && h.id === cur;
+      const badge = sel ? '<span class="hero-badge selected">SELECTED</span>' : h.playable ? '<span class="hero-badge">PLAY</span>' : `<span class="hero-badge soon">${h.next ? 'NEXT UP' : 'COMING SOON'}</span>`;
+      return `<button class="hero-card ${sel ? 'selected' : ''} ${h.playable ? '' : 'soon'}" ${h.playable ? `data-action="hero" data-arg="${h.id}"` : 'disabled'}>
+        ${badge}
+        <img class="hero-portrait" src="${heroPortrait(h.id)}" alt="">
+        <span class="hero-name">${h.name}</span>
+        <span class="hero-alias">${h.alias}</span>
+        <ul class="hero-powers">${h.powers.map((p) => `<li>${p}</li>`).join('')}</ul>
       </button>`;
     }).join('');
     this.render(
-      'customize',
-      `<h2>Customize Aegis</h2><div class="skins">${cards}</div>
+      'heroes',
+      `<h2>Heroes</h2><p class="small hero-sub">More heroes are on the way. Each one plays differently in the same Brightport.</p>
+       <div class="hero-cards">${cards}</div>
        <div class="menu"><button data-action="main">Back</button></div>`,
-      'screen wide',
+      'screen wide heroes',
     );
   }
 

@@ -810,8 +810,12 @@ button.danger {
   font-weight: normal;
 }
 
-/* costume picker */
-.skins {
+/* hero select */
+.hero-sub {
+  margin: -6px 0 14px;
+}
+
+.hero-cards {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -819,116 +823,103 @@ button.danger {
   margin-bottom: 16px;
 }
 
-button.skin {
-  width: 128px;
-  padding: 12px 6px 10px;
+button.hero-card {
+  position: relative;
+  width: 172px;
+  padding: 24px 9px 12px;
+  align-self: stretch;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   font-size: 8px;
+  text-align: center;
+  cursor: pointer;
 }
 
-button.skin.selected {
+button.hero-card.selected {
   background: var(--accent-dark);
   box-shadow: inset -4px -4px 0 #0b4f49, inset 4px 4px 0 var(--accent), 0 0 0 3px var(--gold);
 }
 
-.fig {
-  position: relative;
-  width: 48px;
-  height: 84px;
+button.hero-card.soon,
+button.hero-card.soon:hover {
+  cursor: default;
+  opacity: 1;
+  filter: none;
+  background: rgba(16, 28, 56, 0.85);
 }
 
-.fig i {
-  position: absolute;
-  display: block;
+button.hero-card.soon .hero-portrait {
+  filter: grayscale(0.35) brightness(0.8);
 }
 
-.fig-head {
-  left: 14px;
-  top: 0;
-  width: 20px;
-  height: 20px;
-  background: #e2a77e;
-  border-top: 5px solid #3b2618;
+.hero-portrait {
+  width: 80px;
+  height: 128px;
+  image-rendering: pixelated;
+  margin: 2px 0 4px;
 }
 
-.fig-mask {
-  left: 14px;
-  top: 10px;
-  width: 20px;
-  height: 5px;
+.hero-name {
+  font-size: 11px;
+  color: #fff;
 }
 
-.fig-body {
-  left: 11px;
-  top: 20px;
-  width: 26px;
-  height: 30px;
+.hero-alias {
+  color: #9fb4d8;
+  line-height: 1.5;
 }
 
-.fig-emblem {
-  left: 9px;
-  top: 6px;
-  width: 8px;
-  height: 9px;
-  clip-path: polygon(0 0, 100% 0, 100% 55%, 50% 100%, 0 55%);
-}
-
-.fig-belt {
-  left: 11px;
-  top: 46px;
-  width: 26px;
-  height: 4px;
-}
-
-.fig-arm {
-  top: 20px;
-  width: 10px;
-  height: 30px;
-}
-
-.fig-arm.l {
-  left: 1px;
-}
-
-.fig-arm.r {
-  right: 1px;
-}
-
-.fig-arm i,
-.fig-leg i {
-  left: 0;
-  bottom: 0;
-  width: 100%;
-  height: 10px;
-}
-
-.fig-leg {
-  top: 50px;
-  width: 12px;
-  height: 32px;
-}
-
-.fig-leg.l {
-  left: 12px;
-}
-
-.fig-leg.r {
-  right: 12px;
-}
-
-.fig-cape {
-  left: 9px;
-  top: 18px;
-  width: 30px;
-  height: 52px;
-  opacity: 0.9;
-}
-
-.skin-name {
+.hero-powers {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  text-align: left;
+  color: #c9d6ee;
   line-height: 1.6;
+}
+
+.hero-powers li {
+  position: relative;
+  padding-left: 9px;
+}
+
+.hero-powers li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 4px;
+  height: 4px;
+  background: var(--gold);
+}
+
+.screen.wide.heroes {
+  max-width: min(980px, 96vw);
+}
+
+.hero-badge {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 6px;
+  font-size: 7px;
+  white-space: nowrap;
+  background: #2f7a45;
+  color: #fff;
+}
+
+.hero-badge.selected {
+  background: var(--gold);
+  color: #10203a;
+}
+
+.hero-badge.soon {
+  background: #5b3d8a;
+  color: #f1e6ff;
+  animation: blink 1.6s steps(2) infinite;
 }
 
 /* tutorial: big instruction banner and idle reminder */

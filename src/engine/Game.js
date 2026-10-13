@@ -113,7 +113,7 @@ export class Game {
     this.particles = new Particles(this.scene, 7000);
     this.effects = new Effects(this.particles);
     this.flightFX = new FlightFX(this.scene, this.particles, this.world);
-    this.applySkin(this.settings.skin);
+    this.applySkin('sky'); // Sky Guardian's colours (costume choice was retired for the Heroes menu)
     this.player.onSonicBoom = () => this.sonicBoom();
     this.player.onHeroLanding = (speed) => this.heroLanding(speed);
     this.meters = new Meters();
