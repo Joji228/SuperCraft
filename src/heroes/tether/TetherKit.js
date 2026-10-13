@@ -221,7 +221,9 @@ export class TetherKit {
     // the bottom of the arc scrapes the street (or rooftop) below
     const d = this.anchor.distanceTo(tmp.set(p.pos.x, p.pos.y + 1.4, p.pos.z));
     const ground = this.groundBelow(this.anchor.x, this.anchor.z, p.pos.y);
-    this.ropeLen = Math.max(7, Math.min(d * 0.85, this.anchor.y - (ground + 4.5)));
+    // (the line starts at his real distance when the web lands and is reeled in to
+    // this length smoothly; snapping straight to it yanked him metres in one frame)
+    this.ropeTarget = Math.max(7, Math.min(d * 0.85, this.anchor.y - (ground + 4.5)));
     this.swingT = 0;
     this.trick = null;
     // every few swings, a different pose on the line
@@ -266,6 +268,7 @@ export class TetherKit {
     if (onLine && !this.webLanded) {
       this.webLanded = true;
       this.splats.add(this.anchor, this.anchorN);
+      this.ropeLen = this.anchor.distanceTo(tmp.set(p.pos.x, p.pos.y + 1.4, p.pos.z));
     }
     v.y -= TETHER.gravity * dt;
     if (onLine) {
@@ -281,8 +284,10 @@ export class TetherKit {
       const sp = v.length();
       if (sp > 1 && p.pos.y + 1.4 < this.anchor.y) v.multiplyScalar(1 + (TETHER.pump * dt) / sp);
       if (v.length() > TETHER.maxSpeed) v.multiplyScalar(TETHER.maxSpeed / v.length());
-      // reel in a little so arcs stay lively
-      this.ropeLen = Math.max(8, this.ropeLen - 3 * dt);
+      // reel in towards the swing length (quickly but smoothly), then a little more so
+      // arcs stay lively
+      this.ropeTarget = Math.max(8, this.ropeTarget - 3 * dt);
+      if (this.ropeLen > this.ropeTarget) this.ropeLen = Math.max(this.ropeTarget, this.ropeLen - 14 * dt);
     }
 
     p.move(dt);
@@ -294,9 +299,16 @@ export class TetherKit {
       const len = d.length();
       if (len > this.ropeLen) {
         d.divideScalar(len);
+        // pull him back onto the rope's reach, but never more than a little per frame
+        // (if a wall was in the way the gap could build up and then jump all at once),
+        // and only as far as he fits
         const before = p.pos.clone();
-        p.pos.set(this.anchor.x + d.x * this.ropeLen, this.anchor.y + d.y * this.ropeLen - 1.4, this.anchor.z + d.z * this.ropeLen);
-        if (p.overlaps()) p.pos.copy(before);
+        const pull = Math.min(len - this.ropeLen, 0.6);
+        for (const k of [1, 0.5, 0.25]) {
+          p.pos.copy(before).addScaledVector(d, -pull * k);
+          if (!p.overlaps()) break;
+          p.pos.copy(before);
+        }
         const radial = v.dot(d);
         if (radial > 0) v.addScaledVector(d, -radial);
       }
