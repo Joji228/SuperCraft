@@ -172,10 +172,18 @@ export class TetherModel {
       armL = up === 'L' ? lineArm : -0.5;
       spreadR = up === 'R' ? -0.25 : 0.7;
       spreadL = up === 'L' ? -0.25 : 0.7;
-      legL = -1.1;
-      legR = -0.35;
-      tilt = Math.max(-0.5, Math.min(0.9, s.vy * -0.02 + 0.25));
-      roll = (s.swingSide || 0) * 0.35;
+      // the body hangs along the web (the line arm points at the anchor); legs trail
+      // behind through the bottom of the arc and swing forward on the way up
+      tilt = s.ropeTilt ?? 0.25;
+      roll = -(s.ropeRoll ?? 0) * 0.8;
+      const rise = Math.max(-1, Math.min(1, s.vy / 18));
+      legL = -0.7 - 0.6 * rise;
+      legR = -0.15 - 0.45 * rise;
+      if (s.boost) {
+        // pouring on speed: tucked tighter, free arm pulled in
+        legL -= 0.3;
+        legR -= 0.3;
+      }
       const free = up === 'R' ? 'L' : 'R';
       if (s.swingVariant === 1) {
         // legs together, stretched out ahead like a diver
@@ -205,14 +213,23 @@ export class TetherModel {
       if (s.trick.type === 'flip') spinX = e * Math.PI * 2;
       else if (s.trick.type === 'spin') spinY = e * Math.PI * 2 * (s.trick.side || 1);
       else spinZ = e * Math.PI * 2 * (s.trick.side || 1);
+    } else if (s.flare) {
+      // about to land: swung upright, knees bent, arms out
+      armL = armR = -0.6;
+      spreadL = spreadR = 0.9;
+      legL = -1.0;
+      legR = -0.2;
+      tilt = 0.1;
     } else if (s.skydive) {
-      // dropping chest-first, arms spread wide, legs trailing
-      armL = armR = -0.25;
-      spreadL = spreadR = 1.45;
-      legL = 0.35;
-      legR = 0.2;
-      tilt = 1.25;
-      roll = Math.sin(this.time * 2.3) * 0.08;
+      // after letting go: hands and chest lead the way forward, then as he starts
+      // to fall he tips over into a head-first dive, arms reaching ahead
+      const fall = Math.max(0, Math.min(1, -s.vy / 30));
+      tilt = 1.0 + 1.35 * fall;
+      armL = armR = -2.4 - 0.5 * fall;
+      spreadL = spreadR = 0.45 - 0.3 * fall;
+      legL = 0.25 + 0.15 * Math.sin(this.time * 9);
+      legR = 0.1 - 0.15 * Math.sin(this.time * 9);
+      roll = Math.sin(this.time * 2.3) * 0.06;
     } else if (s.zip) {
       // pulled along the web: both arms forward, body stretched out
       armL = armR = -1.7;

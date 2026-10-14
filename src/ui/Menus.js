@@ -21,7 +21,7 @@ const CONTROLS = [
   ['T', 'Free Roam: summon the Iron Tyrant from the red plaza circle'],
   ['R', 'Free Roam: steal a car / get out (W S drive, A D steer, Shift nitro, Space handbrake, H horn)'],
   ['Granite', 'Hold Space to charge a leap (release to jump) · Right mouse: Granite Smash (in the air: dive slam) · Q thunder clap'],
-  ['Tether', 'In the air press Space for each web, hold to swing, let go near the top for a boost · Shift in the air: dash · Q web zip · Right mouse web ball · Shift + W up walls, Space kicks off'],
+  ['Tether', 'In the air press Space for each web, hold to swing, let go near the top for a boost · hold Shift while swinging for speed · Q web zip · Right mouse web ball · Shift + W up walls, Space kicks off'],
   ['V', 'Camera: close / medium / far / first person'],
   ['Esc', 'Pause'],
   ['F3', 'Debug info (FPS)'],
