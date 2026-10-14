@@ -11,6 +11,7 @@ import { B, SOLID, LASER_PROOF, FLAMMABLE } from '../../world/Blocks.js';
 import { CITY } from '../../world/CityGenerator.js';
 import { FORMS, ALIENS, formPortrait } from './FluxForms.js';
 import { FluxModel } from './FluxModels.js';
+import { ReverbClone } from './ReverbClone.js';
 
 const PRISM = {
   drain: 0.4, // per second as an alien (a full bar lasts about 4 minutes)
@@ -45,6 +46,11 @@ export class FluxKit {
     this.bolts = [];
     this.spikes = [];
     this.ramHits = new Map();
+    // what the new aliens are up to (the model reads this too)
+    this.alien = { rolling: false, rollSpeed: 0, grow: 1, invisible: false, phasing: false, wallClimb: false };
+    this.clones = [];
+    this.cloneCd = 0;
+    this.airT = 0;
     // models: Deka is the game's 'flux' model, the aliens live here
     this.models = { human: game.models.flux };
     for (const a of ALIENS) {
@@ -58,6 +64,7 @@ export class FluxKit {
       fire: new THREE.MeshBasicMaterial({ color: 0xffa040 }),
       shard: new THREE.MeshLambertMaterial({ color: 0x5ff2b4, emissive: 0x135c42 }),
       zap: new THREE.MeshBasicMaterial({ color: 0x9dffb0 }),
+      sonic: new THREE.MeshBasicMaterial({ color: 0xe8f4ff, transparent: true, opacity: 0.85 }),
     };
     this.pool = [];
     this.spikeGeo = new THREE.ConeGeometry(0.45, 2, 5).translate(0, 1, 0);
@@ -75,26 +82,36 @@ export class FluxKit {
     return true;
   }
 
-  /** Brawl barges cars aside, and so does Blitz at full tilt; the others bump off them. */
+  /** The brutes barge cars aside, and so do Blitz at full tilt and Rollo rolled up; the others bump off them. */
   get shovesCars() {
     const p = this.game.player;
-    return this.form === 'brawl' || (this.form === 'blitz' && Math.hypot(p.vel.x, p.vel.z) > 25);
+    return this.form === 'brawl' || this.form === 'titanor' || this.alien.rolling || (this.form === 'blitz' && Math.hypot(p.vel.x, p.vel.z) > 25);
   }
 
-  /** Only Brawl is strong enough to lift cars; everyone else can carry people and small things. */
+  /** Titanor at giant size treads straight over cars, crushing them. */
+  get crushesCars() {
+    return this.alien.grow > 1.5;
+  }
+
+  /** Only the strongest can lift cars; everyone else can carry people and small things. */
   canLift(e) {
-    return this.form === 'brawl' || !e.carryHeavy;
+    return this.form === 'brawl' || this.form === 'titanor' || !e.carryHeavy;
+  }
+
+  /** Frostmoth's freezing breath puts fires out, so Deka gets the fire emergencies too. */
+  get canDouse() {
+    return true;
   }
 
   get disallow() {
     const d = new Set(this.f.disallow);
-    // the forms that throw things instead of punching
-    if (['fireball', 'shards', 'zap'].includes(this.f.lmb)) d.add('punch');
+    // the forms whose left mouse is something other than a punch
+    if (this.f.lmb !== 'punch') d.add('punch');
     return d;
   }
 
   get punchPower() {
-    return this.f.punchPower;
+    return this.f.punchPower * (this.alien.grow > 1.5 ? 1.9 : 1);
   }
 
   get punchKnock() {
@@ -102,16 +119,21 @@ export class FluxKit {
   }
 
   get heavyHitter() {
-    return this.form === 'brawl'; // four fists knock holes in walls
+    return this.form === 'brawl' || this.form === 'titanor'; // they knock holes in walls
   }
 
-  // Blitz zips in to strike, Brawl pounces: both reach drones hovering overhead
+  // Blitz zips in to strike; Brawl, Feral, Rollo and Titanor pounce: they reach drones overhead
   get lunge() {
-    return this.form === 'blitz' || this.form === 'brawl';
+    return ['blitz', 'brawl', 'feral', 'rollo', 'titanor'].includes(this.form);
+  }
+
+  /** A giant's fists reach that much higher and further. */
+  get punchScale() {
+    return this.alien.grow;
   }
 
   get lungeReach() {
-    return this.form === 'blitz' ? 12 : 10;
+    return this.form === 'blitz' ? 12 : this.form === 'feral' ? 14 : 10;
   }
 
   get punchCooldowns() {
@@ -135,6 +157,7 @@ export class FluxKit {
   }
 
   reset() {
+    this.leaveForm(this.form);
     this.climb = null;
     if (this.ladderPinned) this.pinLadder(false);
     this.closeWheel(false);
@@ -152,6 +175,7 @@ export class FluxKit {
     const g = this.game;
     const p = g.player;
     const was = this.form;
+    if (was !== id) this.leaveForm(was);
     this.form = id;
     const f = FORMS[id];
     // swap the model in place
@@ -172,7 +196,7 @@ export class FluxKit {
     p.noTrail = id !== 'blitz';
     p.wades = true;
     p.waterSolid = false;
-    p.stepHeight = id === 'brawl' ? 2.01 : 1.01;
+    p.stepHeight = id === 'brawl' || id === 'titanor' ? 2.01 : 1.01;
     // Cinder's Shift is a flight boost, not a run; Blitz runs across water; Cinder
     // carves round buildings in flight like Forge does
     p.noSprint = id === 'cinder';
@@ -196,6 +220,27 @@ export class FluxKit {
     }
     g.rings?.spawn({ pos: tmp.set(p.pos.x, p.pos.y + 0.1, p.pos.z).clone(), r0: 0.5, r1: 5, life: 0.4, opacity: 0.7, color: 0x5dff7a, thick: true });
     if (id !== 'human' && was === 'human') g.hud.toast(`${f.name}!`, 'good', 1.2);
+  }
+
+  /** Undo whatever the form we're leaving was doing (rolled up, giant, invisible, phasing, clones). */
+  leaveForm(was) {
+    const g = this.game;
+    const p = g.player;
+    const A = this.alien;
+    A.rolling = false;
+    A.rollSpeed = 0;
+    A.grow = 1;
+    A.invisible = false;
+    A.phasing = false;
+    A.wallClimb = false;
+    p.invisible = false;
+    p.ghostFloor = null;
+    this.bouncing = false;
+    this.pouncing = false;
+    if (g.abilities.senses.active && was === 'feral') g.abilities.senses.set(false);
+    for (const c of this.clones) if (!c.removed) c.life = 0;
+    this.clones.length = 0;
+    if (p.overlaps?.()) p.unstick();
   }
 
   // ---------- the alien wheel ----------
@@ -376,11 +421,11 @@ export class FluxKit {
     const d = this.dash;
     d.t += dt;
     // straight at the target, up into the air too if it's hovering overhead
-    const chest = this.form === 'brawl' ? 1.6 : 1.1;
+    const chest = this.form === 'brawl' ? 1.6 : this.form === 'titanor' ? p.height * 0.55 : 1.1;
     const to = tmp.set(d.target.pos.x - p.pos.x, d.target.pos.y + (d.target.height || 1) * 0.5 - (p.pos.y + chest), d.target.pos.z - p.pos.z);
     const dist = to.length();
     const speed = this.form === 'brawl' ? 30 : 42;
-    if (dist < 1.6 || d.t > dist / speed + 0.1 || d.t > 0.45 || d.target.removed) {
+    if (dist < 1.6 * this.alien.grow || d.t > dist / speed + 0.1 || d.t > 0.45 || d.target.removed) {
       this.dash = null;
       p.vel.x *= 0.2;
       p.vel.z *= 0.2;
@@ -413,6 +458,15 @@ export class FluxKit {
         g.audio.play('click');
         return this.updateClimb(dt);
       }
+    }
+    if (this.form === 'rollo' && this.updateRoll(dt, input, canAct)) return true;
+    if (this.form === 'feral' && this.updateWallClimb(dt, input, canAct)) return true;
+    // mid-leap (Feral's pounce): keep the momentum instead of the usual air control
+    if (this.pouncing && !p.onGround) {
+      p.vel.y = Math.max(p.vel.y - 32 * dt, -50);
+      p.move(dt);
+      if (Math.hypot(p.vel.x, p.vel.z) > 1) p.yaw = Math.atan2(p.vel.x, p.vel.z);
+      return true;
     }
     const chest = w.get(Math.floor(p.pos.x), Math.floor(p.pos.y + 1.0), Math.floor(p.pos.z));
     this.swimming = this.form === 'human' && !p.flying && chest === B.WATER;
@@ -490,6 +544,7 @@ export class FluxKit {
     }
 
     if (this.form !== 'human' && canAct && !this.wheelOpen) this.powers(dt, input);
+    this.alienUpdate(dt, input, canAct);
     if (this.form === 'cinder') {
       // flying on flames costs energy
       if (p.flying && !g.meters.drain(7 * dt)) p.setFlying(false);
@@ -594,6 +649,23 @@ export class FluxKit {
       if (f.lmb === 'fireball') this.shoot('fire', 0.32, 1);
       else if (f.lmb === 'shards') this.shoot('shard', 0.42, 3);
       else if (f.lmb === 'zap') this.shoot('zap', 0.2, 1);
+      else if (f.lmb === 'sonic') this.shoot('sonic', 0.26, 1);
+      else if (f.lmb === 'grab' && input.pressed('punch')) this.ghostGrab();
+    }
+    // Frostmoth: hold left mouse to breathe ice
+    if (f.lmb === 'frost') {
+      this.held = input.isDown('punch') && g.meters.energy > 1;
+      if (this.held) this.frostBreath(dt);
+    }
+    // Reverb: hold right mouse to scream
+    if (f.rmb === 'scream') {
+      this.held = input.isDown('laser') && g.meters.energy > 1;
+      if (this.held) this.scream(dt);
+    }
+    // E: Wraith turns invisible, Reverb splits into clones
+    if (input.pressed('senses')) {
+      if (this.form === 'wraith') this.toggleInvisible();
+      else if (this.form === 'reverb') this.splitClones();
     }
     if (f.lmb === 'punch' && input.pressed('punch')) this.fighting();
 
@@ -601,8 +673,10 @@ export class FluxKit {
     if (f.rmb === 'flamethrower') {
       this.held = input.isDown('laser') && g.meters.energy > 1;
       if (this.held) this.flamethrower(dt);
-    } else if (input.pressed('laser')) {
-      const cost = { slam: 25, cyclone: 25, spikes: 30 }[f.rmb];
+    } else if (f.rmb === 'grow' && input.pressed('laser')) {
+      this.toggleGrow();
+    } else if (f.rmb !== 'scream' && input.pressed('laser')) {
+      const cost = { slam: 25, cyclone: 25, spikes: 30, bounce: 20, nova: 30, fear: 25, pounce: 15 }[f.rmb] ?? 20;
       if (this.specialCd > 0) {
         // still recovering
       } else if (g.meters.energy < cost) {
@@ -614,6 +688,10 @@ export class FluxKit {
         this.specialFired = false;
         this.fighting();
         if (f.rmb === 'spikes') this.spikeLine();
+        else if (f.rmb === 'bounce') this.bounce();
+        else if (f.rmb === 'nova') this.frostNova();
+        else if (f.rmb === 'fear') this.terrify();
+        else if (f.rmb === 'pounce') this.greatLeap();
         g.audio.play('whoosh');
       }
     }
@@ -651,12 +729,12 @@ export class FluxKit {
     g.hero.root.updateMatrixWorld(true);
     const from = g.hero.handR.getWorldPosition(new THREE.Vector3());
     const target = aim.entity ? aim.entity.centerInto(new THREE.Vector3()) : aim.point.clone();
-    const speed = kind === 'fire' ? 55 : kind === 'shard' ? 80 : 120;
+    const speed = kind === 'fire' ? 55 : kind === 'shard' ? 80 : kind === 'sonic' ? 110 : 120;
     for (let i = 0; i < count; i++) {
       const dir = target.clone().sub(from).normalize();
       if (count > 1) dir.add(tmp.set((Math.random() - 0.5) * 0.12, (Math.random() - 0.5) * 0.08, (Math.random() - 0.5) * 0.12)).normalize();
       const m = this.boltMesh(kind);
-      const size = kind === 'fire' ? [0.45, 0.45, 0.45] : kind === 'shard' ? [0.14, 0.14, 0.7] : [0.08, 0.08, 1.4];
+      const size = kind === 'fire' ? [0.45, 0.45, 0.45] : kind === 'shard' ? [0.14, 0.14, 0.7] : kind === 'sonic' ? [0.6, 0.6, 0.08] : [0.08, 0.08, 1.4];
       m.scale.set(...size);
       m.position.copy(from);
       m.lookAt(tmp.copy(from).add(dir));
@@ -676,9 +754,10 @@ export class FluxKit {
       if (ent && (!blk || ent.t < blk.t)) {
         const e = ent.entity;
         const at = b.pos.clone().addScaledVector(b.dir, ent.t);
-        const dmg = b.kind === 'fire' ? 26 : b.kind === 'shard' ? 15 : 14;
+        const dmg = b.kind === 'fire' ? 26 : b.kind === 'shard' ? 15 : b.kind === 'sonic' ? 16 : 14;
+        if (b.kind === 'sonic' && e.canFreeze) e.stun = Math.max(e.stun || 0, 0.5);
         const dealt = e.damage(dmg, { type: b.kind === 'fire' ? 'fire' : 'punch', knock: b.dir.clone().multiplyScalar(b.kind === 'fire' ? 6 : 4).setY(2), source: g.player });
-        if (b.kind === 'zap' && e.kind === 'drone') e.damage(20, { type: 'impact' });
+        if ((b.kind === 'zap' || b.kind === 'sonic') && e.kind === 'drone') e.damage(20, { type: 'impact' }); // electronics hate it
         if (dealt > 0) g.markers.damageNumber(at, dealt, b.kind === 'fire' ? '#ffb36b' : '#bfffe6');
         g.hud.hitMarker(!e.alive);
         this.burst(b.kind, at);
@@ -693,6 +772,7 @@ export class FluxKit {
       b.pos.addScaledVector(b.dir, step);
       b.travelled += step;
       b.mesh.position.copy(b.pos);
+      if (b.kind === 'sonic') b.mesh.scale.x = b.mesh.scale.y = 0.6 + Math.min(1.2, b.travelled * 0.04);
       if (b.kind === 'fire') {
         b.mesh.rotation.x += dt * 12;
         if (Math.random() < 0.9) g.effects.flame(b.pos, 0.8, 0.15);
@@ -931,6 +1011,502 @@ export class FluxKit {
     }
   }
 
+  // ---------- the six newer aliens ----------
+
+  /** Things that run every frame for the newer aliens. */
+  alienUpdate(dt, input, canAct) {
+    const g = this.game;
+    const p = g.player;
+    const A = this.alien;
+    const f = this.form;
+    this.cloneCd = Math.max(0, this.cloneCd - dt);
+    this.clones = this.clones.filter((c) => !c.removed);
+    this.airT = p.onGround ? 0 : this.airT + dt;
+    if (f === 'human') return;
+
+    // Frostmoth and Wraith: hold Shift to phase through walls
+    if (f === 'frostmoth' || f === 'wraith') {
+      const want = canAct && input.isDown('boost') && g.meters.energy > 1;
+      // never let go while still inside a wall
+      p.ghostFloor = null;
+      const stuck = A.phasing && p.overlaps();
+      A.phasing = want || (A.phasing && stuck);
+      if (A.phasing) {
+        p.ghostFloor = CITY.G;
+        if (!g.meters.drain(12 * dt) && stuck) p.unstick();
+        g.meters.invulnerable = Math.max(g.meters.invulnerable, 0.1);
+        if (Math.random() < dt * 30) g.particles.emit({ x: p.pos.x + (Math.random() - 0.5) * 0.8, y: p.pos.y + Math.random() * p.height, z: p.pos.z + (Math.random() - 0.5) * 0.8, vx: 0, vy: 0.5, vz: 0, life: 0.6, size: 0.25, grow: 1.5, alpha: 0.5, r: f === 'wraith' ? 0.75 : 0.65, g: f === 'wraith' ? 0.65 : 0.9, b: 1, drag: 1 });
+      }
+    }
+    // Wraith's invisibility costs energy while it lasts
+    if (A.invisible) {
+      if (!g.meters.drain(6 * dt)) this.toggleInvisible();
+      p.invisible = true;
+    }
+    // Titanor: giant size costs energy; his footsteps shake the street
+    if (f === 'titanor' && A.grow > 1) {
+      if (!g.meters.drain(5 * dt)) this.toggleGrow();
+      const hs = Math.hypot(p.vel.x, p.vel.z);
+      if (p.onGround && hs > 2) {
+        this.stepT = (this.stepT || 0) + dt * hs / 5;
+        if (this.stepT > 1) {
+          this.stepT = 0;
+          this.stomp(2.8, 14);
+        }
+      }
+    }
+    // landing from Rollo's bounce or Feral's leap
+    if ((this.bouncing || this.pouncing) && p.onGround && this.special > 0.25) {
+      const big = this.bouncing;
+      this.bouncing = this.pouncing = false;
+      g.rig.shake = Math.max(g.rig.shake, big ? 0.6 : 0.35);
+      g.audio.play(big ? 'stomp' : 'land');
+      g.effects.dust(tmp.set(p.pos.x, p.pos.y + 0.1, p.pos.z), big ? 40 : 18, big ? 2.5 : 1.5);
+      g.rings?.spawn({ pos: tmp.clone(), r0: 0.5, r1: big ? 8 : 5, life: 0.4, opacity: 0.8, color: big ? 0xf2c94c : 0xffb070, thick: true });
+      this.radial(big ? 7 : 4.5, big ? 45 : 30, big ? 10 : 7, big ? 12 : 6);
+      if (big) this.crater(p.pos, 2, 4);
+    }
+  }
+
+  // --- Rollo ---
+
+  /** Hold Shift: curl up and roll. Momentum, wall bounces, and he bowls through everything. */
+  updateRoll(dt, input, canAct) {
+    const g = this.game;
+    const p = g.player;
+    const A = this.alien;
+    const want = canAct && input.isDown('boost') && g.meters.speed > 1 && !p.flying;
+    if (!A.rolling && !want) return false;
+    if (!A.rolling) {
+      A.rolling = true;
+      p.height = 1.5;
+      g.audio.play('whoosh');
+    }
+    const hs0 = Math.hypot(p.vel.x, p.vel.z);
+    if (!want && hs0 < 4) {
+      A.rolling = false;
+      p.height = FORMS.rollo.body.height;
+      p.unstick();
+      return false;
+    }
+    g.meters.drainSpeed(dt * 0.7);
+    const yaw = g.rig.yaw;
+    const fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
+    const iz = canAct ? (input.isDown('forward') ? 1 : 0) - (input.isDown('back') ? 1 : 0) : 0;
+    const ix = canAct ? (input.isDown('right') ? 1 : 0) - (input.isDown('left') ? 1 : 0) : 0;
+    let wx = fx * iz + rx * ix, wz = fz * iz + rz * ix;
+    const wl = Math.hypot(wx, wz);
+    const MAX = 32;
+    if (wl > 0 && want) {
+      wx /= wl;
+      wz /= wl;
+      // a heavy ball: speed builds up, and turning takes a moment
+      const sp = Math.min(MAX, hs0 + 26 * dt);
+      let dx = hs0 > 0.5 ? p.vel.x / hs0 : wx, dz = hs0 > 0.5 ? p.vel.z / hs0 : wz;
+      const k = 1 - Math.exp(-3 * dt);
+      dx += (wx - dx) * k;
+      dz += (wz - dz) * k;
+      const dl = Math.hypot(dx, dz) || 1;
+      // turning hard against the roll bleeds speed
+      const turnLoss = Math.max(0, -(dx / dl) * (p.vel.x / Math.max(hs0, 0.01)) - (dz / dl) * (p.vel.z / Math.max(hs0, 0.01)));
+      const speed = sp * (1 - turnLoss * 0.02);
+      p.vel.x = (dx / dl) * speed;
+      p.vel.z = (dz / dl) * speed;
+    } else {
+      const k = Math.exp(-(want ? 0.5 : 2.5) * dt);
+      p.vel.x *= k;
+      p.vel.z *= k;
+    }
+    if (canAct && input.pressed('jump') && p.onGround) p.vel.y = 13;
+    p.vel.y = Math.max(p.vel.y - 32 * dt, -50);
+    const vx = p.vel.x, vz = p.vel.z;
+    p.move(dt);
+    // bounce off walls instead of stopping dead
+    if (p.hitWall) {
+      const hard = Math.max(Math.abs(vx), Math.abs(vz));
+      if (p.vel.x === 0 && Math.abs(vx) > 3) p.vel.x = -vx * 0.6;
+      if (p.vel.z === 0 && Math.abs(vz) > 3) p.vel.z = -vz * 0.6;
+      if (hard > 12) {
+        g.audio.play('thud');
+        g.rig.shake = Math.max(g.rig.shake, Math.min(0.5, hard / 60));
+        g.effects.dust(tmp.set(p.pos.x, p.pos.y + 0.6, p.pos.z), 10, 1);
+        // smash glass and small stuff he rams into
+        const w = g.world;
+        const ax = Math.floor(p.pos.x + Math.sign(vx) * (p.halfW + 0.3)), az = Math.floor(p.pos.z + Math.sign(vz) * (p.halfW + 0.3));
+        for (let y = 0; y < 2; y++) {
+          const by = Math.floor(p.pos.y) + y;
+          for (const [bx, bz] of [[ax, Math.floor(p.pos.z)], [Math.floor(p.pos.x), az]]) {
+            const b = w.get(bx, by, bz);
+            if ((b >= B.GLASS_BLUE && b <= B.GLASS_DARK) || b === B.DOOR || b === B.LEAVES || b === B.PLANKS) w.edit(bx, by, bz, B.AIR);
+          }
+        }
+      }
+    }
+    const hs = Math.hypot(p.vel.x, p.vel.z);
+    A.rollSpeed = hs;
+    if (hs > 0.5) p.yaw = Math.atan2(p.vel.x, p.vel.z);
+    if (hs > 6) this.rollHits(hs);
+    if (p.onGround && hs > 8 && Math.random() < dt * 20) g.effects.dust(tmp.set(p.pos.x, p.pos.y + 0.1, p.pos.z), 2, 0.6);
+    p.modeLabel = 'ROLLING';
+    return true;
+  }
+
+  /** Rolled up and moving: anything he hits gets bowled over. */
+  rollHits(hs) {
+    const g = this.game;
+    const p = g.player;
+    const now = performance.now();
+    for (const e of g.entities.query(tmp.set(p.pos.x, p.pos.y + 0.75, p.pos.z), 1.9)) {
+      if (!e.alive || e.carried || e.removed || e.kind === 'clone' || (e.rollHit || 0) > now) continue;
+      e.rollHit = now + 600;
+      const dir = new THREE.Vector3(e.pos.x - p.pos.x, 0, e.pos.z - p.pos.z);
+      if (dir.lengthSq() < 0.01) dir.set(p.vel.x, 0, p.vel.z);
+      dir.normalize().lerp(tmp2.set(p.vel.x, 0, p.vel.z).normalize(), 0.5).normalize();
+      const m = Math.max(1, e.mass);
+      if (e.kind === 'car') e.driving = false;
+      const dmg = e.team === 'civ' ? 6 : e.kind === 'car' ? hs * 1.6 : 10 + hs * 1.3;
+      const dealt = e.damage(dmg, { type: 'impact', knock: dir.multiplyScalar(hs * 0.7 * m).setY(5 * m), source: p });
+      if (dealt > 1 && e.team !== 'civ') g.markers.damageNumber(e.centerInto(new THREE.Vector3()), dealt, '#f2c94c');
+      g.audio.play(e.kind === 'car' ? 'crunch' : 'punchHeavy', e.pos);
+      g.rig.shake = Math.max(g.rig.shake, 0.25);
+      p.vel.multiplyScalar(e.kind === 'car' ? 0.75 : 0.92);
+      this.fighting();
+    }
+  }
+
+  /** RMB: a huge bounce that comes down as a shockwave. */
+  bounce() {
+    const p = this.game.player;
+    p.vel.y = 17;
+    p.onGround = false;
+    this.bouncing = true;
+  }
+
+  // --- Titanor ---
+
+  toggleGrow() {
+    const g = this.game;
+    const p = g.player;
+    const A = this.alien;
+    const f = FORMS.titanor;
+    if (A.grow <= 1) {
+      if (g.meters.energy < 20) {
+        g.hud.toast('Not enough energy to grow', 'warn', 1);
+        return;
+      }
+      A.grow = 2.4;
+      p.halfW = f.body.halfW * 2.4;
+      p.height = f.body.height * 2.4;
+      p.unstick();
+      p.stats = { walk: 8, run: 14, sprint: 14, jump: 22 };
+      p.stepHeight = 4.01;
+      g.rig.eye = f.eye * 2.2;
+      g.rig.distScale = f.camScale * 2.1;
+      g.rig.shake = Math.max(g.rig.shake, 0.7);
+      g.audio.play('stomp');
+      g.audio.play('boom');
+      g.hud.toast('Titanor grows!', 'good', 1);
+      this.special = 0;
+      this.specialCd = 1;
+    } else {
+      A.grow = 1;
+      p.halfW = f.body.halfW;
+      p.height = f.body.height;
+      p.stats = { ...f.stats };
+      p.stepHeight = 2.01;
+      g.rig.eye = f.eye;
+      g.rig.distScale = f.camScale;
+      this.specialCd = 1;
+    }
+  }
+
+  /** A giant's footstep: the ground shakes, people stumble, cars get squashed. */
+  stomp(r, dmg) {
+    const g = this.game;
+    const p = g.player;
+    g.rig.shake = Math.max(g.rig.shake, 0.18);
+    g.audio.play('thud', p.pos);
+    g.effects.dust(tmp.set(p.pos.x, p.pos.y + 0.1, p.pos.z), 8, 1.5);
+    g.addDanger(p.pos, 12, 1);
+    for (const e of g.entities.query(tmp.set(p.pos.x, p.pos.y + 0.5, p.pos.z), r + 1)) {
+      if (!e.alive || e.carried || e.removed || e.kind === 'clone') continue;
+      if (Math.abs(e.pos.y - p.pos.y) > 2) continue;
+      if (e.kind === 'car') {
+        e.driving = false;
+        e.damage(40, { type: 'impact', source: p });
+        g.audio.play('crunch', e.pos);
+      } else e.damage(e.team === 'civ' ? 3 : dmg, { type: 'impact', knock: tmp2.set(e.pos.x - p.pos.x, 0, e.pos.z - p.pos.z).normalize().multiplyScalar(5).setY(4), source: p });
+    }
+  }
+
+  // --- Frostmoth ---
+
+  /** Hold LMB: a cone of freezing breath. Freezes enemies, puts out fires, ices over water. */
+  frostBreath(dt) {
+    const g = this.game;
+    const p = g.player;
+    g.meters.drain(14 * dt);
+    this.fighting();
+    p.aimTimer = 0.3;
+    const aim = g.abilities.computeAim();
+    g.hero.root.updateMatrixWorld(true);
+    const from = g.hero.head.getWorldPosition(tmp2).add(tmp.copy(aim.dir).multiplyScalar(0.4));
+    const dir = aim.dir;
+    for (let i = 0; i < 6; i++) {
+      const s = 14 + Math.random() * 8;
+      const c = 0.8 + Math.random() * 0.2;
+      g.particles.emit({ x: from.x, y: from.y, z: from.z, vx: (dir.x + (Math.random() - 0.5) * 0.3) * s, vy: (dir.y + (Math.random() - 0.5) * 0.3) * s, vz: (dir.z + (Math.random() - 0.5) * 0.3) * s, life: 0.5 + Math.random() * 0.2, size: 0.25, grow: 4, alpha: 0.75, r: c * 0.8, g: c * 0.95, b: 1, drag: 2 });
+    }
+    for (const e of g.entities.query(from, 13)) {
+      if (!e.alive || e.carried || e.kind === 'clone') continue;
+      const to = e.centerInto(tmp).sub(from);
+      const d = to.length();
+      if (d > 12 || to.divideScalar(d).dot(dir) < 0.85) continue;
+      e.chill((e.team === 'civ' ? 0.35 : 1.3) * dt);
+      const dealt = e.damage((e.team === 'civ' ? 2 : 8) * dt, { type: 'laser', source: p });
+      g.markers.accumulate(e, dealt, '#bff4ff');
+    }
+    g.fires.extinguishCone(from, dir, 12, 0.85, dt * 2);
+    // ice over water it's aimed at
+    const h = aim.block;
+    if (h && h.block === B.WATER && aim.point.distanceTo(from) < 14 && g.world.get(h.x, h.y + 1, h.z) === B.AIR) {
+      for (const [dx, dz] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) if (g.world.get(h.x + dx, h.y, h.z + dz) === B.WATER && g.world.get(h.x + dx, h.y + 1, h.z + dz) === B.AIR) g.world.edit(h.x + dx, h.y, h.z + dz, B.ICE);
+    }
+    if (!this.frostLoop) {
+      this.frostLoop = true;
+      g.audio.startLoop('breath');
+    }
+    clearTimeout(this.frostLoopOff);
+    this.frostLoopOff = setTimeout(() => {
+      this.frostLoop = false;
+      g.audio.stopLoop('breath');
+    }, 120);
+  }
+
+  /** RMB: a burst of cold all around him that freezes everything close. */
+  frostNova() {
+    const g = this.game;
+    const p = g.player;
+    const c = new THREE.Vector3(p.pos.x, p.pos.y + 1, p.pos.z);
+    g.effects.iceBurst(c, 40);
+    g.audio.play('freeze');
+    g.rings?.spawn({ pos: c.clone(), r0: 0.5, r1: 9, life: 0.45, opacity: 0.8, color: 0xbff4ff, thick: true });
+    g.fires.extinguishAt(c, 9);
+    for (const e of g.entities.query(c, 9)) {
+      if (!e.alive || e.carried || e.kind === 'clone') continue;
+      e.chill(e.team === 'civ' ? 0.4 : 1.5);
+      if (e.team !== 'civ') e.damage(12, { type: 'impact', source: p });
+    }
+  }
+
+  // --- Wraith ---
+
+  toggleInvisible() {
+    const g = this.game;
+    const A = this.alien;
+    if (!A.invisible && g.meters.energy < 10) {
+      g.hud.toast('Not enough energy', 'warn', 1);
+      return;
+    }
+    A.invisible = !A.invisible;
+    g.player.invisible = A.invisible;
+    g.audio.play(A.invisible ? 'sensesOn' : 'sensesOff');
+    if (A.invisible) g.hud.toast('Invisible: enemies lose track of you', 'good', 1.4);
+  }
+
+  /** LMB: a ghostly grab that yanks an enemy off its feet and flings it away. */
+  ghostGrab() {
+    const g = this.game;
+    const p = g.player;
+    const aim = g.abilities.computeAim();
+    let target = aim.entity && aim.entity.alive && aim.entity.kind !== 'clone' && aim.entity.pos.distanceTo(p.pos) < 14 ? aim.entity : null;
+    if (!target) {
+      let best = 0.6;
+      for (const e of g.entities.query(p.pos, 12)) {
+        if (!e.alive || e.carried || e.kind === 'clone' || e.team !== 'enemy') continue;
+        const to = tmp.set(e.pos.x - p.pos.x, e.pos.y - p.pos.y, e.pos.z - p.pos.z).normalize();
+        const c = to.dot(aim.dir);
+        if (c > best) {
+          best = c;
+          target = e;
+        }
+      }
+    }
+    this.shotCd = 0.8;
+    this.shotT = 0;
+    p.aimTimer = 0.4;
+    g.hero.punch(3);
+    if (!target) {
+      g.audio.play('whoosh');
+      return;
+    }
+    this.fighting();
+    const c = target.centerInto(new THREE.Vector3());
+    g.hero.root.updateMatrixWorld(true);
+    const hand = g.hero.handR.getWorldPosition(new THREE.Vector3());
+    // a spectral chain from his hand to the victim
+    for (let i = 0; i <= 14; i++) {
+      const q = hand.clone().lerp(c, i / 14);
+      g.particles.emit({ x: q.x, y: q.y, z: q.z, vx: 0, vy: 0.4, vz: 0, life: 0.4, size: 0.3, grow: 1.4, alpha: 0.8, r: 0.75, g: 0.6, b: 1, drag: 1 });
+    }
+    const away = new THREE.Vector3(c.x - p.pos.x, 0, c.z - p.pos.z).normalize();
+    const side = new THREE.Vector3(-away.z, 0, away.x).multiplyScalar(Math.random() < 0.5 ? -1 : 1);
+    const m = Math.max(1, target.mass);
+    if (target.kind === 'car') target.driving = false;
+    const dealt = target.damage(target.team === 'civ' ? 5 : 30, { type: 'impact', knock: away.multiplyScalar(10).add(side.multiplyScalar(8)).multiplyScalar(m).setY(11 * m), source: p });
+    if (dealt > 1 && target.team !== 'civ') g.markers.damageNumber(c, dealt, '#d7c8ff');
+    if (target.canFreeze) target.stun = Math.max(target.stun || 0, 1);
+    g.audio.play('punchHeavy', target.pos);
+    g.hud.hitMarker(!target.alive);
+  }
+
+  /** RMB: a shriek that sends enemies running and people screaming. */
+  terrify() {
+    const g = this.game;
+    const p = g.player;
+    const c = new THREE.Vector3(p.pos.x, p.pos.y + 1, p.pos.z);
+    g.rings?.spawn({ pos: c.clone(), r0: 0.5, r1: 16, life: 0.6, opacity: 0.7, color: 0xb9a7ff, thick: true });
+    g.audio.play('scream');
+    for (let i = 0; i < 40; i++) {
+      const a = Math.random() * Math.PI * 2;
+      g.particles.emit({ x: c.x, y: c.y, z: c.z, vx: Math.cos(a) * 12, vy: (Math.random() - 0.5) * 3, vz: Math.sin(a) * 12, life: 0.7, size: 0.4, grow: 2, alpha: 0.6, r: 0.7, g: 0.6, b: 1, drag: 1.5 });
+    }
+    for (const e of g.entities.query(c, 16)) {
+      if (!e.alive || e.removed) continue;
+      if (e.team === 'enemy') {
+        e.scared = 4;
+        e.alerted = true;
+      } else if (e.team === 'civ') e.panic?.(p.pos, 5);
+    }
+  }
+
+  // --- Feral ---
+
+  /** W into a tall wall: climb straight up it, then scramble over the top. */
+  updateWallClimb(dt, input, canAct) {
+    const g = this.game;
+    const p = g.player;
+    const A = this.alien;
+    if (!canAct || !input.isDown('forward') || p.flying) {
+      A.wallClimb = false;
+      return false;
+    }
+    const yaw = g.rig.yaw;
+    const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+    const reach = p.halfW + 0.45;
+    // a tall wall in front (chest height) starts a climb; once climbing, keep going
+    // until even his feet are clear of the edge (parapets included)
+    const wallAt = (h) => {
+      const r = g.world.raycast(p.pos.x, p.pos.y + h, p.pos.z, fx, 0, fz, reach);
+      return r && Math.abs(r.ny) < 0.5 ? r : null;
+    };
+    const hitChest = wallAt(1.1) || (A.wallClimb ? wallAt(0.15) : null);
+    if (!hitChest) {
+      if (A.wallClimb) {
+        // over the top: a little hop forward onto the roof
+        A.wallClimb = false;
+        p.vel.set(fx * 5, 6, fz * 5);
+      }
+      return false;
+    }
+    A.wallClimb = true;
+    p.vel.set(fx * 1.5, 8.5, fz * 1.5);
+    p.move(dt);
+    p.yaw = Math.atan2(fx, fz);
+    if (Math.random() < dt * 8) g.effects.debris(tmp.set(p.pos.x + fx * reach, p.pos.y + 0.8, p.pos.z + fz * reach), 0x8d8a82, 2, 3);
+    p.modeLabel = 'CLIMBING';
+    return true;
+  }
+
+  /** RMB: a great leap forward that lands with a thump. */
+  greatLeap() {
+    const g = this.game;
+    const p = g.player;
+    if (!p.onGround) return;
+    const yaw = g.rig.yaw;
+    p.vel.set(-Math.sin(yaw) * 24, 11, -Math.cos(yaw) * 24);
+    p.onGround = false;
+    this.pouncing = true;
+  }
+
+  // --- Reverb ---
+
+  /** Hold RMB: a scream that blasts enemies back and shatters glass. */
+  scream(dt) {
+    const g = this.game;
+    const p = g.player;
+    g.meters.drain(18 * dt);
+    this.fighting();
+    p.aimTimer = 0.3;
+    const aim = g.abilities.computeAim();
+    g.hero.root.updateMatrixWorld(true);
+    const from = g.hero.head.getWorldPosition(tmp2).clone();
+    const dir = aim.dir;
+    this.ringT = (this.ringT || 0) - dt;
+    if (this.ringT <= 0) {
+      this.ringT = 0.07;
+      g.rings?.spawn({ pos: from.clone().addScaledVector(dir, 0.6), normal: dir.clone(), r0: 0.2, r1: 3.5, life: 0.35, speed: 34, opacity: 0.6, color: 0xe8f4ff });
+    }
+    for (const e of g.entities.query(from, 15)) {
+      if (!e.alive || e.carried || e.kind === 'clone') continue;
+      const to = e.centerInto(tmp).sub(from);
+      const d = to.length();
+      if (d > 14 || to.divideScalar(d).dot(dir) < 0.82) continue;
+      const civ = e.team === 'civ';
+      const dealt = e.damage((civ ? 4 : 28) * dt, { type: 'laser', knock: tmp.copy(dir).multiplyScalar((civ ? 6 : 14) * dt * Math.max(1, e.mass)), source: p });
+      if (e.canFreeze && !civ) e.stun = Math.max(e.stun || 0, 0.3);
+      g.markers.accumulate(e, dealt, '#e8f4ff');
+      if (e.kind === 'drone') e.damage(20 * dt, { type: 'impact' });
+    }
+    // windows in the cone shatter
+    const w = g.world;
+    for (let i = 0; i < 4; i++) {
+      const d = tmp.copy(dir).add(new THREE.Vector3((Math.random() - 0.5) * 0.5, (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.5)).normalize();
+      const h = w.raycast(from.x, from.y, from.z, d.x, d.y, d.z, 14);
+      if (h && ((h.block >= B.GLASS_BLUE && h.block <= B.GLASS_DARK) || h.block === B.DOOR || h.block === B.LAMP)) {
+        w.edit(h.x, h.y, h.z, B.AIR);
+        g.effects.debris(new THREE.Vector3(h.x + 0.5, h.y + 0.5, h.z + 0.5), 0xbfe8ff, 6, 5);
+        if (Math.random() < 0.5) g.audio.play('glass', p.pos);
+      }
+    }
+    if (!this.screamLoop) {
+      this.screamLoop = true;
+      g.audio.startLoop('laser');
+    }
+    clearTimeout(this.screamLoopOff);
+    this.screamLoopOff = setTimeout(() => {
+      this.screamLoop = false;
+      g.audio.stopLoop('laser');
+    }, 120);
+  }
+
+  /** E: split into three little copies that fight beside him. */
+  splitClones() {
+    const g = this.game;
+    const p = g.player;
+    if (this.cloneCd > 0) {
+      g.hud.toast('Clones still recovering', 'info', 0.8);
+      return;
+    }
+    if (g.meters.energy < 40) {
+      g.hud.toast('Not enough energy', 'warn', 1);
+      return;
+    }
+    g.meters.drain(40);
+    this.cloneCd = 20;
+    for (const c of this.clones) c.life = 0;
+    this.clones.length = 0;
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2;
+      const c = g.entities.add(new ReverbClone(g, p.pos.x + Math.cos(a) * 1.2, p.pos.y + 0.3, p.pos.z + Math.sin(a) * 1.2));
+      c.unstick();
+      this.clones.push(c);
+    }
+    g.audio.play('sensesOn');
+    g.rings?.spawn({ pos: new THREE.Vector3(p.pos.x, p.pos.y + 0.2, p.pos.z), r0: 0.4, r1: 3, life: 0.3, opacity: 0.8, color: 0xe8f4ff, thick: true });
+    g.hud.toast('Reverb splits!', 'good', 1);
+  }
+
   // ---------- HUD ----------
 
   updateUi() {
@@ -974,13 +1550,19 @@ export class FluxKit {
     hud.ab.laser.classList.toggle('active', this.held || this.special < 0.4);
     hud.ab.breath.classList.toggle('active', this.wheelOpen);
     hud.ab.breath.classList.toggle('disabled', false);
+    if (this.form === 'rollo') hud.ab.boost.classList.toggle('active', this.alien.rolling);
+    if (this.form === 'titanor') hud.ab.laser.classList.toggle('active', this.alien.grow > 1.5);
+    if (this.form === 'wraith') hud.ab.senses.classList.toggle('active', this.alien.invisible);
+    if (this.form === 'wraith' || this.form === 'frostmoth') hud.ab.boost.classList.toggle('active', this.alien.phasing);
+    if (this.form === 'frostmoth') hud.ab.punch.classList.toggle('active', this.held);
   }
 
   cooldowns() {
     const f = this.f;
-    const shot = { fireball: 0.32, shards: 0.42, zap: 0.2 }[f.lmb];
+    const shot = { fireball: 0.32, shards: 0.42, zap: 0.2, sonic: 0.26, grab: 0.8 }[f.lmb];
     return {
-      laser: f.rmb && f.rmb !== 'flamethrower' ? [this.specialCd, 1.8] : null,
+      laser: f.rmb && !['flamethrower', 'scream'].includes(f.rmb) ? [this.specialCd, f.rmb === 'grow' ? 1 : 1.8] : null,
+      senses: this.form === 'reverb' ? [this.cloneCd, 20] : null,
       punch: shot ? [this.shotCd, shot] : null,
       // the band locked after a time-out: the Q button fills back up as it recharges
       breath: this.recharging ? [PRISM.rechargeUntil - this.prism, PRISM.rechargeUntil] : null,

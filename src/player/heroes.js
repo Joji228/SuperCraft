@@ -44,7 +44,7 @@ export const HEROES = [
     name: 'Deka',
     alias: 'Hero of the Fluxitrix',
     tagline: 'A teenager whose wristband turns him into alien heroes',
-    powers: ['Hold Q: the alien wheel', 'Cinder, Brawl, Blitz, Shard', 'Fluxitrix bar: time as an alien', 'As Deka: punch, run, swim'],
+    powers: ['Hold Q: the alien wheel', 'Ten aliens, from Cinder to Reverb', 'Fluxitrix bar: time as an alien', 'As Deka: punch, run, swim'],
     playable: true,
     note: 'Free Roam',
   },

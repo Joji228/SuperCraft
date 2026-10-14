@@ -316,6 +316,19 @@ export class Game {
         p.onGround = true;
         continue;
       }
+      // a giant (Titanor grown) just treads cars flat
+      if (this.heroKit?.crushesCars) {
+        e.driving = false;
+        if (e.kind === 'car' && !(e.bumpCd > performance.now())) {
+          e.bumpCd = performance.now() + 500;
+          e.damage(150, { type: 'impact', source: p }); // flattened
+          e.dent = 1;
+          this.audio.play('crunch', e.pos);
+          this.rig.shake = Math.max(this.rig.shake, 0.35);
+          this.effects.debris(e.centerInto(new THREE.Vector3()), 0x9aa0a6, 10, 6);
+        }
+        continue;
+      }
       // push out along whichever side is nearer
       const px = hx - Math.abs(lx), pz = hz - Math.abs(lz);
       let nx, nz, pen;
@@ -799,6 +812,7 @@ export class Game {
       climbing: this.heroId === 'flux' && !!this.heroKit.climb,
       warn: this.heroId === 'flux' && this.heroKit.form !== 'human' && this.heroKit.prism < 20,
       recharging: this.heroId === 'flux' && this.heroKit.recharging,
+      alien: this.heroId === 'flux' ? this.heroKit.alien : null,
       wading: p.wading,
     });
 

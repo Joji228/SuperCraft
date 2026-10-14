@@ -19,6 +19,7 @@ export class Body {
     this.waterSolid = true; // water is a floor for everyone in Brightport
     this.hitWall = false; // horizontal collision during the last move
     this.impact = 0; // speed lost in the last collision (for crash damage)
+    this.ghostFloor = null; // phasing: blocks at or above this height don't stop the body
   }
 
   /** True if the box overlaps a solid voxel. */
@@ -29,6 +30,7 @@ export class Body {
     const y0 = Math.floor(this.pos.y), y1 = Math.floor(this.pos.y + this.height - EPS);
     const z0 = Math.floor(this.pos.z - hw), z1 = Math.floor(this.pos.z + hw - EPS);
     for (let y = y0; y <= y1; y++) {
+      if (this.ghostFloor !== null && y >= this.ghostFloor) continue;
       for (let z = z0; z <= z1; z++) {
         for (let x = x0; x <= x1; x++) {
           const b = w.get(x, y, z);

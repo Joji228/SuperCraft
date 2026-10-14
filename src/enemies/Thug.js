@@ -80,7 +80,21 @@ export class Thug extends Humanoid {
     this.cooldown -= dt;
     this.dangerCd -= dt;
 
-    if (!this.alerted && heroDist < this.aggro) this.alerted = true;
+    // terrified (Wraith): run for it for a few seconds
+    if (this.scared > 0) {
+      this.scared -= dt;
+      steer(this, -toHero.dir.x, -toHero.dir.z, this.speed * 1.3, dt);
+      this.yaw = Math.atan2(this.vel.x, this.vel.z);
+      if (this.hitWall && this.onGround) this.vel.y = 7;
+      super.update(dt);
+      return;
+    }
+    // an invisible hero: they lose track of him and go back to what they were doing
+    if (p.invisible) {
+      this.alerted = false;
+      if (this.state === 'fight') this.state = 'idle';
+    }
+    if (!this.alerted && heroDist < this.aggro && !p.invisible) this.alerted = true;
     if (this.health < this.maxHealth * 0.22 && this.state !== 'flee' && !this.noFlee) this.state = 'flee';
     else if (this.alerted && this.state !== 'flee') this.state = 'fight';
 

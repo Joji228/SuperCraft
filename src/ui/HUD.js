@@ -193,6 +193,36 @@ export class HUD {
         hint: '<b>LMB</b> crystal shards &nbsp; <b>RMB</b> crystal spikes<br>Takes far less damage<br>Hold <b>Q</b> to change',
         heat: false,
       },
+      'flux-rollo': {
+        ab: { boost: ['SHIFT', 'Roll'], punch: ['LMB', 'Punch'], laser: ['RMB', 'Bounce'], breath: ['Q', 'Aliens'], carry: ['G', 'Carry'], senses: null, fly: null },
+        hint: 'Hold <b>SHIFT</b> to roll up: <b>WASD</b> steer, <b>SPACE</b> hop, bounce off walls<br><b>LMB</b> punch &nbsp; <b>RMB</b> bounce slam<br>Hold <b>Q</b> to change',
+        heat: false,
+      },
+      'flux-titanor': {
+        ab: { boost: ['SHIFT', 'Run'], punch: ['LMB', 'Punch'], laser: ['RMB', 'Grow'], breath: ['Q', 'Aliens'], carry: ['G', 'Carry'], senses: null, fly: null },
+        hint: '<b>RMB</b> grow giant (energy drains while big) &nbsp; <b>LMB</b> huge punches<br>Giant footsteps flatten cars &nbsp; <b>G</b> lift cars<br>Hold <b>Q</b> to change',
+        heat: false,
+      },
+      'flux-frostmoth': {
+        ab: { punch: ['LMB', 'Frost'], laser: ['RMB', 'Nova'], boost: ['SHIFT', 'Phase'], fly: ['F', 'Fly'], breath: ['Q', 'Aliens'], carry: ['G', 'Carry'], senses: null },
+        hint: '<b>F</b> fly &nbsp; hold <b>LMB</b> freezing breath (puts fires out) &nbsp; <b>RMB</b> frost nova<br>Hold <b>SHIFT</b> to phase through walls<br>Hold <b>Q</b> to change',
+        heat: false,
+      },
+      'flux-wraith': {
+        ab: { punch: ['LMB', 'Grab'], laser: ['RMB', 'Terrify'], senses: ['E', 'Invisible'], boost: ['SHIFT', 'Phase'], fly: ['F', 'Float'], breath: ['Q', 'Aliens'], carry: ['G', 'Carry'] },
+        hint: '<b>LMB</b> grab and fling &nbsp; <b>RMB</b> terrify &nbsp; <b>E</b> invisible<br>Hold <b>SHIFT</b> to phase through walls &nbsp; <b>F</b> float<br>Hold <b>Q</b> to change',
+        heat: false,
+      },
+      'flux-feral': {
+        ab: { boost: ['SHIFT', 'Sprint'], punch: ['LMB', 'Pounce'], laser: ['RMB', 'Leap'], senses: ['E', 'Smell'], breath: ['Q', 'Aliens'], carry: ['G', 'Carry'], fly: null },
+        hint: '<b>E</b> smell enemies through walls &nbsp; <b>LMB</b> pounce and bite &nbsp; <b>RMB</b> great leap<br><b>W</b> into a wall to climb it &nbsp; <b>SHIFT</b> sprint<br>Hold <b>Q</b> to change',
+        heat: false,
+      },
+      'flux-reverb': {
+        ab: { punch: ['LMB', 'Sonic'], laser: ['RMB', 'Scream'], senses: ['E', 'Clones'], breath: ['Q', 'Aliens'], carry: ['G', 'Carry'], boost: null, fly: null },
+        hint: '<b>LMB</b> sonic blasts &nbsp; hold <b>RMB</b> shattering scream<br><b>E</b> split into three clones<br>Hold <b>Q</b> to change',
+        heat: false,
+      },
       forge: {
         ab: { boost: ['SHIFT', 'Boost'], punch: ['LMB', 'Punch'], laser: ['RMB', 'Repulsor'], breath: ['Q', 'Unibeam'], senses: ['E', 'Missiles'], carry: ['G', 'Carry'], fly: ['F', 'Fly'] },
         hint: '<b>F</b> fly &nbsp; <b>SHIFT</b> boost (hold for the afterburner) &nbsp; <b>SPACE/C</b> up/down<br>Hold <b>RMB</b> repulsors &nbsp; hold <b>Q</b> Unibeam &nbsp; <b>E</b> homing missiles<br><b>LMB</b> punch &nbsp; <b>G</b> carry &nbsp; <b>V</b> camera',

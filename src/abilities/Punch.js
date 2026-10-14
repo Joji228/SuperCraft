@@ -76,11 +76,12 @@ export class Punch {
     const p = g.player;
     this.combo = combo;
     const dir = aim.dir;
-    this.origin.set(p.pos.x, p.pos.y + (big ? 1.8 : 1.35), p.pos.z);
-    this.center.copy(this.origin).addScaledVector(dir, big ? 1.9 : 1.5);
+    const sc = g.heroKit?.punchScale ?? 1; // a giant (Titanor grown) reaches much further
+    this.origin.set(p.pos.x, p.pos.y + (big ? 1.8 : 1.35) * sc, p.pos.z);
+    this.center.copy(this.origin).addScaledVector(dir, (big ? 1.9 : 1.5) * sc);
     // entities in the fist's reach, plus whatever the crosshair touches just beyond
-    const hits = g.entities.query(this.center, big ? 2.3 : 1.7, (e) => e.punchable && !e.carried && e.team !== 'civ' && !e.removed);
-    const far = g.entities.raycast(this.origin, dir, big ? 4 : 3.2, (e) => e.punchable && !e.carried && e.team !== 'civ');
+    const hits = g.entities.query(this.center, (big ? 2.3 : 1.7) * sc, (e) => e.punchable && !e.carried && e.team !== 'civ' && !e.removed);
+    const far = g.entities.raycast(this.origin, dir, (big ? 4 : 3.2) * sc, (e) => e.punchable && !e.carried && e.team !== 'civ');
     if (far && !hits.includes(far.entity)) hits.push(far.entity);
     // big shields: a punch lands if the fist reaches the bubble's surface
     for (const e of g.entities.list) {

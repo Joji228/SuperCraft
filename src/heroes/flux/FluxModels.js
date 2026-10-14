@@ -213,6 +213,185 @@ function build(kind, pivot) {
       S.legR = legGroup(-1, 0.16, 0.8, 0.26, crystal, light);
       break;
     }
+    case 'rollo': {
+      S.hip = 0.62;
+      const plate = mat(0xf2c94c), plateD = mat(0xc99a2e), skin = mat(0xe8e8e8), dark = mat(0x3a3d45);
+      add(part(0.66, 0.8, 0.5, skin, 0, 0.4, 0));
+      // the armoured shell he curls up in: plates over back, shoulders and front
+      add(part(0.98, 0.98, 0.5, plate, 0, 0.5, -0.2));
+      add(part(1.0, 0.1, 0.52, plateD, 0, 0.72, -0.2));
+      add(part(1.0, 0.1, 0.52, plateD, 0, 0.36, -0.2));
+      add(part(0.6, 0.5, 0.06, plate, 0, 0.5, 0.27));
+      const em = part(0.16, 0.16, 0.03, band, 0, 0.55, 0.31);
+      em.castShadow = false;
+      add(em);
+      S.head = headGroup(0.82);
+      S.head.add(part(0.4, 0.34, 0.38, skin, 0, 0.17, 0.08));
+      S.head.add(part(0.46, 0.2, 0.46, plate, 0, 0.36, 0.04));
+      S.head.add(part(0.07, 0.05, 0.02, dark, -0.09, 0.2, 0.28));
+      S.head.add(part(0.07, 0.05, 0.02, dark, 0.09, 0.2, 0.28));
+      S.armL = armGroup(1, 0.58, 0.78, 0.7, 0.2, skin, plate);
+      S.armR = armGroup(-1, 0.58, 0.78, 0.7, 0.2, skin, plate);
+      S.legL = legGroup(1, 0.2, 0.56, 0.26, skin, plate);
+      S.legR = legGroup(-1, 0.2, 0.56, 0.26, skin, plate);
+      // rolled up: a chunky armoured ball (shown instead of his body)
+      S.shell = new THREE.Group();
+      const b1 = part(1.5, 1.5, 1.5, plate);
+      const b2 = part(1.62, 1.2, 1.2, plateD);
+      const b3 = part(1.2, 1.62, 1.2, plateD);
+      const b4 = part(1.2, 1.2, 1.62, plate);
+      const stripe = part(1.56, 0.18, 1.56, mat(0x2a2a2a));
+      const emb = part(0.3, 0.3, 0.06, band, 0, 0, 0.82);
+      S.shell.add(b1, b2, b3, b4, stripe, emb);
+      S.shell.visible = false;
+      break;
+    }
+    case 'titanor': {
+      S.hip = 1.2;
+      const hide = mat(0xa07a4a), dark = mat(0x7a5a34), belly = mat(0xd8c08a), black = mat(0x1d1d1d);
+      add(part(1.02, 1.1, 0.7, hide, 0, 0.55, 0));
+      add(part(0.6, 0.86, 0.06, belly, 0, 0.5, 0.36));
+      add(part(0.9, 0.24, 0.66, black, 0, 0.02, 0)); // belt
+      const em = part(0.18, 0.18, 0.03, band, 0, 0.04, 0.35);
+      em.castShadow = false;
+      add(em);
+      for (let i = 0; i < 4; i++) add(part(0.16, 0.2, 0.2, dark, 0, 0.95 - i * 0.24, -0.4)); // back plates
+      S.tail = new THREE.Group();
+      S.tail.position.set(0, 0.05, -0.35);
+      S.tail.add(part(0.4, 0.36, 1.0, hide, 0, -0.1, -0.5));
+      S.tail.add(part(0.26, 0.24, 0.7, dark, 0, -0.2, -1.2));
+      pivot.add(S.tail);
+      S.head = headGroup(1.1);
+      S.head.add(part(0.56, 0.5, 0.62, hide, 0, 0.25, 0.08));
+      S.head.add(part(0.6, 0.12, 0.3, dark, 0, 0.48, 0.12)); // brow ridge
+      S.head.add(part(0.46, 0.08, 0.04, mat(0xf4f4f4), 0, 0.08, 0.4)); // teeth
+      for (const x of [-0.14, 0.14]) {
+        const e = part(0.08, 0.06, 0.02, glow(0xffd34d), x, 0.34, 0.4);
+        e.castShadow = false;
+        S.head.add(e);
+      }
+      S.armL = armGroup(1, 0.68, 1.0, 0.82, 0.32, hide, dark, 1.25);
+      S.armR = armGroup(-1, 0.68, 1.0, 0.82, 0.32, hide, dark, 1.25);
+      S.legL = legGroup(1, 0.28, 1.14, 0.4, dark, hide);
+      S.legR = legGroup(-1, 0.28, 1.14, 0.4, dark, hide);
+      break;
+    }
+    case 'frostmoth': {
+      S.hip = 0.86;
+      const navy = mat(0x2a4478), deep = mat(0x1a2c50), ice = glow(0x7dffef);
+      const wingMat = new THREE.MeshLambertMaterial({ color: 0x9fe8ff, emissive: 0x1c4a5a, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
+      add(part(0.56, 0.84, 0.34, navy, 0, 0.42, 0));
+      add(part(0.3, 0.6, 0.04, deep, 0, 0.42, 0.18));
+      const em = part(0.14, 0.14, 0.03, band, 0, 0.62, 0.2);
+      em.castShadow = false;
+      add(em);
+      S.head = headGroup(0.84);
+      S.head.add(part(0.42, 0.42, 0.4, navy, 0, 0.21, 0));
+      for (const x of [-0.11, 0.11]) {
+        const e = part(0.12, 0.08, 0.02, ice, x, 0.24, 0.21);
+        e.castShadow = false;
+        S.head.add(e);
+      }
+      for (const x of [-0.12, 0.12]) S.head.add(part(0.04, 0.3, 0.04, deep, x, 0.55, 0.05)); // antennae
+      // big moth wings on his back (folded like a cloak when he's on the ground)
+      S.wings = [];
+      for (const side of [1, -1]) {
+        const w = new THREE.Group();
+        w.position.set(side * 0.1, 0.72, -0.2);
+        const m1 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.5, 0.04), wingMat);
+        m1.position.set(side * 0.6, -0.2, 0);
+        const m2 = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.06, 0.05), ice);
+        m2.position.set(side * 0.5, 0.25, 0.01);
+        w.add(m1, m2);
+        w.userData.side = side;
+        pivot.add(w);
+        S.wings.push(w);
+      }
+      S.armL = armGroup(1, 0.36, 0.76, 0.6, 0.18, navy, deep);
+      S.armR = armGroup(-1, 0.36, 0.76, 0.6, 0.18, navy, deep);
+      S.legL = legGroup(1, 0.14, 0.8, 0.22, navy, deep);
+      S.legR = legGroup(-1, 0.14, 0.8, 0.22, navy, deep);
+      break;
+    }
+    case 'wraith': {
+      S.hip = 0.8;
+      const ghost = new THREE.MeshLambertMaterial({ color: 0xb9a7ff, emissive: 0x2a1a55, transparent: true, opacity: 0.85 });
+      const pale = new THREE.MeshLambertMaterial({ color: 0xe6e0ff, emissive: 0x3a3060, transparent: true, opacity: 0.9 });
+      const hollow = new THREE.MeshBasicMaterial({ color: 0x2a0a4a });
+      add(part(0.5, 0.8, 0.3, ghost, 0, 0.4, 0));
+      add(part(0.24, 0.12, 0.04, hollow, 0, 0.5, 0.16));
+      const em = part(0.12, 0.12, 0.03, band, 0, 0.66, 0.17);
+      em.castShadow = false;
+      add(em);
+      S.head = headGroup(0.8);
+      S.head.add(part(0.44, 0.46, 0.42, pale, 0, 0.23, 0));
+      S.head.add(part(0.12, 0.12, 0.02, hollow, -0.1, 0.26, 0.22));
+      S.head.add(part(0.12, 0.12, 0.02, hollow, 0.1, 0.26, 0.22));
+      S.head.add(part(0.2, 0.06, 0.02, hollow, 0, 0.1, 0.22));
+      S.armL = armGroup(1, 0.34, 0.74, 0.66, 0.15, ghost, pale);
+      S.armR = armGroup(-1, 0.34, 0.74, 0.66, 0.15, ghost, pale);
+      // no legs: a wispy tail
+      S.legL = legGroup(1, 0.1, 0.5, 0.18, ghost, ghost);
+      S.legR = legGroup(-1, 0.1, 0.5, 0.18, ghost, ghost);
+      S.tail = new THREE.Group();
+      S.tail.position.set(0, -0.05, 0);
+      S.tail.add(part(0.4, 0.4, 0.26, ghost, 0, -0.2, -0.02));
+      S.tail.add(part(0.26, 0.3, 0.2, ghost, 0, -0.52, -0.08));
+      pivot.add(S.tail);
+      S.fade = [ghost, pale];
+      break;
+    }
+    case 'feral': {
+      // on all fours: the torso runs front to back, front legs are the "arms"
+      S.hip = 0.78;
+      const fur = mat(0xff9a4d), dark = mat(0xd8662a), white = mat(0xf4f4f4), black = mat(0x1d1d1d);
+      add(part(0.62, 0.52, 1.3, fur, 0, 0.12, 0));
+      add(part(0.5, 0.16, 1.1, dark, 0, 0.42, -0.05)); // spine ridge
+      const em = part(0.14, 0.14, 0.03, band, 0.32, 0.12, 0);
+      em.castShadow = false;
+      em.rotation.y = Math.PI / 2;
+      add(em);
+      S.head = headGroup(0.18);
+      S.head.position.z = 0.75;
+      S.head.add(part(0.5, 0.42, 0.5, fur, 0, 0.06, 0.18));
+      S.head.add(part(0.36, 0.08, 0.04, white, 0, -0.09, 0.44)); // fangs
+      for (const x of [-0.2, 0.2]) S.head.add(part(0.06, 0.2, 0.1, dark, x, 0.22, 0.3)); // gill slits instead of eyes
+      S.tail = new THREE.Group();
+      S.tail.position.set(0, 0.25, -0.65);
+      S.tail.add(part(0.14, 0.14, 0.6, dark, 0, 0.1, -0.3));
+      pivot.add(S.tail);
+      S.armL = armGroup(1, 0.24, 0.0, 0.72, 0.18, fur, black);
+      S.armR = armGroup(-1, 0.24, 0.0, 0.72, 0.18, fur, black);
+      S.armL.position.z = S.armR.position.z = 0.48;
+      S.legL = legGroup(1, 0.24, 0.72, 0.2, fur, black);
+      S.legR = legGroup(-1, 0.24, 0.72, 0.2, fur, black);
+      S.legL.position.z = S.legR.position.z = -0.48;
+      break;
+    }
+    case 'reverb': {
+      S.hip = 0.5;
+      const white = mat(0xf4f8ff), black = mat(0x1d2a3a), blue = glow(0x4dc3ff);
+      add(part(0.46, 0.5, 0.3, black, 0, 0.25, 0));
+      add(part(0.26, 0.26, 0.04, white, 0, 0.27, 0.16));
+      const em = part(0.1, 0.1, 0.03, band, 0, 0.27, 0.19);
+      em.castShadow = false;
+      add(em);
+      for (const s of [1, -1]) add(part(0.16, 0.16, 0.16, white, s * 0.3, 0.46, 0)); // speaker shoulders
+      S.head = headGroup(0.5);
+      S.head.add(part(0.4, 0.34, 0.36, white, 0, 0.17, 0));
+      S.head.add(part(0.3, 0.06, 0.02, black, 0, 0.12, 0.19)); // grille
+      S.head.add(part(0.3, 0.04, 0.02, black, 0, 0.04, 0.19));
+      for (const x of [-0.09, 0.09]) {
+        const e = part(0.06, 0.05, 0.02, blue, x, 0.24, 0.19);
+        e.castShadow = false;
+        S.head.add(e);
+      }
+      S.armL = armGroup(1, 0.3, 0.42, 0.38, 0.12, black, white);
+      S.armR = armGroup(-1, 0.3, 0.42, 0.38, 0.12, black, white);
+      S.legL = legGroup(1, 0.1, 0.46, 0.14, black, white);
+      S.legR = legGroup(-1, 0.1, 0.46, 0.14, black, white);
+      break;
+    }
   }
   return S;
 }
@@ -227,6 +406,11 @@ export class FluxModel {
     Object.assign(this, S);
     this.hipY = S.hip;
     this.pivot.position.y = S.hip;
+    if (S.shell) {
+      S.shell.position.y = 0.78;
+      this.root.add(S.shell);
+    }
+    this.scaleNow = 1;
     this.handR = this.armR.userData.hand;
     this.handL = this.armL.userData.hand;
     this.eyes = new THREE.Group(); // interface compatibility (no laser eyes)
@@ -350,6 +534,24 @@ export class FluxModel {
       spreadL = spreadR = 0.2;
     }
 
+    // per-alien extras
+    const A = s.alien || {};
+    if (k === 'feral' && s.mode !== 'fly') {
+      tilt = A.wallClimb ? -1.35 : 0; // a beast on all fours stays level (or rears up a wall)
+      if (A.wallClimb) {
+        const c = this.time * 10;
+        armL = -0.6 + Math.sin(c) * 0.6;
+        armR = -0.6 - Math.sin(c) * 0.6;
+      }
+    }
+    if (k === 'wraith') {
+      // floating: no walking, the tail sways
+      legL = legR = 0.3;
+      crouch = -0.25 + Math.sin(this.time * 2.2) * 0.08;
+      if (s.mode !== 'fly') tilt = Math.min(0.35, (s.hSpeed || 0) * 0.04);
+    }
+    if (k === 'titanor' && (s.hSpeed || 0) < 0.3) spreadL = spreadR = 0.28;
+
     // right-mouse power poses
     const sp = s.special ?? 9;
     if (sp < 0.7) {
@@ -371,10 +573,27 @@ export class FluxModel {
         spreadL = spreadR = 0.4;
         crouch = 0.3;
         tilt = 0.5;
+      } else if (k === 'rollo' || k === 'feral') {
+        // bounce slam / great leap: tucked, then stretched out
+        crouch = sp < 0.15 ? 0.4 : 0;
+        armL = armR = sp < 0.15 ? 0.6 : -1.6;
+        if (k === 'feral') tilt = sp < 0.15 ? 0.2 : -0.3;
+      } else if (k === 'titanor') {
+        armL = armR = -2.6; // roaring as he grows
+        spreadL = spreadR = 0.9;
+        tilt = -0.2;
+      } else if (k === 'frostmoth' || k === 'wraith') {
+        armL = armR = -1.2;
+        spreadL = spreadR = 1.3;
       }
     }
-    if (s.held) {
-      // holding a stream (Cinder's flamethrower): both arms forward
+    if (s.held && k === 'reverb') {
+      // the scream: arms flung back, chest out
+      armL = armR = 0.8;
+      spreadL = spreadR = 0.8;
+      tilt = -0.25;
+    } else if (s.held) {
+      // holding a stream (Cinder's flamethrower, Frostmoth's breath): both arms forward
       armL = armR = -(Math.PI / 2 + this.tilt + (s.aimPitch || 0));
       spreadL = spreadR = 0.05;
     }
@@ -433,6 +652,44 @@ export class FluxModel {
       this.flame.scale.set(1 + Math.random() * 0.15, 0.8 + Math.random() * 0.5, 1 + Math.random() * 0.15);
       for (const f of this.fires || []) f.scale.set(0.8 + Math.random() * 0.4, 0.7 + Math.random() * 0.7, 0.8 + Math.random() * 0.4);
     }
+    // Rollo rolled up: the body hides inside a spinning armoured ball
+    if (this.shell) {
+      const rolling = !!A.rolling;
+      this.shell.visible = rolling;
+      this.pivot.visible = !rolling;
+      if (rolling) this.shell.rotation.x += (A.rollSpeed || 0) * dt / 0.78;
+    }
+    // Titanor grows (and shrinks) smoothly
+    const sc = A.grow || 1;
+    if (Math.abs(this.scaleNow - sc) > 0.001) {
+      this.scaleNow = damp(this.scaleNow, sc, 6, dt);
+      this.root.scale.setScalar(this.scaleNow);
+    }
+    // Frostmoth's wings: folded like a cloak on the ground, beating in flight
+    if (this.wings) {
+      for (const w of this.wings) {
+        const side = w.userData.side;
+        const open = s.mode === 'fly' ? 1 : s.mode === 'air' ? 0.6 : 0.1;
+        const beat = s.mode === 'fly' ? Math.sin(this.time * (s.boost ? 22 : 12)) * 0.6 : 0;
+        w.rotation.y = damp(w.rotation.y, side * (-1.2 * (1 - open) + 0.15) + side * beat, 18, dt);
+        w.rotation.z = side * 0.15;
+      }
+    }
+    // see-through while phasing; nearly gone while invisible
+    if (this.fade || A.phasing) {
+      if (!this.fadeMats) {
+        this.fadeMats = new Set();
+        this.root.traverse((o) => o.material && !o.material.isMeshBasicMaterial && this.fadeMats.add(o.material));
+        for (const m of this.fadeMats) {
+          m.transparent = true;
+          m.userData.baseOpacity = m.opacity;
+        }
+      }
+      const want = A.invisible ? 0.12 : A.phasing ? 0.35 : 1;
+      this.opacity = damp(this.opacity ?? 1, want, 10, dt);
+      for (const m of this.fadeMats) m.opacity = m.userData.baseOpacity * this.opacity;
+    }
+
     if (this.band) {
       // the Fluxitrix glows green, or flashes red when it's about to time out / recharging
       const on = s.warn ? Math.floor(this.time * 6) % 2 === 0 : true;

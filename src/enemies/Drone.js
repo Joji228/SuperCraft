@@ -108,7 +108,9 @@ export class Drone extends Entity {
     const g = this.game;
     const p = g.player;
     const heroDist = this.pos.distanceTo(p.pos);
-    const focus = heroDist < 90 || !this.target || this.target.removed ? p.pos : this.target.pos;
+    const hasTarget = this.target && !this.target.removed;
+    // an invisible hero can't be tracked: harass the victim, or just hover
+    const focus = p.invisible ? (hasTarget ? this.target.pos : (this.hoverAt ||= this.pos.clone())) : heroDist < 90 || !hasTarget ? p.pos : this.target.pos;
     this.orbit += dt * 0.6 * this.orbitDir;
     const tx = focus.x + Math.cos(this.orbit) * this.range;
     const tz = focus.z + Math.sin(this.orbit) * this.range;
@@ -128,7 +130,7 @@ export class Drone extends Entity {
     this.cooldown -= dt;
     const eye = tmpA.set(this.pos.x, this.pos.y + 0.25, this.pos.z);
     const aimAt = focus === p.pos ? heroChest(g, tmpB) : tmpB.set(focus.x, focus.y + 1, focus.z);
-    if (this.cooldown <= 0 && eye.distanceTo(aimAt) < 45 && canSee(g.world, eye, aimAt)) {
+    if (focus !== this.hoverAt && this.cooldown <= 0 && eye.distanceTo(aimAt) < 45 && canSee(g.world, eye, aimAt)) {
       this.cooldown = this.style === 'sentinel' ? 2.8 + Math.random() * 1.6 : 1.8 + Math.random() * 1.4;
       g.projectiles.fire(this.style === 'sentinel' ? 'plasma' : 'bolt', eye, aimAt, this, 0.06);
       g.audio.play('zap', this.pos);
