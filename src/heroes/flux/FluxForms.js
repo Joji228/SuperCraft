@@ -1,10 +1,9 @@
-// Flux's forms: Deka (human) and the five aliens of the Fluxitrix. All original
+// Deka's forms: Deka (human) and the aliens of the Fluxitrix. All original
 // names and designs, inspired by the classic alien-watch archetypes:
 //   Cinder  - a living ember: flame head, magma-rock body, throws fire, flies on flames
 //   Brawl   - a four-armed red giant: crushing punches, huge jumps, shockwave slam
 //   Blitz   - a sleek speedster on wheel feet: blinding speed, rapid strikes, cyclone
 //   Shard   - a crystal warrior: shard volleys, crystal spikes from the ground, tough
-//   Glitch  - living circuitry: zaps, an EMP pulse, and takes over cars (R)
 
 export const FORMS = {
   human: {
@@ -91,25 +90,9 @@ export const FORMS = {
     rmb: 'spikes',
     abilities: ['LMB crystal shards', 'RMB crystal spikes', 'Very tough'],
   },
-  glitch: {
-    name: 'Glitch',
-    title: 'Living circuitry',
-    color: '#7dff8a',
-    body: { halfW: 0.36, height: 1.75 },
-    stats: { walk: 7.5, run: 14, sprint: 14, jump: 14 },
-    eye: 1.6,
-    camScale: 1.05,
-    disallow: ['fly', 'boost', 'laser', 'breath', 'senses'],
-    punchPower: 0.9,
-    punchKnock: 1,
-    damageMul: 0.85,
-    lmb: 'zap',
-    rmb: 'emp',
-    abilities: ['LMB zap', 'RMB EMP pulse', 'R take over a car'],
-  },
 };
 
-export const ALIENS = ['cinder', 'brawl', 'blitz', 'shard', 'glitch'];
+export const ALIENS = ['cinder', 'brawl', 'blitz', 'shard'];
 
 // ---------- small pixel portraits for the alien wheel (16 x 20 cells) ----------
 
@@ -181,18 +164,6 @@ const PAINT = {
     r(13, 7, 2, 6, '#5ff2b4');
     r(4, 13, 3, 6, '#3fd096');
     r(9, 13, 3, 6, '#3fd096');
-  },
-  glitch(r) {
-    r(5, 1, 6, 5, '#111418');
-    r(7, 2, 3, 3, '#7dff8a'); // single round eye
-    r(4, 6, 8, 7, '#111418');
-    r(5, 7, 1, 5, '#7dff8a'); // circuit lines
-    r(10, 7, 1, 5, '#7dff8a');
-    r(6, 9, 4, 1, '#7dff8a');
-    r(2, 6, 2, 6, '#111418');
-    r(12, 6, 2, 6, '#111418');
-    r(5, 13, 2, 6, '#111418');
-    r(9, 13, 2, 6, '#111418');
   },
 };
 

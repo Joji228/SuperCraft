@@ -126,10 +126,6 @@ export class FluxKit {
     return !!this.f.fireproof;
   }
 
-  get upgradesCars() {
-    return this.form === 'glitch';
-  }
-
   /** Called by the game when Flux is chosen (and after each mode starts). */
   onSelect() {
     this.prism = 100;
@@ -606,7 +602,7 @@ export class FluxKit {
       this.held = input.isDown('laser') && g.meters.energy > 1;
       if (this.held) this.flamethrower(dt);
     } else if (input.pressed('laser')) {
-      const cost = { slam: 25, cyclone: 25, spikes: 30, emp: 35 }[f.rmb];
+      const cost = { slam: 25, cyclone: 25, spikes: 30 }[f.rmb];
       if (this.specialCd > 0) {
         // still recovering
       } else if (g.meters.energy < cost) {
@@ -618,7 +614,6 @@ export class FluxKit {
         this.specialFired = false;
         this.fighting();
         if (f.rmb === 'spikes') this.spikeLine();
-        else if (f.rmb === 'emp') this.emp();
         g.audio.play('whoosh');
       }
     }
@@ -883,27 +878,6 @@ export class FluxKit {
     }
   }
 
-  /** Glitch: an EMP pulse. Drones drop, cars die, enemies seize up. */
-  emp() {
-    const g = this.game;
-    const p = g.player;
-    g.audio.play('zap');
-    g.audio.play('shieldHit');
-    g.rings?.spawn({ pos: new THREE.Vector3(p.pos.x, p.pos.y + 1, p.pos.z), r0: 0.5, r1: 15, life: 0.5, opacity: 0.8, color: 0x7dff8a, thick: true });
-    for (const e of g.entities.query(p.pos, 15)) {
-      if (!e.alive || e.carried) continue;
-      if (e.kind === 'drone') e.damage(100, { type: 'impact', source: p });
-      else if (e.kind === 'car') {
-        e.driving = false;
-        e.vel.multiplyScalar(0.1);
-      } else if (e.team === 'enemy') {
-        e.stun = Math.max(e.stun || 0, e.boss ? 0.6 : 2.5);
-        e.damage(10, { type: 'impact', source: p });
-      }
-      g.effects.sparks(e.centerInto(new THREE.Vector3()), 6, null, 0x7dff8a);
-    }
-  }
-
   /** Damage + knock-back in a ring around him (civilians just get pushed). */
   radial(r, dmg, out, up) {
     const g = this.game;
@@ -942,25 +916,6 @@ export class FluxKit {
       g.audio.play('punchHit', e.pos);
       this.fighting();
     }
-  }
-
-  // ---------- Glitch takes over cars ----------
-
-  upgradeCar(car) {
-    if (car.upgraded) return;
-    car.upgraded = true;
-    car.savedColors = car.boxes.map((b) => b.color);
-    for (const b of car.boxes) {
-      if (b.glow) b.color = 0x7dff8a;
-      else if (b.color !== 0x1c1c1c) b.color = b.color === 0x23303f ? 0x7dff8a : 0x111418;
-    }
-    this.game.hud.toast('Glitch takes over the car!', 'good', 1.2);
-  }
-
-  restoreCar(car) {
-    if (!car.upgraded) return;
-    car.upgraded = false;
-    car.boxes.forEach((b, i) => (b.color = car.savedColors[i]));
   }
 
   onLand(speed) {

@@ -1,5 +1,5 @@
 // Models for Flux's forms: Deka (a kid in a green jacket over a white "10" tee, with the
-// glowing Fluxitrix on his wrist) and the five aliens. One blocky rig per form, all
+// glowing Fluxitrix on his wrist) and his aliens. One blocky rig per form, all
 // sharing the same poses. Same interface as HeroModel (root, head, eyes, punch(),
 // update()) plus handR for projectiles.
 import * as THREE from 'three';
@@ -39,20 +39,6 @@ function tenTexture() {
     g.fillRect(8, 10, 5, 2);
     g.fillRect(8, 4, 2, 8);
     g.fillRect(11, 4, 2, 8);
-  });
-}
-
-function circuitTexture() {
-  return pixelTexture(16, 16, (g) => {
-    g.fillStyle = '#111418';
-    g.fillRect(0, 0, 16, 16);
-    g.fillStyle = '#7dff8a';
-    g.fillRect(2, 0, 1, 7);
-    g.fillRect(2, 7, 6, 1);
-    g.fillRect(8, 7, 1, 9);
-    g.fillRect(12, 2, 1, 10);
-    g.fillRect(12, 12, 3, 1);
-    g.fillRect(5, 12, 1, 4);
   });
 }
 
@@ -227,24 +213,6 @@ function build(kind, pivot) {
       S.legR = legGroup(-1, 0.16, 0.8, 0.26, crystal, light);
       break;
     }
-    case 'glitch': {
-      S.hip = 0.78; // leg length + foot
-      const goo = mat(0xffffff, { map: circuitTexture() }), dark = mat(0x111418), green = glow(0x7dff8a);
-      add(part(0.52, 0.66, 0.32, goo, 0, 0.33, 0));
-      const em = part(0.12, 0.12, 0.03, band, 0, 0.52, 0.17);
-      em.castShadow = false;
-      add(em);
-      S.head = headGroup(0.66);
-      S.head.add(part(0.44, 0.44, 0.42, goo, 0, 0.22, 0));
-      const eye = part(0.2, 0.2, 0.04, green, 0, 0.24, 0.22);
-      eye.castShadow = false;
-      S.head.add(eye);
-      S.armL = armGroup(1, 0.34, 0.6, 0.52, 0.16, goo, dark);
-      S.armR = armGroup(-1, 0.34, 0.6, 0.52, 0.16, goo, dark);
-      S.legL = legGroup(1, 0.13, 0.72, 0.2, goo, dark);
-      S.legR = legGroup(-1, 0.13, 0.72, 0.2, goo, dark);
-      break;
-    }
   }
   return S;
 }
@@ -403,9 +371,6 @@ export class FluxModel {
         spreadL = spreadR = 0.4;
         crouch = 0.3;
         tilt = 0.5;
-      } else if (k === 'glitch') {
-        armL = armR = -0.6;
-        spreadL = spreadR = 1.4;
       }
     }
     if (s.held) {

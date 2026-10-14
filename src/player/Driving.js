@@ -82,7 +82,6 @@ export class Driving {
     car.carryable = false;
     car.thrown = false;
     car.halfW = 1.05;
-    if (g.heroKit?.upgradesCars) g.heroKit.upgradeCar(car);
     // a superhero's getaway car takes a beating (same dents, more hit points)
     if (!car.tough) {
       car.tough = true;
@@ -121,7 +120,6 @@ export class Driving {
     car.carryable = true;
     car.roll = 0;
     car.pitch = 0;
-    g.kits?.flux?.restoreCar(car);
     car.halfW = 1.0;
     g.audio.stopLoop('engine');
     const p = g.player;
@@ -182,8 +180,7 @@ export class Driving {
     this.nitro = throttle && input.isDown('boost') && vf > 2 && (this.nitro ? m.speed > 0 : m.speed > 12);
 
     if (car.onGround) {
-      // a car Glitch has taken over is quicker and its nitro never runs dry
-      const top = (this.nitro ? CAR.nitroSpeed : CAR.maxSpeed) * (car.upgraded ? 1.35 : 1);
+      const top = this.nitro ? CAR.nitroSpeed : CAR.maxSpeed;
       if (throttle) {
         if (vf < top) vf = Math.min(top, vf + (this.nitro ? CAR.nitroAccel : CAR.accel) * (1 - Math.max(0, vf) / (top * 1.6)) * dt);
         else vf += (top - vf) * (1 - Math.exp(-1.5 * dt)); // nitro ran out: ease back down
@@ -203,7 +200,7 @@ export class Driving {
       const grip = Math.min(1, Math.abs(vf) / 6) / (1 + Math.abs(vf) / 45);
       car.yaw -= this.steer * CAR.steer * grip * Math.sign(vf || 1) * (handbrake ? 1.7 : 1) * dt;
     }
-    if (this.nitro && !car.upgraded) m.drainSpeed(dt);
+    if (this.nitro) m.drainSpeed(dt);
     v.y = Math.max(-60, v.y - 32 * dt);
 
     // move, then deal with whatever we ran into

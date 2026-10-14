@@ -193,11 +193,6 @@ export class HUD {
         hint: '<b>LMB</b> crystal shards &nbsp; <b>RMB</b> crystal spikes<br>Takes far less damage<br>Hold <b>Q</b> to change',
         heat: false,
       },
-      'flux-glitch': {
-        ab: { punch: ['LMB', 'Zap'], laser: ['RMB', 'EMP'], breath: ['Q', 'Aliens'], carry: ['G', 'Carry'], boost: null, senses: null, fly: null },
-        hint: '<b>LMB</b> zap &nbsp; <b>RMB</b> EMP pulse (drones drop)<br><b>R</b> next to a car: take it over (faster, endless nitro)<br>Hold <b>Q</b> to change',
-        heat: false,
-      },
       forge: {
         ab: { boost: ['SHIFT', 'Boost'], punch: ['LMB', 'Punch'], laser: ['RMB', 'Repulsor'], breath: ['Q', 'Unibeam'], senses: ['E', 'Missiles'], carry: ['G', 'Carry'], fly: ['F', 'Fly'] },
         hint: '<b>F</b> fly &nbsp; <b>SHIFT</b> boost (hold for the afterburner) &nbsp; <b>SPACE/C</b> up/down<br>Hold <b>RMB</b> repulsors &nbsp; hold <b>Q</b> Unibeam &nbsp; <b>E</b> homing missiles<br><b>LMB</b> punch &nbsp; <b>G</b> carry &nbsp; <b>V</b> camera',
