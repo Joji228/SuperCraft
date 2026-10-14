@@ -129,6 +129,19 @@ export class Civilian extends Humanoid {
       if (this.state === 'trapped' && Math.random() < dt * 0.15) this.game.audio.play('scream', this.pos);
     } else if (this.state === 'idle') {
       if (this.timer <= 0) this.state = 'walk';
+    } else if (this.state === 'goto' && this.goal) {
+      // limping over to somewhere safe (an injured driver heading for the ambulance)
+      tmp.copy(this.goal).sub(this.pos).setY(0);
+      if (tmp.lengthSq() > 0.36) {
+        tmp.normalize();
+        if (this.hitWall) {
+          const s = Math.random() < 0.5 ? 1 : -1;
+          tmp.set(-tmp.z * s, 0, tmp.x * s);
+        }
+        wantX = tmp.x;
+        wantZ = tmp.z;
+        speed = 2.4;
+      }
     }
 
     if (speed > 0) {

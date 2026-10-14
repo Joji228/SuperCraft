@@ -153,7 +153,7 @@ export class Car extends Entity {
     for (const e of g.entities.list) {
       if (e === this || e.removed || e.carried) continue;
       if (Math.abs(e.pos.y - this.pos.y) > 3) continue;
-      if (e.kind === 'car') {
+      if (e.kind === 'car' || e.kind === 'ambulance') {
         if (test(e.pos.x, e.pos.z, 7.5, 2.4)) return 'car';
       } else if (e.look || e.kind === 'prop') {
         if (test(e.pos.x, e.pos.z, 5.5, 1.8)) return 'person';

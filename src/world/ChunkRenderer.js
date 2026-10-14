@@ -38,6 +38,7 @@ export class ChunkRenderer {
       transparent: true,
       opacity: 0.78,
       depthWrite: false,
+      side: THREE.DoubleSide, // the surface is visible from below when diving
     });
     this.chunks = new Array(CX * CZ).fill(null);
     this.shadows = true;

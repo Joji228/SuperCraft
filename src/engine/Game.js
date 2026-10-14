@@ -29,6 +29,7 @@ import { ForgeKit, FORGE } from '../heroes/forge/ForgeKit.js';
 import { DEFAULT_FLIGHT } from '../player/Player.js';
 import { FluxModel } from '../heroes/flux/FluxModels.js';
 import { FluxKit } from '../heroes/flux/FluxKit.js';
+import { Ladders } from '../world/Ladders.js';
 import { skinById } from '../player/skins.js';
 import { Meters } from '../abilities/Meters.js';
 import { Abilities } from '../abilities/Abilities.js';
@@ -149,6 +150,7 @@ export class Game {
     this.projectiles = new Projectiles(this);
     this.fires = new Fires(this);
     this.zones = new Zones(this);
+    this.ladders = new Ladders(this);
     this.abilities = new Abilities(this);
     this.driving = new Driving(this);
     this.crowd = new Crowd(this);
@@ -200,10 +202,50 @@ export class Game {
     this.chunks.setNight(this.sky.night);
   }
 
+  /** Camera below the water line: blue haze, short murky view and a tinted screen. */
+  updateUnderwater(cam) {
+    const w = this.world;
+    const under = this.state !== 'menu' && w.get(Math.floor(cam.position.x), Math.floor(cam.position.y), Math.floor(cam.position.z)) === B.WATER;
+    if (!this.uwEl) {
+      this.uwEl = document.createElement('div');
+      this.uwEl.className = 'underwater';
+      document.getElementById('fx').before(this.uwEl);
+    }
+    if (under) {
+      const fog = this.scene.fog;
+      fog.color.setHex(0x1f6c94);
+      this.scene.background.setHex(0x1f6c94);
+      fog.near = 1;
+      fog.far = 34;
+      this.sky.dome.visible = false;
+    } else if (this.underwater) {
+      this.sky.dome.visible = true;
+      this.sky.apply();
+      this.sky.setRenderDistance(this.settings.renderDistance);
+    }
+    if (under !== this.underwater) {
+      this.underwater = under;
+      this.uwEl.classList.toggle('on', under);
+      if (under) this.audio.play('splash');
+    }
+  }
+
   // ---------- shared gameplay services ----------
 
   allowed(name) {
     return !this.locks.has(name) && !this.heroKit?.disallow.has(name);
+  }
+
+  /**
+   * What the current hero can do at all (in any form), so Free Roam only sends
+   * emergencies he can actually handle. 'douse': put fires out; 'carry': lift people.
+   */
+  heroCan(cap) {
+    const k = this.heroKit;
+    if (!k) return true; // Sky Guardian can do everything
+    if (cap === 'douse') return !!k.canDouse;
+    if (cap === 'carry') return k.canCarry ?? !k.disallow.has('carry');
+    return true;
   }
 
   /**
@@ -530,6 +572,7 @@ export class Game {
 
     this.sky.update(dt, cam, focus);
     if (this.sky.cycle) this.chunks.setNight(this.sky.night);
+    this.updateUnderwater(cam);
     this.chunks.update(cam.position, this.settings.renderDistance);
     const drawDist = Math.min(this.settings.renderDistance, 200);
     this.humanoids.update(this.entities.list, cam.position, drawDist);
@@ -649,13 +692,14 @@ export class Game {
       zip: !!this.heroKit?.zip,
       climb: this.heroKit?.climbing,
       shotT: this.heroKit?.shotT ?? 9,
-      shootArm: this.heroId === 'forge' && this.heroKit.shootT < 0.22 ? (this.heroKit.shotHand > 0 ? 'L' : 'R') : null,
+      shootArm: this.heroId === 'forge' && this.heroKit.shootT < 0.45 ? 'B' : null, // both hands held out while firing
       aimPitch: this.rig.pitch,
       unibeam: this.heroId === 'forge' ? this.heroKit.uni : 0,
       podT: this.heroId === 'forge' ? this.heroKit.podT : 9,
       special: this.heroId === 'flux' ? this.heroKit.special : 9,
       held: this.heroId === 'flux' && this.heroKit.held,
       swimming: this.heroId === 'flux' && this.heroKit.swimming,
+      climbing: this.heroId === 'flux' && !!this.heroKit.climb,
       warn: this.heroId === 'flux' && this.heroKit.form !== 'human' && this.heroKit.prism < 20,
       recharging: this.heroId === 'flux' && this.heroKit.recharging,
       wading: p.wading,

@@ -42,6 +42,7 @@ export class GraniteKit {
     this.clapCd = 0;
     this.lastVy = 0;
     this.heavyHitter = true;
+    this.canDouse = true; // his thunder clap blows fires out
     this.punchPower = GRANITE.punchPower;
     this.punchKnock = GRANITE.punchKnock;
     this.smashT = 9;

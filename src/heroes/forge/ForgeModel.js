@@ -231,7 +231,12 @@ export class ForgeModel {
     // repulsor: the firing arm points where you aim (works upright or laid out flat)
     let fastL = false, fastR = false;
     const aimX = -(Math.PI / 2 + this.tilt + (s.aimPitch || 0));
-    if (s.shootArm === 'L') {
+    if (s.shootArm === 'B') {
+      // firing: both palms held steady out in front, aimed where you look
+      armL = armR = aimX;
+      spreadL = spreadR = 0.12;
+      fastL = fastR = true;
+    } else if (s.shootArm === 'L') {
       armL = aimX;
       spreadL = 0.05;
       fastL = true;
@@ -291,7 +296,7 @@ export class ForgeModel {
     for (let i = 0; i < this.flames.length; i++) {
       const f = this.flames[i];
       const isHand = i < 2;
-      const firing = (i === 0 && s.shootArm === 'L') || (i === 1 && s.shootArm === 'R');
+      const firing = s.shootArm === 'B' || (i === 0 && s.shootArm === 'L') || (i === 1 && s.shootArm === 'R');
       const on = this.thrust > 0.05 && (!isHand || (handsBurn && !firing));
       f.visible = on;
       if (!on) continue;

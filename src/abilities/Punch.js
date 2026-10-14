@@ -54,13 +54,14 @@ export class Punch {
     g.audio.play('whoosh');
     // an agile hero dashes in to an enemy a few metres away, then strikes
     if (kit?.lunge) {
-      const target = g.entities.raycast(new THREE.Vector3(p.pos.x, p.pos.y + 1.2, p.pos.z), aim.dir, 7, (e) => e.punchable && !e.carried && e.team === 'enemy' && e.alive)?.entity ||
-        g.entities.nearest(p.pos, 6, (e) => e.team === 'enemy' && e.alive && e.punchable && !e.carried && (e.pos.x - p.pos.x) * aim.dir.x + (e.pos.z - p.pos.z) * aim.dir.z > 0);
-      if (target && Math.hypot(target.pos.x - p.pos.x, target.pos.z - p.pos.z) > 1.8) {
+      const reach = kit.lungeReach ?? 7;
+      const target = g.entities.raycast(new THREE.Vector3(p.pos.x, p.pos.y + 1.2, p.pos.z), aim.dir, reach, (e) => e.punchable && !e.carried && e.team === 'enemy' && e.alive)?.entity ||
+        g.entities.nearest(p.pos, reach - 1, (e) => e.team === 'enemy' && e.alive && e.punchable && !e.carried && (e.pos.x - p.pos.x) * aim.dir.x + (e.pos.z - p.pos.z) * aim.dir.z > 0);
+      if (target && Math.hypot(target.pos.x - p.pos.x, target.pos.y - p.pos.y, target.pos.z - p.pos.z) > 1.8) {
         const combo = this.combo;
         kit.dashTo(target, () => {
           const to = new THREE.Vector3(target.pos.x - p.pos.x, target.pos.y + target.height * 0.5 - (p.pos.y + 1.35), target.pos.z - p.pos.z).normalize();
-          this.strike({ dir: to }, COMBO[combo - 1], power, knockMul, false, combo);
+          this.strike({ dir: to }, COMBO[combo - 1], power, knockMul, big, combo);
         });
         return;
       }

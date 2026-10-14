@@ -145,7 +145,7 @@ export class HUD {
       },
       'flux-human': {
         ab: { boost: ['SHIFT', 'Run'], punch: ['LMB', 'Punch'], carry: ['G', 'Aliens'], laser: null, breath: null, senses: null, fly: null },
-        hint: 'Hold <b>G</b> and move the mouse to pick an alien<br><b>WASD</b> move &nbsp; <b>SHIFT</b> run &nbsp; <b>SPACE</b> jump &nbsp; <b>LMB</b> punch<br>Swim across the river; <b>R</b> next to a car to drive',
+        hint: 'Hold <b>G</b> and move the mouse to pick an alien<br><b>WASD</b> move &nbsp; <b>SHIFT</b> run &nbsp; <b>SPACE</b> jump &nbsp; <b>LMB</b> punch<br>Swim, and climb out at the wall ladders &nbsp; <b>R</b> next to a car to drive',
         heat: false,
       },
       'flux-cinder': {

@@ -13,9 +13,9 @@ import { FORMS, ALIENS, formPortrait } from './FluxForms.js';
 import { FluxModel } from './FluxModels.js';
 
 const PRISM = {
-  drain: 1.5, // per second as an alien (about a minute when calm)
-  fightDrain: 2.5, // extra per second while using powers
-  recharge: 4, // per second as Kai
+  drain: 0.4, // per second as an alien (a full bar lasts about 4 minutes)
+  fightDrain: 0.15, // extra per second while using powers (about 3 minutes of nonstop fighting)
+  recharge: 12, // per second as Kai (empty to full in about 8 seconds)
   minToTransform: 15,
   rechargeUntil: 40, // after a time-out the band is locked until it gets back here
   warnAt: 20,
@@ -71,6 +71,10 @@ export class FluxKit {
     return FORMS[this.form];
   }
 
+  get canCarry() {
+    return false; // G is the alien wheel
+  }
+
   get disallow() {
     const d = new Set(this.f.disallow);
     // the forms that throw things instead of punching
@@ -90,8 +94,13 @@ export class FluxKit {
     return this.form === 'brawl'; // four fists knock holes in walls
   }
 
+  // Blitz zips in to strike, Brawl pounces: both reach drones hovering overhead
   get lunge() {
-    return this.form === 'blitz' ? 7 : undefined;
+    return this.form === 'blitz' || this.form === 'brawl';
+  }
+
+  get lungeReach() {
+    return this.form === 'blitz' ? 12 : 10;
   }
 
   get punchCooldowns() {
@@ -119,10 +128,12 @@ export class FluxKit {
   }
 
   reset() {
+    this.climb = null;
+    if (this.ladderPinned) this.pinLadder(false);
     this.closeWheel(false);
     for (const b of this.bolts) b.mesh.visible = false;
     this.bolts.length = 0;
-    for (const s of this.spikes) s.mesh.visible = false;
+    for (const s of this.spikes) if (s.mesh) this.game.scene.remove(s.mesh); // queued spikes have no mesh yet
     this.spikes.length = 0;
     for (const m of Object.values(this.models)) m.setVisible(false);
     this.prismEl?.classList.add('hidden');
@@ -272,23 +283,59 @@ export class FluxKit {
     this.dash = { target, strike, t: 0 };
   }
 
+  /** While Kai swims, mark the nearest wall ladder so he knows where to get out. */
+  pinLadder(on) {
+    const g = this.game;
+    const l = on && g.ladders?.list.reduce((b, x) => (!b || Math.hypot(x.x - g.player.pos.x, x.z - g.player.pos.z) < Math.hypot(b.x - g.player.pos.x, b.z - g.player.pos.z) ? x : b), null);
+    if (l) {
+      g.markers.setPin('ladder', (this.ladderPos ||= new THREE.Vector3()).set(l.lx, CITY.G + 1.5, l.lz), 'Ladder', 'zone');
+      this.ladderPinned = true;
+    } else if (this.ladderPinned) {
+      g.markers.removePin('ladder');
+      this.ladderPinned = false;
+    }
+  }
+
+  /** Hand over hand up a wall ladder, then step off onto the ground. */
+  updateClimb(dt) {
+    const p = this.game.player;
+    const l = this.climb;
+    const k = Math.min(1, dt * 10);
+    p.pos.x += (l.x - l.nx * 0.4 - p.pos.x) * k;
+    p.pos.z += (l.z - l.nz * 0.4 - p.pos.z) * k;
+    p.pos.y += 3.6 * dt;
+    p.vel.set(0, 0, 0);
+    p.yaw = Math.atan2(l.nx, l.nz);
+    if (p.pos.y >= CITY.G - 0.7) {
+      p.pos.set(l.lx + l.nx * 0.7, CITY.G, l.lz + l.nz * 0.7);
+      p.onGround = true;
+      this.climb = null;
+      this.swimming = false;
+    }
+    return true;
+  }
+
   updateDash(dt) {
     const p = this.game.player;
     const d = this.dash;
     d.t += dt;
-    const to = tmp.set(d.target.pos.x - p.pos.x, 0, d.target.pos.z - p.pos.z);
+    // straight at the target, up into the air too if it's hovering overhead
+    const chest = this.form === 'brawl' ? 1.6 : 1.1;
+    const to = tmp.set(d.target.pos.x - p.pos.x, d.target.pos.y + (d.target.height || 1) * 0.5 - (p.pos.y + chest), d.target.pos.z - p.pos.z);
     const dist = to.length();
-    if (dist < 1.6 || d.t > 0.2 || d.target.removed) {
+    const speed = this.form === 'brawl' ? 30 : 42;
+    if (dist < 1.6 || d.t > dist / speed + 0.1 || d.t > 0.45 || d.target.removed) {
       this.dash = null;
       p.vel.x *= 0.2;
       p.vel.z *= 0.2;
+      p.vel.y = Math.min(p.vel.y, 2);
       d.strike();
       return true;
     }
     to.divideScalar(dist);
-    p.vel.x = to.x * 40;
-    p.vel.z = to.z * 40;
-    p.vel.y = Math.max(p.vel.y - 32 * dt, -20);
+    p.vel.x = to.x * speed;
+    p.vel.z = to.z * speed;
+    p.vel.y = Math.abs(to.y) > 0.15 ? to.y * speed : Math.max(p.vel.y - 32 * dt, -20);
     p.move(dt);
     p.yaw = Math.atan2(to.x, to.z);
     return true;
@@ -300,8 +347,20 @@ export class FluxKit {
     const p = g.player;
     const w = g.world;
     if (this.dash) return this.updateDash(dt);
+    if (this.climb) return this.updateClimb(dt);
+    // in the water next to one of the wall ladders: W or Space climbs out
+    const feet = w.get(Math.floor(p.pos.x), Math.floor(p.pos.y + 0.2), Math.floor(p.pos.z));
+    if (canAct && !p.flying && feet === B.WATER && (input.isDown('forward') || input.pressed('jump'))) {
+      const lad = g.ladders?.near(p.pos);
+      if (lad) {
+        this.climb = lad;
+        g.audio.play('click');
+        return this.updateClimb(dt);
+      }
+    }
     const chest = w.get(Math.floor(p.pos.x), Math.floor(p.pos.y + 1.0), Math.floor(p.pos.z));
     this.swimming = this.form === 'human' && !p.flying && chest === B.WATER;
+    this.pinLadder(this.swimming);
     if (!this.swimming) return false;
     // float with the head above the surface, slow front crawl
     let top = Math.floor(p.pos.y + 1.0);

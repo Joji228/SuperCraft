@@ -290,7 +290,15 @@ export class FluxModel {
     let armL = 0, armR = 0, spreadL = 0.08, spreadR = 0.08, legL = 0, legR = 0;
     let arm2 = 0;
 
-    if (s.swimming) {
+    if (s.climbing) {
+      // hand over hand up a ladder
+      const c = this.time * 8;
+      armL = -2.5 + Math.sin(c) * 0.45;
+      armR = -2.5 - Math.sin(c) * 0.45;
+      legL = -0.5 - Math.sin(c) * 0.45;
+      legR = -0.5 + Math.sin(c) * 0.45;
+      spreadL = spreadR = 0.12;
+    } else if (s.swimming) {
       // front crawl
       const c = this.time * 5;
       tilt = 1.35;

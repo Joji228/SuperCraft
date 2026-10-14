@@ -5,6 +5,7 @@ import { Drone } from '../enemies/Drone.js';
 import { Brute } from '../enemies/Boss.js';
 import { Civilian } from '../npc/Civilians.js';
 import { Car } from '../npc/Traffic.js';
+import { Ambulance } from '../npc/Ambulance.js';
 import { CITY } from '../world/CityGenerator.js';
 import { findStreetSpot, nearestIntersection, buildingsNear, facadePoints, isStreet } from './spots.js';
 
@@ -96,8 +97,10 @@ class CarCrash extends GameEvent {
     // clear traffic out of the crash site so nothing overlaps
     for (const e of game.entities.query(pos, 10, (x) => x.kind === 'car' && !x.persistent)) e.remove();
     this.title = 'Car crash';
-    this.desc = 'A crash! Put out the fire and get the driver to safety.';
     const g = game;
+    // only heroes who can put fires out get a burning wreck; the rest get a smoking one
+    this.burning = g.heroCan('douse');
+    this.carrier = g.heroCan('carry');
     const a = this.add(new Car(g));
     a.pos.set(pos.x - 1.2, pos.y, pos.z);
     a.yaw = 0.6;
@@ -108,24 +111,65 @@ class CarCrash extends GameEvent {
     b.yaw = -1.1;
     b.dent = 0.5;
     b.health = 60;
-    this.fire = g.fires.ignite(new THREE.Vector3(pos.x - 1.2, pos.y + 1.3, pos.z), { intensity: 1, size: 1.3, tag: this.tag, persistent: true });
+    this.wreck = a;
+    if (this.burning) this.fire = g.fires.ignite(new THREE.Vector3(pos.x - 1.2, pos.y + 1.3, pos.z), { intensity: 1, size: 1.3, tag: this.tag, persistent: true });
     const driver = this.add(new Civilian(g, pos.x - 1.2 + 2, pos.y, pos.z - 1.5, { state: 'trapped' }));
     driver.carryLabel = 'Injured driver';
     driver.health = 25;
     this.driver = driver;
-    // ambulance zone a bit down the street
-    const zp = findStreetSpot(g.world, pos.x, pos.z, 12, 22, 2) || pos.clone().add(new THREE.Vector3(14, 0, 0));
-    this.zones.push(g.zones.add(zp, { radius: 3.5, label: 'Ambulance' }));
+    // an ambulance pulls up down the street, back doors open towards the crash
+    const amb = new Ambulance(g);
+    amb.pos.copy(this.ambulanceSpot(g, pos));
+    amb.yaw = Math.atan2(amb.pos.x - pos.x, amb.pos.z - pos.z);
+    this.ambulance = this.add(amb);
+    const zp = amb.dropPoint(new THREE.Vector3());
+    this.zones.push(g.zones.add(zp, { radius: 2.6, label: 'Ambulance', onRescue: (e) => amb.load(e) }));
+    this.desc = this.describe();
+  }
+
+  /** A clear stretch of road leading away from the crossing, on the near lane. */
+  ambulanceSpot(g, pos) {
+    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]].sort(() => Math.random() - 0.5);
+    for (const [dx, dz] of dirs) {
+      const x = pos.x + dx * 15 + dz * 1.5, z = pos.z + dz * 15 - dx * 1.5;
+      let ok = true;
+      for (const s of [-3.5, 0, 3.5]) if (!isStreet(g.world, x + dx * s, z + dz * s)) ok = false;
+      if (ok) return new THREE.Vector3(x, pos.y, z);
+    }
+    return findStreetSpot(g.world, pos.x, pos.z, 12, 22, 2) || pos.clone().add(new THREE.Vector3(15, 0, 0));
+  }
+
+  describe() {
+    if (this.game.fires.count(this.tag) > 0) {
+      const how = this.game.heroId === 'granite' ? 'thunder clap (Q)' : 'super breath (Q)';
+      return `The wreck is on fire! Put it out with your ${how}.`;
+    }
+    if (this.driver.state === 'goto') return 'The driver is limping to the ambulance. Keep them safe.';
+    if (this.carrier) return 'Carry the injured driver (G) to the ambulance.';
+    return 'Get to the trapped driver and pull them out of the wreck.';
   }
 
   update(dt) {
     super.update(dt);
-    const fireOut = this.game.fires.count(this.tag) === 0;
-    if (!this.driver.alive) this.status = 'failed';
-    else if (fireOut && this.driver.saved) {
-      this.status = 'done';
+    const g = this.game;
+    const fireOut = g.fires.count(this.tag) === 0;
+    const d = this.driver;
+    if (!this.burning && Math.random() < dt * 6) g.effects.smoke(this.wreck.center, 1, 0.8, 0.2);
+    // heroes who can't carry people free the driver, who then walks to the ambulance
+    if (!this.carrier && fireOut && d.alive && !d.saved && d.state === 'trapped' && d.pos.distanceTo(g.player.pos) < 3.2) {
+      d.state = 'goto';
+      d.goal = this.ambulance.dropPoint(new THREE.Vector3());
+      d.cheer(0.6);
+      d.state = 'goto';
+      g.hud.toast('Driver freed!', 'good', 2);
     }
-    this.desc = fireOut ? 'Carry the driver to the ambulance.' : 'Put out the fire (Q) and rescue the driver.';
+    if (d.state === 'goto' && !d.saved && d.alive) {
+      const z = this.zones[0];
+      if (z && g.zones.inside(z, d.pos)) g.zones.checkDrop(d);
+    }
+    if (!d.alive) this.status = 'failed';
+    else if (fireOut && d.saved) this.status = 'done';
+    this.desc = this.describe();
   }
 }
 
@@ -231,10 +275,11 @@ class MiniBoss extends GameEvent {
   }
 }
 
+// needs: what the hero must be able to do for the emergency to be possible at all
 const TYPES = [
   { cls: Robbery, weight: 3 },
   { cls: CarCrash, weight: 2 },
-  { cls: BuildingFire, weight: 2 },
+  { cls: BuildingFire, weight: 2, needs: ['douse'] },
   { cls: DroneAttack, weight: 2 },
   { cls: MiniBoss, weight: 1, minDone: 2 },
 ];
@@ -251,7 +296,8 @@ export class EventDirector {
 
   pick() {
     // vary it: never the same kind of emergency twice in a row
-    const ok = TYPES.filter((t) => (!t.minDone || this.stats.events >= t.minDone) && t.cls !== this.lastType);
+    const g = this.game;
+    const ok = TYPES.filter((t) => (!t.minDone || this.stats.events >= t.minDone) && t.cls !== this.lastType && (t.needs || []).every((c) => g.heroCan(c)));
     const total = ok.reduce((s, t) => s + t.weight, 0);
     let r = Math.random() * total;
     for (const t of ok) if ((r -= t.weight) <= 0) return t.cls;

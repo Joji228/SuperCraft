@@ -392,3 +392,23 @@ body.unlocked .hud-click {
     display: none;
   }
 }
+
+/* under the water line: a blue haze with a darker rim and faint caustic shimmer */
+.underwater {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s;
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(80, 180, 230, 0.18), rgba(10, 50, 90, 0.55) 85%),
+    linear-gradient(rgba(60, 150, 210, 0.22), rgba(10, 60, 100, 0.35));
+}
+.underwater.on {
+  opacity: 1;
+  animation: underwater-shimmer 3s ease-in-out infinite alternate;
+}
+@keyframes underwater-shimmer {
+  from { filter: brightness(1); }
+  to { filter: brightness(1.15); }
+}

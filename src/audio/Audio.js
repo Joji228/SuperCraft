@@ -336,6 +336,10 @@ const LOOPS = {
 };
 
 const SOUNDS = {
+  splash(a, d) {
+    // going under: a soft watery plunge
+    a.noiseBurst({ dur: 0.5, type: 'lowpass', freq: 1400, freqEnd: 300, q: 0.7, gain: 0.3, attack: 0.02, dest: d });
+  },
   boom(a, d) {
     // a rushing swell into a deep, soft thump that rolls away (no harsh crack)
     a.noiseBurst({ dur: 0.45, type: 'bandpass', freq: 300, freqEnd: 1100, q: 0.8, gain: 0.35, attack: 0.3, dest: d });
