@@ -30,6 +30,7 @@ import { DEFAULT_FLIGHT } from '../player/Player.js';
 import { FluxModel } from '../heroes/flux/FluxModels.js';
 import { FluxKit } from '../heroes/flux/FluxKit.js';
 import { Ladders } from '../world/Ladders.js';
+import { heroById } from '../player/heroes.js';
 import { skinById } from '../player/skins.js';
 import { Meters } from '../abilities/Meters.js';
 import { Abilities } from '../abilities/Abilities.js';
@@ -287,6 +288,25 @@ export class Game {
     } else this.applySkin('sky');
     this.hud.setHeroLayout(id);
     this.heroKit?.onSelect?.(); // Flux starts as Kai (sets his own body, HUD and models)
+  }
+
+  /** Free Roam only: swap heroes on the spot (from the pause menu), keeping your place in the city. */
+  switchHero(id) {
+    if (!this.mode || this.mode instanceof MissionRun || id === this.heroId) return;
+    if (this.driving.active) this.driving.exit();
+    if (this.abilities.carry.held) this.abilities.carry.drop();
+    this.abilities.laser.hide();
+    this.abilities.breath.stop();
+    const p = this.player;
+    const wasFlying = p.flying;
+    this.setHero(id);
+    // keep flying if the new hero can, otherwise drop out of the sky
+    p.flying = wasFlying && this.allowed('fly');
+    p.vel.set(0, Math.min(p.vel.y, 0), 0);
+    this.effects.confetti(p.pos.clone().setY(p.pos.y + 1), 20);
+    this.hud.hintTimer = 14;
+    this.hud.hint.classList.remove('fade');
+    this.hud.toast(`Now playing ${heroById(id).name}`, 'good', 2);
   }
 
   /** Lock powers (tutorial). names: array of 'jump'|'fly'|'boost'|'punch'|'laser'|'breath'|'senses'|'carry' */

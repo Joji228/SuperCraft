@@ -90,6 +90,11 @@ export class Menus {
         return this.showHeroes();
       case 'hero':
         this.settings.set('hero', arg);
+        // from the pause menu in Free Roam: switch straight away and carry on playing
+        if (this.back === 'pause' && this.inFreeRoam()) {
+          g.switchHero(arg);
+          return g.resume();
+        }
         return this.showHeroes();
       case 'back':
         return this.back === 'pause' ? this.showPause(this.pauseInfo) : this.showMain();
@@ -140,6 +145,12 @@ export class Menus {
     );
   }
 
+  /** A Free Roam session is running (missions always use Sky Guardian). */
+  inFreeRoam() {
+    const run = this.game.mode;
+    return !!run && !run.def;
+  }
+
   /** Free Roam opens once the tutorial mission has been completed (or everything is unlocked for testing). */
   freeRoamOpen() {
     const prog = loadProgress();
@@ -163,9 +174,9 @@ export class Menus {
     }).join('');
     this.render(
       'heroes',
-      `<h2>Heroes</h2><p class="small hero-sub">Pick who you play in Free Roam (the Campaign is always Sky Guardian).</p>
+      `<h2>Heroes</h2><p class="small hero-sub">${this.back === 'pause' ? 'Pick a hero to switch to them right here.' : 'Pick who you play in Free Roam (the Campaign is always Sky Guardian).'}</p>
        <div class="hero-cards">${cards}</div>
-       <div class="menu"><button data-action="main">Back</button></div>`,
+       <div class="menu"><button data-action="back">Back</button></div>`,
       'screen wide heroes',
     );
   }
@@ -238,6 +249,7 @@ export class Menus {
        <div class="menu">
          <button data-action="resume" class="primary">Resume</button>
          ${retry}
+         ${this.inFreeRoam() ? '<button data-action="heroes">Switch hero</button>' : ''}
          <button data-action="controls">Controls</button>
          <button data-action="settings">Settings</button>
          <button data-action="quit">Main Menu</button>
