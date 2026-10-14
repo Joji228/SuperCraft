@@ -1268,3 +1268,125 @@ body.driving .crosshair {
 .charge.full .charge-fill {
   animation: blink 0.25s steps(2) infinite;
 }
+
+/* ---------- Flux: PRISM meter and the alien wheel ---------- */
+
+.prism {
+  position: absolute;
+  left: 16px;
+  bottom: 156px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 8px;
+  color: #b9ffb0;
+  text-shadow: 1px 1px 0 #10203a;
+}
+
+.prism-bar {
+  width: 150px;
+  height: 10px;
+  background: #0d1830;
+  border: 2px solid #0d1830;
+}
+
+.prism-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(#b9ffb0, #3fcf5a);
+}
+
+.prism.warn .prism-fill,
+.prism.warn .prism-label {
+  background: #ff4d3a;
+  animation: blink 0.35s steps(2) infinite;
+}
+
+.prism.warn .prism-label {
+  background: none;
+  color: #ff6a5a;
+}
+
+.prism.recharging .prism-fill {
+  background: linear-gradient(#ff8a7a, #c8301f);
+}
+
+.prism-form {
+  min-width: 70px;
+}
+
+.alien-wheel {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.alien-wheel .wheel-ring {
+  position: absolute;
+  left: -205px;
+  top: -205px;
+  width: 410px;
+  height: 410px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(10, 30, 16, 0.55) 0 34%, rgba(10, 30, 16, 0.8) 35% 70%, transparent 71%);
+  border: 3px solid rgba(143, 227, 106, 0.6);
+  box-shadow: 0 0 30px rgba(93, 255, 122, 0.35);
+}
+
+.alien-wheel .wheel-item {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  font-size: 8px;
+  color: #d8ffd0;
+  background: rgba(13, 24, 48, 0.85);
+  border: 2px solid #1d3a24;
+  text-shadow: 1px 1px 0 #10203a;
+}
+
+.alien-wheel .wheel-item img {
+  width: 48px;
+  height: 60px;
+  image-rendering: pixelated;
+}
+
+.alien-wheel .wheel-item.sel {
+  border-color: #8fe36a;
+  background: rgba(30, 80, 40, 0.92);
+  box-shadow: 0 0 14px #5dff7a;
+}
+
+.alien-wheel .wheel-center img {
+  width: 36px;
+  height: 45px;
+}
+
+.alien-wheel.locked .wheel-item:not(.wheel-center) {
+  filter: grayscale(1) brightness(0.6);
+}
+
+.alien-wheel .wheel-info {
+  position: absolute;
+  left: 0;
+  top: 220px;
+  transform: translateX(-50%);
+  width: 360px;
+  text-align: center;
+  font-size: 9px;
+  line-height: 1.7;
+  color: #e6ffe0;
+  text-shadow: 1px 1px 0 #10203a;
+}
+
+.alien-wheel .wheel-info small {
+  font-size: 7px;
+  color: #b9d8b0;
+}

@@ -143,6 +143,36 @@ export class HUD {
         hint: 'In the air, press <b>SPACE</b> for each web: hold to swing, let go near the top for a boost<br>Hold <b>SHIFT</b> while swinging for speed &nbsp; <b>Q</b> web zip &nbsp; <b>RMB</b> web shot &nbsp; <b>LMB</b> combo<br><b>SHIFT</b>+<b>W</b> runs up walls, <b>SPACE</b> kicks off them',
         heat: false,
       },
+      'flux-human': {
+        ab: { boost: ['SHIFT', 'Run'], punch: ['LMB', 'Punch'], carry: ['G', 'Aliens'], laser: null, breath: null, senses: null, fly: null },
+        hint: 'Hold <b>G</b> and move the mouse to pick an alien<br><b>WASD</b> move &nbsp; <b>SHIFT</b> run &nbsp; <b>SPACE</b> jump &nbsp; <b>LMB</b> punch<br>Swim across the river; <b>R</b> next to a car to drive',
+        heat: false,
+      },
+      'flux-cinder': {
+        ab: { punch: ['LMB', 'Fireball'], laser: ['RMB', 'Flames'], fly: ['F', 'Fly'], carry: ['G', 'Aliens'], boost: null, breath: null, senses: null },
+        hint: '<b>LMB</b> fireballs &nbsp; hold <b>RMB</b> flamethrower<br><b>F</b> fly on flames (uses energy) &nbsp; fire cannot hurt him<br>Hold <b>G</b> to change',
+        heat: false,
+      },
+      'flux-brawl': {
+        ab: { boost: ['SHIFT', 'Charge'], punch: ['LMB', 'Punch'], laser: ['RMB', 'Slam'], carry: ['G', 'Aliens'], breath: null, senses: null, fly: null },
+        hint: '<b>LMB</b> four-fist punches (they smash walls) &nbsp; <b>RMB</b> shockwave slam<br><b>SPACE</b> huge jump &nbsp; <b>SHIFT</b> charge<br>Hold <b>G</b> to change',
+        heat: false,
+      },
+      'flux-blitz': {
+        ab: { boost: ['SHIFT', 'Speed'], punch: ['LMB', 'Strike'], laser: ['RMB', 'Cyclone'], carry: ['G', 'Aliens'], breath: null, senses: null, fly: null },
+        hint: '<b>SHIFT</b> super speed (run through enemies) &nbsp; <b>LMB</b> rapid strikes<br><b>RMB</b> cyclone<br>Hold <b>G</b> to change',
+        heat: false,
+      },
+      'flux-shard': {
+        ab: { punch: ['LMB', 'Shards'], laser: ['RMB', 'Spikes'], carry: ['G', 'Aliens'], boost: null, breath: null, senses: null, fly: null },
+        hint: '<b>LMB</b> crystal shards &nbsp; <b>RMB</b> crystal spikes<br>Takes far less damage<br>Hold <b>G</b> to change',
+        heat: false,
+      },
+      'flux-glitch': {
+        ab: { punch: ['LMB', 'Zap'], laser: ['RMB', 'EMP'], carry: ['G', 'Aliens'], boost: null, breath: null, senses: null, fly: null },
+        hint: '<b>LMB</b> zap &nbsp; <b>RMB</b> EMP pulse (drones drop)<br><b>R</b> next to a car: take it over (faster, endless nitro)<br>Hold <b>G</b> to change',
+        heat: false,
+      },
       forge: {
         ab: { boost: ['SHIFT', 'Boost'], punch: ['LMB', 'Punch'], laser: ['RMB', 'Repulsor'], breath: ['Q', 'Unibeam'], senses: ['E', 'Missiles'], carry: ['G', 'Carry'], fly: ['F', 'Fly'] },
         hint: '<b>F</b> fly &nbsp; <b>SHIFT</b> boost (hold for the afterburner) &nbsp; <b>SPACE/C</b> up/down<br>Hold <b>RMB</b> repulsors &nbsp; hold <b>Q</b> Unibeam &nbsp; <b>E</b> homing missiles<br><b>LMB</b> punch &nbsp; <b>G</b> carry &nbsp; <b>V</b> camera',

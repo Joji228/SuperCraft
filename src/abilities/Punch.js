@@ -46,8 +46,8 @@ export class Punch {
     const power = kit?.punchPower ?? 1;
     // (Tether keeps the first hits light so the target stays in reach for the combo)
     const knockMul = kit?.punchKnockSeq?.[this.combo - 1] ?? kit?.punchKnock ?? 1;
-    const big = !!kit && !kit.lunge; // Granite: a big, heavy hitter
-    this.cooldown = kit?.lunge ? [0.2, 0.32, 0.45][this.combo - 1] : step.cooldown * (big ? 1.35 : 1);
+    const big = !!kit?.heavyHitter; // Granite (and Flux's Brawl): big, heavy hitters
+    this.cooldown = kit?.punchCooldowns ? kit.punchCooldowns[this.combo - 1] : kit?.lunge ? [0.2, 0.32, 0.45][this.combo - 1] : step.cooldown * (big ? 1.35 : 1);
     this.window = 0.75;
     p.aimTimer = 0.45;
     g.hero.punch(this.combo);

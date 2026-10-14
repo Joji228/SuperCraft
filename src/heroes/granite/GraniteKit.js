@@ -41,6 +41,7 @@ export class GraniteKit {
     this.clapFired = true;
     this.clapCd = 0;
     this.lastVy = 0;
+    this.heavyHitter = true;
     this.punchPower = GRANITE.punchPower;
     this.punchKnock = GRANITE.punchKnock;
     this.smashT = 9;

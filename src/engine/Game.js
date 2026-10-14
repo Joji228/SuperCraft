@@ -27,6 +27,8 @@ import { TetherKit, TETHER } from '../heroes/tether/TetherKit.js';
 import { ForgeModel } from '../heroes/forge/ForgeModel.js';
 import { ForgeKit, FORGE } from '../heroes/forge/ForgeKit.js';
 import { DEFAULT_FLIGHT } from '../player/Player.js';
+import { FluxModel } from '../heroes/flux/FluxModels.js';
+import { FluxKit } from '../heroes/flux/FluxKit.js';
 import { skinById } from '../player/skins.js';
 import { Meters } from '../abilities/Meters.js';
 import { Abilities } from '../abilities/Abilities.js';
@@ -113,7 +115,7 @@ export class Game {
     this.ocean = createOcean(this.scene);
     this.player = new Player(this.world);
     // one model per hero; this.hero is whichever is in play
-    this.models = { sky: new HeroModel(), granite: new GraniteModel(), tether: new TetherModel(), forge: new ForgeModel() };
+    this.models = { sky: new HeroModel(), granite: new GraniteModel(), tether: new TetherModel(), forge: new ForgeModel(), flux: new FluxModel('human') };
     for (const m of Object.values(this.models)) {
       m.setVisible(false);
       this.scene.add(m.root);
@@ -211,7 +213,7 @@ export class Game {
   setHero(id) {
     if (!this.models[id]) id = 'sky';
     const p = this.player;
-    if (!this.kits) this.kits = { granite: new GraniteKit(this), tether: new TetherKit(this), forge: new ForgeKit(this) };
+    if (!this.kits) this.kits = { granite: new GraniteKit(this), tether: new TetherKit(this), forge: new ForgeKit(this), flux: new FluxKit(this) };
     this.heroKit?.reset?.();
     this.hero.setVisible(false);
     this.heroId = id;
@@ -241,6 +243,7 @@ export class Game {
       this.flightFX.setPalette(pal.suit, pal.accent, pal.belt);
     } else this.applySkin('sky');
     this.hud.setHeroLayout(id);
+    this.heroKit?.onSelect?.(); // Flux starts as Kai (sets his own body, HUD and models)
   }
 
   /** Lock powers (tutorial). names: array of 'jump'|'fly'|'boost'|'punch'|'laser'|'breath'|'senses'|'carry' */
@@ -271,7 +274,8 @@ export class Game {
   hurtPlayer(amount, fromPos, type) {
     if (this.state !== 'playing' || this.koTimer > 0) return;
     // Aegis is tough: enemies only do part of their listed damage
-    const dealt = this.meters.hurt(amount * 0.4);
+    if (type === 'fire' && this.heroKit?.fireproof) return;
+    const dealt = this.meters.hurt(amount * 0.4 * (this.heroKit?.damageMul ?? 1));
     if (dealt <= 0) return;
     this.hud.damaged(dealt);
     if (type !== 'fire' || Math.random() < 0.1) this.audio.play('hurt');
@@ -541,7 +545,9 @@ export class Game {
     const [dx, dy] = input.consumeMouse();
     // how long since the player last pressed anything or moved the mouse (tutorial hints)
     this.idleTime = input.held.size || Math.abs(dx) + Math.abs(dy) > 2 ? 0 : (this.idleTime || 0) + realDt;
-    if (!this.cutscene) this.rig.look(dx, dy);
+    // Flux's alien wheel takes the mouse while it's open
+    if (!this.cutscene && !this.heroKit?.wheelOpen) this.rig.look(dx, dy);
+    this.heroKit?.wheelMouse?.(dx, dy);
     if (input.pressed('camera')) {
       const m = (this.settings.cameraMode + 1) % 4;
       this.settings.set('cameraMode', m);
@@ -560,6 +566,7 @@ export class Game {
       this.hitStopTime -= realDt;
       dt = realDt * 0.05;
     }
+    if (this.heroKit?.wheelOpen) dt *= 0.3; // time slows while choosing an alien
     this.time += dt;
 
     const p = this.player;
@@ -646,6 +653,11 @@ export class Game {
       aimPitch: this.rig.pitch,
       unibeam: this.heroId === 'forge' ? this.heroKit.uni : 0,
       podT: this.heroId === 'forge' ? this.heroKit.podT : 9,
+      special: this.heroId === 'flux' ? this.heroKit.special : 9,
+      held: this.heroId === 'flux' && this.heroKit.held,
+      swimming: this.heroId === 'flux' && this.heroKit.swimming,
+      warn: this.heroId === 'flux' && this.heroKit.form !== 'human' && this.heroKit.prism < 20,
+      recharging: this.heroId === 'flux' && this.heroKit.recharging,
       wading: p.wading,
     });
 
