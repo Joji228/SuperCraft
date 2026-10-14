@@ -8,22 +8,32 @@
 //   Left mouse: a flowing melee combo (jab, spinning kick, flip kick) with lunges.
 // Every few swings he shows off: a different swing pose, or a spin/flip when he lets
 // go fast, then falls chest-down with his arms spread wide.
+// Pacing, after the classic PS2/PSP Spider-Man games: swings chained without touching
+// the ground build momentum (up to x5), letting go at the top of the arc gives a
+// "perfect release" boost, Shift in mid-air is a forward air dash, Space on a wall
+// kicks off it, and dives pick up extra speed to swing out of.
 // No flight, laser, breath or senses.
 import * as THREE from 'three';
 import { B } from '../../world/Blocks.js';
 
 export const TETHER = {
-  stats: { walk: 8, run: 15, sprint: 26, jump: 15 },
+  stats: { walk: 8, run: 15, sprint: 30, jump: 16 },
   palette: { suit: 0x1d2540, accent: 0x111628, belt: 0x25c9bb },
-  gravity: 38, // a little heavier on the line: faster, snappier swings
+  gravity: 42, // heavier on the line: faster, snappier swings
   swingRange: 90,
   minAnchorHeight: 5, // anchor must be at least this far above the hero
-  webSpeed: 240, // how fast the thrown web flies to the building (m/s)
-  steer: 12, // m/s² of air steering while swinging
-  pump: 16, // m/s² of extra speed along the swing
-  maxSpeed: 66,
-  releaseBoost: 8, // upward kick when letting go
-  releaseForward: 6,
+  webSpeed: 320, // how fast the thrown web flies to the building (m/s)
+  steer: 14, // m/s² of air steering while swinging
+  pump: 20, // m/s² of extra speed along the swing
+  maxSpeed: 74,
+  releaseBoost: 6, // upward kick when letting go (flatter, faster arcs)
+  releaseForward: 7,
+  perfectBoost: 10, // extra forward fling for letting go at the top of the arc
+  flowMax: 4, // momentum steps from chained swings (x1 .. x5)
+  flowWindow: 2.5, // seconds after letting go to catch the next web and keep the chain
+  airDash: 17, // m/s forward burst with Shift in mid-air
+  airDashCooldown: 1.1,
+  diveGravity: 12, // extra pull while falling chest-first (dives gather speed)
   zipSpeed: 52,
   zipRange: 80,
   zipCooldown: 0.5,
@@ -69,6 +79,9 @@ export class TetherKit {
     this.lunge = 9; // melee: dashes in to enemies a few metres away
     this.punchKnockSeq = [0.35, 0.5, 1.6]; // light hits keep them close, the last one sends them flying
     this.dash = null;
+    this.flow = 0; // momentum from chained swings
+    this.airDashCd = 0;
+    this.perfectT = 9;
   }
 
   /** Melee dash: close the gap to an enemy, then call strike(). */
@@ -123,7 +136,11 @@ export class TetherKit {
     const g = this.game;
     const p = g.player;
     this.zipCd = Math.max(0, this.zipCd - dt);
+    this.airDashCd = Math.max(0, this.airDashCd - dt);
     this.releasedT += dt;
+    this.perfectT += dt;
+    // touching the ground (or waiting too long) ends the momentum chain
+    if (p.onGround || (!this.swinging && this.releasedT > TETHER.flowWindow)) this.flow = 0;
     if (this.trick) {
       this.trick.t += dt;
       if (this.trick.t >= this.trick.dur || p.onGround) this.trick = null;
@@ -136,7 +153,7 @@ export class TetherKit {
     if (this.zip) return this.updateZip(dt);
 
     // ---- swinging: one press of Space in the air throws one web ----
-    if (!this.swinging && !p.onGround && canAct && input.pressed('jump') && !g.abilities.carry.held) {
+    if (!this.swinging && !this.climbing && !p.onGround && canAct && input.pressed('jump') && !g.abilities.carry.held) {
       if (this.attach()) return this.updateSwing(dt, input);
     }
     if (this.swinging) {
@@ -147,8 +164,32 @@ export class TetherKit {
       return this.updateSwing(dt, input);
     }
 
-    // ---- wall run / climb ----
-    return this.updateClimb(dt, input, canAct);
+    // ---- air dash: Shift in mid-air, a quick burst the way you're looking ----
+    if (canAct && !p.onGround && !this.climbing && input.pressed('boost') && this.airDashCd <= 0) this.airDashNow();
+
+    // ---- wall run / climb (Space kicks off the wall) ----
+    if (this.updateClimb(dt, input, canAct)) return true;
+
+    // dives gather speed so the next swing comes out faster
+    if (this.skydive) p.vel.y -= TETHER.diveGravity * dt;
+    return false;
+  }
+
+  airDashNow() {
+    const g = this.game;
+    const p = g.player;
+    this.airDashCd = TETHER.airDashCooldown;
+    const f = g.rig.forward(tmp);
+    const hs = Math.hypot(f.x, f.z) || 1;
+    p.vel.x = p.vel.x * 0.4 + (f.x / hs) * TETHER.airDash;
+    p.vel.z = p.vel.z * 0.4 + (f.z / hs) * TETHER.airDash;
+    p.vel.y = Math.max(p.vel.y, 4 + Math.max(0, f.y) * 10);
+    this.trick = null;
+    g.audio.play('whoosh');
+    g.rig.fovPunch = 6;
+    for (let i = 0; i < 14; i++) {
+      g.particles.emit({ x: p.pos.x, y: p.pos.y + 1, z: p.pos.z, vx: -f.x * 8 + (Math.random() - 0.5) * 3, vy: (Math.random() - 0.5) * 3, vz: -f.z * 8 + (Math.random() - 0.5) * 3, life: 0.35, size: 0.2, grow: 2, alpha: 0.6, r: 0.75, g: 0.95, b: 1, drag: 3 });
+    }
   }
 
   /** Find a building to shoot a web at: ahead, above, off to one side. */
@@ -226,6 +267,8 @@ export class TetherKit {
     this.ropeTarget = Math.max(7, Math.min(d * 0.85, this.anchor.y - (ground + 4.5)));
     this.swingT = 0;
     this.trick = null;
+    // chaining webs without touching down builds momentum
+    if (this.releasedT < TETHER.flowWindow && this.swingCount > 0) this.flow = Math.min(TETHER.flowMax, this.flow + 1);
     // every few swings, a different pose on the line
     this.swingCount++;
     if (this.swingCount >= this.nextPoseAt) {
@@ -243,6 +286,17 @@ export class TetherKit {
     p.modeLabel = null;
     this.releasedT = 0;
     if (!boost) return;
+    // perfect release: letting go on the way up, near the top of the arc, while moving
+    // fast throws him much further (the classic swing-jump)
+    const hs0 = Math.hypot(p.vel.x, p.vel.z);
+    if (this.swingT > 0.35 && p.vel.y > 0 && p.vel.y < 14 && hs0 > 14) {
+      p.vel.x += (p.vel.x / hs0) * TETHER.perfectBoost;
+      p.vel.z += (p.vel.z / hs0) * TETHER.perfectBoost;
+      p.vel.y += 2;
+      this.perfectT = 0;
+      g.rig.fovPunch = 7;
+      g.audio.play('throw');
+    }
     // a flick upward and onward when letting go keeps the flow
     const hs = Math.hypot(p.vel.x, p.vel.z);
     if (hs > 4) {
@@ -282,8 +336,9 @@ export class TetherKit {
       v.z += (fz * iz + rz * ix * 0.6) * TETHER.steer * dt;
       // pump: add speed along the direction of travel while below the anchor
       const sp = v.length();
-      if (sp > 1 && p.pos.y + 1.4 < this.anchor.y) v.multiplyScalar(1 + (TETHER.pump * dt) / sp);
-      if (v.length() > TETHER.maxSpeed) v.multiplyScalar(TETHER.maxSpeed / v.length());
+      const flowK = 1 + this.flow * 0.1; // momentum: up to +40% top speed and pump
+      if (sp > 1 && p.pos.y + 1.4 < this.anchor.y) v.multiplyScalar(1 + (TETHER.pump * flowK * dt) / sp);
+      if (v.length() > TETHER.maxSpeed * flowK) v.multiplyScalar((TETHER.maxSpeed * flowK) / v.length());
       // reel in towards the swing length (quickly but smoothly), then a little more so
       // arcs stay lively
       this.ropeTarget = Math.max(8, this.ropeTarget - 3 * dt);
@@ -320,7 +375,7 @@ export class TetherKit {
       return true;
     }
     this.face(dt);
-    p.modeLabel = 'SWINGING';
+    p.modeLabel = this.flow > 0 ? `SWINGING x${this.flow + 1}` : 'SWINGING';
     p.boostAmount += (Math.min(1.1, v.length() / 42) - p.boostAmount) * (1 - Math.exp(-4 * dt));
     return true;
   }
@@ -394,6 +449,16 @@ export class TetherKit {
       }
       return false;
     };
+    // Space on the wall: kick off it, backwards and up, ready for the next web
+    if (this.climbing && canAct && input.pressed('jump')) {
+      this.climbing = false;
+      p.modeLabel = null;
+      p.vel.set(-fx * 13, 16, -fz * 13);
+      p.onGround = false;
+      this.releasedT = 0;
+      g.audio.play('whoosh');
+      return false;
+    }
     if (!want || !wallAt(0.9)) {
       if (this.climbing && want) {
         // reached the top: vault over the edge

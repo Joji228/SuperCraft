@@ -568,4 +568,40 @@ export function generateCity(world, seed = 20261011) {
   cylinder(lx, lz, 1, G + 23, G + 25, () => B.LAMP);
   cylinder(lx, lz, 2, G + 25, G + 26, () => B.PANEL_RED);
   set(lx, G + 26, lz, B.PANEL_RED);
+
+  // ---------- a few extra midtown towers ----------
+  // Added later (for the web-swinging hero): some of the midtown lots closest to
+  // downtown get a taller tower, so the skyline steps down gradually instead of
+  // dropping off and there's more to swing from. Done last, so the random choices
+  // for everything above stay exactly as they were; none ends up taller than the
+  // tallest downtown tower.
+  const tallest = Math.max(...world.buildings.map((b) => b.top));
+  const ring = [];
+  for (let j = 0; j < NC; j++) {
+    for (let i = 0; i < NC; i++) {
+      if (j === RIVER_ROW || district(i, j) !== 'midtown') continue;
+      ring.push({ i, j, d: Math.hypot(i - 5.5, j - 2.5) });
+    }
+  }
+  ring.sort((a, b) => a.d - b.d);
+  const picks = ring.slice(0, 12).filter(() => rng.chance(0.55)).slice(0, 7);
+  for (const { i, j } of picks) {
+    const [x0, z0] = lotOrigin(i, j);
+    const ax = x0 + 2, az = z0 + 2;
+    // clear the lot and forget its old buildings
+    fillBox(ax, G, az, ax + INNER, SY, az + INNER, B.AIR);
+    world.buildings = world.buildings.filter((b) => b.x1 <= ax || b.x0 >= ax + INNER || b.z1 <= az || b.z0 >= az + INNER);
+    const kind = rng.chance(0.55) ? 'glass' : 'office';
+    const cap = tallest - G - 8;
+    if (rng.chance(0.6)) {
+      const m = rng.int(1, 3);
+      tower(ax + m, az + m, ax + INNER - m, az + INNER - m, Math.min(cap, rng.int(48, 76)), kind);
+    } else if (rng.chance(0.5)) {
+      tower(ax + 1, az + 1, ax + 13, az + INNER - 1, Math.min(cap, rng.int(42, 70)), kind);
+      tower(ax + 15, az + 1, ax + INNER - 1, az + INNER - 1, Math.min(cap, rng.int(30, 58)), kind);
+    } else {
+      tower(ax + 1, az + 1, ax + INNER - 1, az + 13, Math.min(cap, rng.int(42, 70)), kind);
+      tower(ax + 1, az + 15, ax + INNER - 1, az + INNER - 1, Math.min(cap, rng.int(30, 58)), kind);
+    }
+  }
 }

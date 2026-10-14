@@ -140,7 +140,7 @@ export class HUD {
       },
       tether: {
         ab: { boost: ['SHIFT', 'Run'], punch: ['LMB', 'Punch'], senses: ['SPACE', 'Swing'], laser: ['RMB', 'Web'], breath: ['Q', 'Zip'], carry: ['G', 'Carry'], fly: null },
-        hint: 'In the air, press <b>SPACE</b> for each web: hold to swing, let go to fling<br><b>Q</b> web zip &nbsp; <b>RMB</b> web shot &nbsp; <b>LMB</b> combo<br><b>SHIFT</b>+<b>W</b> into a wall to run up it',
+        hint: 'In the air, press <b>SPACE</b> for each web: hold to swing, let go near the top for a boost<br><b>SHIFT</b> in the air: dash &nbsp; <b>Q</b> web zip &nbsp; <b>RMB</b> web shot &nbsp; <b>LMB</b> combo<br><b>SHIFT</b>+<b>W</b> runs up walls, <b>SPACE</b> kicks off them',
         heat: false,
       },
       granite: {
