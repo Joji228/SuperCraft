@@ -410,7 +410,7 @@ export class HUD {
       this.speed.textContent = 'MACH ' + (1 + Math.max(0, player.vel.length() - 62) / 130).toFixed(2);
       this.unit.textContent = '';
     } else {
-      this.speed.textContent = Math.round(player.vel.length() * 3.6);
+      this.speed.textContent = Math.round(player.vel.length() * 3.6 * (player.speedShow || 1));
       this.unit.textContent = 'KM/H';
     }
     this.alt.textContent = Math.max(0, Math.round(player.pos.y - CITY.G));

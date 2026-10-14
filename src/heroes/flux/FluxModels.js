@@ -1,5 +1,5 @@
-// Models for Flux's forms: Kai (a kid in a green jacket over a white "10" tee, with the
-// glowing Prism band on his wrist) and the five aliens. One blocky rig per form, all
+// Models for Flux's forms: Deka (a kid in a green jacket over a white "10" tee, with the
+// glowing Fluxitrix on his wrist) and the five aliens. One blocky rig per form, all
 // sharing the same poses. Same interface as HeroModel (root, head, eyes, punch(),
 // update()) plus handR for projectiles.
 import * as THREE from 'three';
@@ -27,7 +27,7 @@ function pixelTexture(w, h, draw) {
   return t;
 }
 
-// a tiny pixel "10" for the back of Kai's tee
+// a tiny pixel "10" for the back of Deka's tee
 function tenTexture() {
   return pixelTexture(16, 16, (g) => {
     g.fillStyle = '#f4f4f4';
@@ -108,7 +108,7 @@ function build(kind, pivot) {
       S.head.add(part(0.06, 0.04, 0.02, mat(0x2d7a3a), 0.09, 0.24, 0.21));
       S.armL = armGroup(1, 0.33, 0.58, 0.48, 0.17, jacket, skin);
       S.armR = armGroup(-1, 0.33, 0.58, 0.48, 0.17, jacket, skin);
-      const b = part(0.2, 0.08, 0.2, band, 0, -0.42, 0); // the Prism band, left wrist
+      const b = part(0.2, 0.08, 0.2, band, 0, -0.42, 0); // the Fluxitrix, left wrist
       b.castShadow = false;
       S.armL.add(b);
       S.band = b;
@@ -320,12 +320,19 @@ export class FluxModel {
     } else if (s.mode === 'fly') {
       // riding his own flames
       const fwd = Math.max(0, (s.vx ?? 0) * Math.sin(this.yaw) + (s.vz ?? 0) * Math.cos(this.yaw));
-      const move = Math.min(1, Math.hypot(fwd, s.vy) / 12);
-      tilt = Math.min(Math.atan2(fwd, s.vy), 1.5) * move;
-      armL = armR = 0.3 * move;
-      spreadL = spreadR = 0.3 * (1 - move) + 0.1;
-      legL = 0.05;
-      legR = -0.05;
+      const move = Math.min(1, Math.hypot(fwd, s.vy) / 14);
+      tilt = Math.min(Math.atan2(fwd, s.vy), 1.55) * move;
+      // cruising: arms a little back; blazing: swept right back like a missile
+      armL = armR = (s.boost ? 0.55 : 0.3) * move;
+      spreadL = spreadR = (s.boost ? 0.08 : 0.22) * move + 0.4 * (1 - move);
+      legL = 0.04 + Math.sin(this.time * 6) * 0.03 * (1 - move);
+      legR = -0.04 - Math.sin(this.time * 6) * 0.03 * (1 - move);
+      if (move < 0.25) {
+        // hovering on the jet: arms out for balance, a gentle bob
+        armL = armR = 0.15;
+        spreadL = spreadR = 0.5;
+        crouch = -0.06 + Math.sin(this.time * 3) * 0.06;
+      }
     } else if (s.mode === 'air') {
       armL = armR = -0.7;
       spreadL = spreadR = 0.45;
@@ -429,11 +436,17 @@ export class FluxModel {
       twist = (this.punchCombo === 2 ? -0.3 : 0.3) * q;
     }
 
-    this.tilt = damp(this.tilt, tilt, s.landT > 0 ? 25 : 9, dt);
+    this.tilt = damp(this.tilt, tilt, s.landT > 0 ? 25 : s.mode === 'fly' ? 6 : 9, dt);
+    // bank into turns when flying fast (Cinder), the way Sky and Forge do
+    let yr = this.yaw - (this.prevYaw ?? this.yaw);
+    yr = Math.atan2(Math.sin(yr), Math.cos(yr)) / Math.max(dt, 1e-4);
+    this.prevYaw = this.yaw;
+    const flat = s.mode === 'fly' ? Math.min(1, (s.hSpeed || 0) / 16) : 0;
+    this.bank = damp(this.bank || 0, Math.max(-0.8, Math.min(0.8, -yr * 0.22)) * flat, 5, dt);
     this.twist = damp(this.twist, twist, 12, dt);
     this.crouch = damp(this.crouch, crouch, 12, dt);
     this.pivot.position.y = this.hipY - this.crouch;
-    this.pivot.rotation.set(this.tilt, this.twist + spinY, 0, 'YXZ');
+    this.pivot.rotation.set(this.tilt, this.twist + spinY, this.bank, 'YXZ');
     this.head.rotation.x = damp(this.head.rotation.x, -Math.min(this.tilt, 1.4) * 0.6, 10, dt);
 
     const R = 12;
@@ -456,7 +469,7 @@ export class FluxModel {
       for (const f of this.fires || []) f.scale.set(0.8 + Math.random() * 0.4, 0.7 + Math.random() * 0.7, 0.8 + Math.random() * 0.4);
     }
     if (this.band) {
-      // the Prism band glows green, or flashes red when it's about to time out / recharging
+      // the Fluxitrix glows green, or flashes red when it's about to time out / recharging
       const on = s.warn ? Math.floor(this.time * 6) % 2 === 0 : true;
       this.band.material.color.setHex(s.recharging ? 0xff3a2a : on ? 0x8fe36a : 0xff3a2a);
     }

@@ -1,5 +1,5 @@
 // Steel ladders bolted to the river walls and the sea wall, spaced well apart,
-// so anyone who ends up in the water (Flux as Kai, mostly) can climb back out.
+// so anyone who ends up in the water (Flux as Deka, mostly) can climb back out.
 import * as THREE from 'three';
 import { B, SOLID } from './Blocks.js';
 import { CITY, riverZ } from './CityGenerator.js';

@@ -25,7 +25,7 @@ const CONTROLS = [
   ['Granite', 'Hold Space to charge a leap (release to jump) · Right mouse: Granite Smash (in the air: dive slam) · Q thunder clap'],
   ['Tether', 'In the air press Space for each web, hold to swing, let go near the top for a boost · hold Shift while swinging for speed · Q web zip · Right mouse web ball · Shift + W up walls, Space kicks off'],
   ['Forge', 'F fly, Shift boost / afterburner · hold Right mouse: repulsors · hold Q: Unibeam · E: homing missiles'],
-  ['Flux', 'Hold Q and move the mouse to pick an alien (middle = back to Kai) · the PRISM bar runs down while you are an alien'],
+  ['Deka', 'Hold Q and move the mouse to pick an alien (middle = back to Deka) · the Fluxitrix bar runs down while you are an alien'],
   ['V', 'Camera: close / medium / far / first person'],
   ['Esc', 'Pause'],
   ['F3', 'Debug info (FPS)'],

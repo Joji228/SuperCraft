@@ -41,10 +41,10 @@ export const HEROES = [
   },
   {
     id: 'flux',
-    name: 'Flux',
-    alias: 'Kai and the Prism band',
+    name: 'Deka',
+    alias: 'Hero of the Fluxitrix',
     tagline: 'A teenager whose wristband turns him into five different aliens',
-    powers: ['Hold Q: the alien wheel', 'Cinder, Brawl, Blitz, Shard, Glitch', 'PRISM bar: time as an alien', 'As Kai: punch, run, swim'],
+    powers: ['Hold Q: the alien wheel', 'Cinder, Brawl, Blitz, Shard, Glitch', 'Fluxitrix bar: time as an alien', 'As Deka: punch, run, swim'],
     playable: true,
     note: 'Free Roam',
   },
@@ -171,7 +171,7 @@ const PAINT = {
     }
     r(7, 26, 1, 5, '#ffb02e');
   },
-  // teenager with the Prism band: hoodie, cargo trousers, glowing wristband
+  // teenager with the Fluxitrix: hoodie, cargo trousers, glowing wristband
   flux({ r }) {
     r(7, 2, 6, 5, '#e2a77e');
     r(6, 1, 8, 2, '#5a3a22'); // messy hair
@@ -187,7 +187,7 @@ const PAINT = {
     r(5, 16, 3, 1, '#257330');
     r(12, 16, 3, 1, '#257330');
     r(3, 17, 2, 2, '#e2a77e');
-    r(15, 15, 2, 2, '#8fe36a'); // the Prism band
+    r(15, 15, 2, 2, '#8fe36a'); // the Fluxitrix
     r(15, 14, 2, 1, '#d8ffc8');
     r(15, 17, 2, 2, '#e2a77e');
     r(6, 17, 3, 11, '#8a7a55'); // cargo trousers

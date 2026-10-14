@@ -1,4 +1,4 @@
-// Flux's forms: Kai (human) and the five aliens of the Prism band. All original
+// Flux's forms: Deka (human) and the five aliens of the Fluxitrix. All original
 // names and designs, inspired by the classic alien-watch archetypes:
 //   Cinder  - a living ember: flame head, magma-rock body, throws fire, flies on flames
 //   Brawl   - a four-armed red giant: crushing punches, huge jumps, shockwave slam
@@ -8,8 +8,8 @@
 
 export const FORMS = {
   human: {
-    name: 'Kai',
-    title: 'Back to Kai',
+    name: 'Deka',
+    title: 'Back to Deka',
     color: '#8fe36a',
     body: { halfW: 0.34, height: 1.75 },
     stats: { walk: 6, run: 10, sprint: 10, jump: 11 },
@@ -31,15 +31,16 @@ export const FORMS = {
     stats: { walk: 7, run: 13, sprint: 13, jump: 13 },
     eye: 1.8,
     camScale: 1.05,
-    disallow: ['boost', 'laser', 'breath', 'senses'],
-    flight: { fly: 22, boost: 22, supersonic: 22, boomDelay: 99, turn: 0.9, accel: 0.9 },
+    disallow: ['laser', 'breath', 'senses'],
+    // cruising on flames, Shift for a blazing boost (never supersonic like Sky or Forge)
+    flight: { fly: 24, boost: 58, supersonic: 58, boomDelay: 999, turn: 0.95, accel: 0.9 },
     punchPower: 1.1,
     punchKnock: 1,
     damageMul: 0.8,
     fireproof: true,
     lmb: 'fireball',
     rmb: 'flamethrower',
-    abilities: ['LMB fireball', 'RMB flamethrower', 'F fly on flames'],
+    abilities: ['LMB fireball', 'RMB flamethrower', 'F fly on flames, SHIFT to blaze'],
   },
   brawl: {
     name: 'Brawl',
@@ -62,7 +63,7 @@ export const FORMS = {
     title: 'Speedster',
     color: '#4dc3ff',
     body: { halfW: 0.36, height: 1.8 },
-    stats: { walk: 9, run: 18, sprint: 62, jump: 14 },
+    stats: { walk: 9, run: 18, sprint: 69.5, jump: 14 }, // 250 km/h flat out
     eye: 1.6,
     camScale: 1.1,
     disallow: ['fly', 'laser', 'breath', 'senses'],
@@ -72,7 +73,7 @@ export const FORMS = {
     rapid: true, // fast, lunging strikes
     lmb: 'punch',
     rmb: 'cyclone',
-    abilities: ['SHIFT super speed', 'LMB rapid strikes', 'RMB cyclone'],
+    abilities: ['SHIFT super speed (even across water)', 'LMB rapid strikes', 'RMB cyclone'],
   },
   shard: {
     name: 'Shard',
@@ -121,7 +122,7 @@ const PAINT = {
     r(3, 6, 10, 7, '#2f8f3a'); // green jacket
     r(6, 6, 4, 7, '#f4f4f4'); // white tee
     r(7, 6, 2, 7, '#1d1d1d'); // black stripe
-    r(12, 10, 2, 2, '#8fe36a'); // the Prism band
+    r(12, 10, 2, 2, '#8fe36a'); // the Fluxitrix
     r(4, 13, 3, 6, '#8a7a55');
     r(9, 13, 3, 6, '#8a7a55');
   },

@@ -1,10 +1,10 @@
-// Flux: Kai and the Prism band.
-//   As Kai (human): walk, run (Shift), jump, swim, throw (weak) punches.
+// Deka and the Fluxitrix (the hero's id in code is still 'flux').
+//   As Deka (human): walk, run (Shift), jump, swim, throw (weak) punches.
 //   Hold Q: the alien wheel opens (time slows down); move the mouse towards an alien
-//     and let go of G to transform. Choose the middle to turn back into Kai.
+//     and let go of G to transform. Choose the middle to turn back into Deka.
 //   PRISM bar: drains while he's an alien (faster while fighting). Under 20% the band
-//     beeps and flashes red; when it runs out he times out back to Kai and the band
-//     goes into recharge mode until it's charged enough again. As Kai it recharges.
+//     beeps and flashes red; when it runs out he times out back to Deka and the band
+//     goes into recharge mode until it's charged enough again. As Deka it recharges.
 // The aliens (see FluxForms.js) use the energy and SPEED bars for their powers.
 import * as THREE from 'three';
 import { B, SOLID, LASER_PROOF, FLAMMABLE } from '../../world/Blocks.js';
@@ -15,7 +15,7 @@ import { FluxModel } from './FluxModels.js';
 const PRISM = {
   drain: 0.4, // per second as an alien (a full bar lasts about 4 minutes)
   fightDrain: 0.15, // extra per second while using powers (about 3 minutes of nonstop fighting)
-  recharge: 12, // per second as Kai (empty to full in about 8 seconds)
+  recharge: 12, // per second as Deka (empty to full in about 8 seconds)
   minToTransform: 15,
   rechargeUntil: 40, // after a time-out the band is locked until it gets back here
   warnAt: 20,
@@ -45,7 +45,7 @@ export class FluxKit {
     this.bolts = [];
     this.spikes = [];
     this.ramHits = new Map();
-    // models: Kai is the game's 'flux' model, the aliens live here
+    // models: Deka is the game's 'flux' model, the aliens live here
     this.models = { human: game.models.flux };
     for (const a of ALIENS) {
       const m = new FluxModel(a);
@@ -177,6 +177,11 @@ export class FluxKit {
     p.wades = true;
     p.waterSolid = false;
     p.stepHeight = id === 'brawl' ? 2.01 : 1.01;
+    // Cinder's Shift is a flight boost, not a run; Blitz runs across water; Cinder
+    // carves round buildings in flight like Forge does
+    p.noSprint = id === 'cinder';
+    p.beforeMove = id === 'cinder' ? () => g.kits.forge.bumper() : id === 'blitz' ? () => this.waterRun() : null;
+    p.speedShow = 1;
     g.rig.eye = f.eye;
     g.rig.distScale = f.camScale;
     if (id === 'blitz') g.flightFX.setPalette(0x4dc3ff, 0x1d2a4a, 0x8fe36a);
@@ -204,7 +209,7 @@ export class FluxKit {
     // PRISM meter, under the other meters
     this.prismEl = document.createElement('div');
     this.prismEl.className = 'prism hidden';
-    this.prismEl.innerHTML = '<span class="prism-label">PRISM</span><div class="prism-bar"><div class="prism-fill"></div></div><span class="prism-form"></span>';
+    this.prismEl.innerHTML = '<span class="prism-label">FLUXITRIX</span><div class="prism-bar"><div class="prism-fill"></div></div><span class="prism-form"></span>';
     hud.appendChild(this.prismEl);
     this.prismFill = this.prismEl.querySelector('.prism-fill');
     this.prismForm = this.prismEl.querySelector('.prism-form');
@@ -238,7 +243,7 @@ export class FluxKit {
         </svg>
         <div class="wheel-needle"></div>
         ${items}
-        <div class="wheel-item wheel-center" data-id="human" style="--x:0px; --y:0px; --c:#8fe36a; --d:0ms"><img src="${formPortrait('human')}" alt=""><span>Kai</span></div>
+        <div class="wheel-item wheel-center" data-id="human" style="--x:0px; --y:0px; --c:#8fe36a; --d:0ms"><img src="${formPortrait('human')}" alt=""><span>Deka</span></div>
       </div>
       <div class="wheel-info"></div>`;
     hud.appendChild(this.wheelEl);
@@ -279,7 +284,7 @@ export class FluxKit {
       return;
     }
     if (this.recharging) {
-      g.hud.toast('The Prism band is recharging', 'warn', 1.2);
+      g.hud.toast('The Fluxitrix is recharging', 'warn', 1.2);
       g.audio.play('overheat');
       return;
     }
@@ -338,7 +343,7 @@ export class FluxKit {
     this.dash = { target, strike, t: 0 };
   }
 
-  /** While Kai swims, mark the nearest wall ladder so he knows where to get out. */
+  /** While Deka swims, mark the nearest wall ladder so he knows where to get out. */
   pinLadder(on) {
     const g = this.game;
     const l = on && g.ladders?.list.reduce((b, x) => (!b || Math.hypot(x.x - g.player.pos.x, x.z - g.player.pos.z) < Math.hypot(b.x - g.player.pos.x, b.z - g.player.pos.z) ? x : b), null);
@@ -396,7 +401,7 @@ export class FluxKit {
     return true;
   }
 
-  /** Movement the kit takes over: Blitz's dash-in, and swimming as Kai. */
+  /** Movement the kit takes over: Blitz's dash-in, and swimming as Deka. */
   drives(dt, input, canAct) {
     const g = this.game;
     const p = g.player;
@@ -460,7 +465,7 @@ export class FluxKit {
     if (canAct && input.isDown('breath') && !this.wheelOpen && !g.driving.active) this.openWheel();
     if (this.wheelOpen && (!input.isDown('breath') || !canAct)) this.closeWheel(canAct);
 
-    // knocked out: the band snaps back to Kai
+    // knocked out: the band snaps back to Deka
     if (g.koTimer > 0 && this.form !== 'human') this.setForm('human', true);
 
     // PRISM charge
@@ -468,7 +473,7 @@ export class FluxKit {
       this.prism = Math.min(100, this.prism + PRISM.recharge * dt);
       if (this.recharging && this.prism >= PRISM.rechargeUntil) {
         this.recharging = false;
-        g.hud.toast('Prism band ready', 'good', 1.2);
+        g.hud.toast('Fluxitrix ready', 'good', 1.2);
         g.audio.play('objective');
       }
     } else {
@@ -483,7 +488,7 @@ export class FluxKit {
       if (this.prism <= 0) {
         this.prism = 0;
         this.recharging = true;
-        g.hud.toast('Timed out! The Prism band is recharging', 'warn', 2);
+        g.hud.toast('Timed out! The Fluxitrix is recharging', 'warn', 2);
         this.setForm('human');
       }
     }
@@ -493,10 +498,32 @@ export class FluxKit {
       // flying on flames costs energy
       if (p.flying && !g.meters.drain(7 * dt)) p.setFlying(false);
       this.cinderFire(dt);
-    }
+      // a blazing boost reads up to about 500 km/h (Sky and Forge go on to break the sound barrier)
+      const f = p.flight;
+      const k = p.flying ? Math.max(0, Math.min(1, (p.vel.length() - f.fly) / (f.boost - f.fly))) : 0;
+      p.speedShow = 1 + 1.4 * k;
+    } else p.speedShow = 1;
     this.updateBolts(dt);
     this.updateSpikes(dt);
     this.updateUi();
+  }
+
+  /** Blitz is fast enough to run across the river (and leaves a wake of spray). */
+  waterRun() {
+    const g = this.game;
+    const p = g.player;
+    const hs = Math.hypot(p.vel.x, p.vel.z);
+    // fast enough (or sprinting) and not already under the surface: the water holds him up
+    const feet = g.world.get(Math.floor(p.pos.x), Math.floor(p.pos.y + 0.05), Math.floor(p.pos.z));
+    const running = (p.sprinting || hs > 18) && feet !== B.WATER;
+    const under = g.world.get(Math.floor(p.pos.x), Math.floor(p.pos.y - 0.5), Math.floor(p.pos.z));
+    p.waterSolid = running;
+    this.waterRunning = running && under === B.WATER;
+    if (this.waterRunning && Math.random() < 0.9) {
+      for (let i = 0; i < 3; i++) {
+        g.particles.emit({ x: p.pos.x + (Math.random() - 0.5) * 0.6, y: p.pos.y + 0.05, z: p.pos.z + (Math.random() - 0.5) * 0.6, vx: -p.vel.x * 0.15 + (Math.random() - 0.5) * 3, vy: 2 + Math.random() * 4, vz: -p.vel.z * 0.15 + (Math.random() - 0.5) * 3, life: 0.5, size: 0.25, grow: 2, alpha: 0.75, r: 0.85, g: 0.95, b: 1, gravity: 12, drag: 1.5 });
+      }
+    }
   }
 
   /** Cinder is always burning: flames lick off his body and head, and he flies on a roaring jet of fire. */

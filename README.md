@@ -23,7 +23,7 @@ Five heroes, one voxel city. Pick yours and save Brightport.
 <td><img src="docs/screenshots/forge.jpg" alt="Forge flying over the city"><br><b>Forge</b>: armoured flight, repulsors, chest beam, homing missiles</td>
 </tr>
 <tr>
-<td><img src="docs/screenshots/flux.jpg" alt="Flux's alien wheel"><br><b>Flux</b>: a wristband that turns him into five different aliens</td>
+<td><img src="docs/screenshots/flux.jpg" alt="Deka's alien wheel"><br><b>Deka</b>: the Fluxitrix on his wrist turns him into five different aliens</td>
 <td><img src="docs/screenshots/heroes.jpg" alt="The Heroes menu"><br><b>Pick a hero</b> in the Heroes menu and play them in Free Roam</td>
 </tr>
 </table>

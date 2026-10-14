@@ -272,6 +272,7 @@ export class Game {
     p.stats = big ? { ...GRANITE.stats } : tether ? { ...TETHER.stats } : { walk: 7, run: 13, sprint: 36, jump: 12.5 };
     p.chargeJump = big;
     p.noSprint = forge; // Forge just runs on foot; Shift only boosts his flight
+    p.speedShow = 1;
     p.wades = big || tether;
     p.modeLabel = null;
     p.stepHeight = big ? 2.01 : 1.01; // he strides up two-block ledges
@@ -287,7 +288,7 @@ export class Game {
       this.flightFX.setPalette(pal.suit, pal.accent, pal.belt);
     } else this.applySkin('sky');
     this.hud.setHeroLayout(id);
-    this.heroKit?.onSelect?.(); // Flux starts as Kai (sets his own body, HUD and models)
+    this.heroKit?.onSelect?.(); // Flux starts as Deka (sets his own body, HUD and models)
   }
 
   /**
