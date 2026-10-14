@@ -316,7 +316,7 @@ export class Menus {
     this.render(
       'credits',
       `<h2>Credits</h2>
-       <p>SuperCraft, made by Gi with Claude.</p>
+       <p>SuperCraft, made by Joji228 with Claude.</p>
        <p class="small">Built with <b>Three.js</b> (MIT license).<br>
        Font: <b>Press Start 2P</b> by CodeMan38 (SIL Open Font License).<br>
        All textures, models and sounds are generated in code.</p>
