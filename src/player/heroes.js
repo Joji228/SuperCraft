@@ -44,7 +44,7 @@ export const HEROES = [
     name: 'Flux',
     alias: 'Kai and the Prism band',
     tagline: 'A teenager whose wristband turns him into five different aliens',
-    powers: ['Hold G: the alien wheel', 'Cinder, Brawl, Blitz, Shard, Glitch', 'PRISM bar: time as an alien', 'As Kai: punch, run, swim'],
+    powers: ['Hold Q: the alien wheel', 'Cinder, Brawl, Blitz, Shard, Glitch', 'PRISM bar: time as an alien', 'As Kai: punch, run, swim'],
     playable: true,
     note: 'Free Roam',
   },

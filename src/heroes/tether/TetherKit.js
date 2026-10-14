@@ -593,8 +593,11 @@ export class TetherKit {
   hud(hud) {
     hud.ab.senses.classList.toggle('active', this.swinging);
     hud.ab.breath.classList.toggle('active', !!this.zip);
-    hud.ab.breath.classList.toggle('disabled', this.zipCd > 0);
     hud.ab.laser.classList.toggle('active', this.shotT < 0.2);
+  }
+
+  cooldowns() {
+    return { breath: [this.zipCd, TETHER.zipCooldown], laser: [this.shotCd, TETHER.shotCooldown] };
   }
 }
 

@@ -693,7 +693,7 @@ export class Game {
       zip: !!this.heroKit?.zip,
       climb: this.heroKit?.climbing,
       shotT: this.heroKit?.shotT ?? 9,
-      shootArm: this.heroId === 'forge' && this.heroKit.shootT < 0.45 ? 'B' : null, // both hands held out while firing
+      shootArm: this.heroId === 'forge' && this.heroKit.shootT < 2 ? 'B' : null, // both hands stay up on target until 2 s after the last shot
       aimPitch: this.rig.pitch,
       unibeam: this.heroId === 'forge' ? this.heroKit.uni : 0,
       podT: this.heroId === 'forge' ? this.heroKit.podT : 9,

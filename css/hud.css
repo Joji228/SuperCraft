@@ -350,6 +350,41 @@
   opacity: 0.4;
 }
 
+/* cooldown: a red haze filling the button that drains downwards as it recharges */
+.ab {
+  position: relative;
+  overflow: hidden;
+}
+
+.ab::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(var(--cd, 0) * 100%);
+  background: linear-gradient(rgba(255, 90, 70, 0.55), rgba(160, 30, 40, 0.65));
+  box-shadow: 0 -2px 0 rgba(255, 170, 140, 0.9);
+  pointer-events: none;
+}
+
+.ab:not(.cooling)::after {
+  box-shadow: none;
+}
+
+.ab.cooling b {
+  color: #ffd0c8;
+}
+
+.ab.ready {
+  animation: ab-ready 0.35s ease-out;
+}
+
+@keyframes ab-ready {
+  0% { box-shadow: 0 0 0 0 rgba(255, 211, 77, 0.9); border-color: var(--gold); }
+  100% { box-shadow: 0 0 0 8px rgba(255, 211, 77, 0); }
+}
+
 .carry {
   position: absolute;
   left: 50%;
@@ -1317,23 +1352,127 @@ body.driving .crosshair {
 
 .alien-wheel {
   position: absolute;
+  inset: 0;
+  pointer-events: none;
+  --c: #8fe36a;
+}
+
+.alien-wheel .wheel-backdrop {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(20, 60, 30, 0.3) 0, rgba(4, 12, 8, 0.7) 55%, rgba(0, 0, 0, 0.85) 100%);
+  animation: wheel-fade 0.2s ease-out;
+}
+
+.alien-wheel .wheel-body {
+  position: absolute;
   left: 50%;
   top: 50%;
   width: 0;
   height: 0;
-  pointer-events: none;
 }
 
-.alien-wheel .wheel-ring {
+.alien-wheel.open .wheel-body {
+  animation: wheel-in 0.26s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes wheel-in {
+  from { transform: scale(0.55) rotate(-40deg); opacity: 0; }
+  to { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+@keyframes wheel-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.alien-wheel .wheel-svg,
+.alien-wheel .wheel-ticks {
   position: absolute;
-  left: -205px;
-  top: -205px;
-  width: 410px;
-  height: 410px;
+  left: -240px;
+  top: -240px;
+  width: 480px;
+  height: 480px;
+  overflow: visible;
+}
+
+/* a slowly turning ring of ticks around the rim */
+.alien-wheel .wheel-ticks {
+  stroke: rgba(143, 227, 106, 0.45);
+  stroke-width: 2;
+  animation: wheel-spin 14s linear infinite;
+}
+
+@keyframes wheel-spin {
+  to { transform: rotate(360deg); }
+}
+
+.alien-wheel .wheel-seg {
+  fill: rgba(8, 26, 14, 0.78);
+  stroke: rgba(143, 227, 106, 0.35);
+  stroke-width: 2;
+  transition: fill 0.15s, stroke 0.15s;
+}
+
+.alien-wheel .wheel-seg.sel {
+  fill: color-mix(in srgb, var(--c) 28%, rgba(8, 26, 14, 0.85));
+  stroke: var(--c);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 10px var(--c));
+}
+
+.alien-wheel .wheel-hub-ring {
+  fill: rgba(6, 18, 10, 0.92);
+  stroke: rgba(143, 227, 106, 0.25);
+  stroke-width: 6;
+  transition: stroke 0.15s;
+}
+
+.alien-wheel.kai .wheel-hub-ring {
+  stroke: rgba(143, 227, 106, 0.6);
+  filter: drop-shadow(0 0 10px #5dff7a);
+}
+
+/* the PRISM charge as an arc round the hub */
+.alien-wheel .wheel-prism {
+  fill: none;
+  stroke: #8fe36a;
+  stroke-width: 6;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  filter: drop-shadow(0 0 4px #5dff7a);
+}
+
+.alien-wheel.locked .wheel-prism {
+  stroke: #ff5a4a;
+  filter: drop-shadow(0 0 4px #ff5a4a);
+}
+
+/* the cone of light: a soft wedge from the hub out past the rim */
+.alien-wheel .wheel-cone {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 540px;
+  height: 540px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(10, 30, 16, 0.55) 0 34%, rgba(10, 30, 16, 0.8) 35% 70%, transparent 71%);
-  border: 3px solid rgba(143, 227, 106, 0.6);
-  box-shadow: 0 0 30px rgba(93, 255, 122, 0.35);
+  background: conic-gradient(from -36deg, transparent 0deg, color-mix(in srgb, var(--c) 60%, transparent) 36deg, transparent 72deg, transparent 360deg);
+  -webkit-mask-image: radial-gradient(circle, transparent 0 24%, #000 30%, #000 72%, transparent 100%);
+  mask-image: radial-gradient(circle, transparent 0 24%, #000 30%, #000 72%, transparent 100%);
+  mix-blend-mode: screen;
+  opacity: 0;
+}
+
+/* a small marker on the hub's edge that follows the mouse */
+.alien-wheel .wheel-needle {
+  position: absolute;
+  left: -3px;
+  top: -70px;
+  width: 6px;
+  height: 14px;
+  background: var(--c);
+  box-shadow: 0 0 8px var(--c);
+  transform-origin: 3px 70px;
 }
 
 .alien-wheel .wheel-item {
@@ -1344,12 +1483,21 @@ body.driving .crosshair {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 6px 8px;
   font-size: 8px;
-  color: #d8ffd0;
-  background: rgba(13, 24, 48, 0.85);
-  border: 2px solid #1d3a24;
-  text-shadow: 1px 1px 0 #10203a;
+  color: #cfe8c8;
+  text-shadow: 1px 1px 0 #0a1a10;
+  transform: translate(var(--x), var(--y)) translate(-50%, -50%) scale(0.92);
+  transition: transform 0.16s cubic-bezier(0.3, 1.6, 0.5, 1), color 0.15s, filter 0.15s;
+  filter: brightness(0.75);
+}
+
+.alien-wheel.open .wheel-item {
+  animation: wheel-item-in 0.3s backwards;
+  animation-delay: var(--d);
+}
+
+@keyframes wheel-item-in {
+  from { opacity: 0; }
 }
 
 .alien-wheel .wheel-item img {
@@ -1359,34 +1507,73 @@ body.driving .crosshair {
 }
 
 .alien-wheel .wheel-item.sel {
-  border-color: #8fe36a;
-  background: rgba(30, 80, 40, 0.92);
-  box-shadow: 0 0 14px #5dff7a;
+  color: #fff;
+  filter: brightness(1.15) drop-shadow(0 0 8px var(--c));
+  transform: translate(var(--x), var(--y)) translate(-50%, -50%) scale(1.28);
 }
 
 .alien-wheel .wheel-center img {
-  width: 36px;
-  height: 45px;
+  width: 40px;
+  height: 50px;
+}
+
+.alien-wheel .wheel-center span {
+  font-size: 7px;
 }
 
 .alien-wheel.locked .wheel-item:not(.wheel-center) {
-  filter: grayscale(1) brightness(0.6);
+  filter: grayscale(1) brightness(0.5);
 }
 
 .alien-wheel .wheel-info {
   position: absolute;
-  left: 0;
-  top: 220px;
+  left: 50%;
+  top: calc(50% + 254px);
   transform: translateX(-50%);
-  width: 360px;
-  text-align: center;
-  font-size: 9px;
-  line-height: 1.7;
+  min-width: 300px;
+  padding: 8px 14px 9px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  font-size: 8px;
   color: #e6ffe0;
-  text-shadow: 1px 1px 0 #10203a;
+  background: rgba(6, 18, 10, 0.85);
+  border: 2px solid var(--c);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--c) 45%, transparent);
+  text-shadow: 1px 1px 0 #0a1a10;
+}
+
+.alien-wheel .wheel-info:empty {
+  display: none;
+}
+
+.alien-wheel .wheel-info b {
+  font-size: 12px;
+  font-weight: normal;
+}
+
+.alien-wheel .wheel-info.pop {
+  animation: wheel-pop 0.18s ease-out;
+}
+
+@keyframes wheel-pop {
+  from { transform: translateX(-50%) scale(0.9); }
 }
 
 .alien-wheel .wheel-info small {
   font-size: 7px;
   color: #b9d8b0;
+}
+
+/* shorter screens: shrink the wheel so the info box still fits */
+@media (max-height: 760px) {
+  .alien-wheel .wheel-body { scale: 0.78; }
+  .alien-wheel .wheel-info { top: calc(50% + 200px); }
+}
+
+/* the alien wheel takes the middle of the screen: tuck the controls hint away */
+#hud.wheel-open .hud-hint,
+#hud.wheel-open .hud-click {
+  opacity: 0;
 }

@@ -1,6 +1,6 @@
 // Flux: Kai and the Prism band.
 //   As Kai (human): walk, run (Shift), jump, swim, throw (weak) punches.
-//   Hold G: the alien wheel opens (time slows down); move the mouse towards an alien
+//   Hold Q: the alien wheel opens (time slows down); move the mouse towards an alien
 //     and let go of G to transform. Choose the middle to turn back into Kai.
 //   PRISM bar: drains while he's an alien (faster while fighting). Under 20% the band
 //     beeps and flashes red; when it runs out he times out back to Kai and the band
@@ -197,25 +197,62 @@ export class FluxKit {
     hud.appendChild(this.prismEl);
     this.prismFill = this.prismEl.querySelector('.prism-fill');
     this.prismForm = this.prismEl.querySelector('.prism-form');
-    // the wheel
+    // the wheel: a dimmed screen, five glowing segments around a hub, and a cone of
+    // light that sweeps round to whichever alien the mouse points at
+    const N = ALIENS.length, R1 = 68, R2 = 214, GAP = 2.2;
+    const xy = (deg, r) => [Math.cos((deg * Math.PI) / 180) * r, Math.sin((deg * Math.PI) / 180) * r].map((v) => v.toFixed(1));
+    const pt = (deg, r) => xy(deg, r).join(' ');
+    const segs = ALIENS.map((id, i) => {
+      const mid = -90 + (i / N) * 360, a0 = mid - 180 / N + GAP, a1 = mid + 180 / N - GAP;
+      return `<path class="wheel-seg" data-id="${id}" style="--c:${FORMS[id].color}" d="M ${pt(a0, R1)} L ${pt(a0, R2)} A ${R2} ${R2} 0 0 1 ${pt(a1, R2)} L ${pt(a1, R1)} A ${R1} ${R1} 0 0 0 ${pt(a0, R1)} Z"/>`;
+    }).join('');
+    const ticks = Array.from({ length: 60 }, (_, i) => {
+      const [x1, y1] = xy(i * 6, 226), [x2, y2] = xy(i * 6, i % 5 ? 232 : 239);
+      return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+    }).join('');
+    const items = ALIENS.map((id, i) => {
+      const [x, y] = xy(-90 + (i / N) * 360, 141);
+      return `<div class="wheel-item" data-id="${id}" style="--x:${x}px; --y:${y}px; --c:${FORMS[id].color}; --d:${i * 35}ms"><img src="${formPortrait(id)}" alt=""><span>${FORMS[id].name}</span></div>`;
+    }).join('');
     this.wheelEl = document.createElement('div');
     this.wheelEl.className = 'alien-wheel hidden';
-    const items = ALIENS.map((id, i) => {
-      const a = -Math.PI / 2 + (i / ALIENS.length) * Math.PI * 2;
-      const x = Math.cos(a) * 150, y = Math.sin(a) * 150;
-      return `<div class="wheel-item" data-id="${id}" style="transform: translate(${x}px, ${y}px) translate(-50%, -50%)"><img src="${formPortrait(id)}" alt=""><span>${FORMS[id].name}</span></div>`;
-    }).join('');
-    this.wheelEl.innerHTML = `<div class="wheel-ring"></div>${items}<div class="wheel-item wheel-center" data-id="human" style="transform: translate(-50%, -50%)"><img src="${formPortrait('human')}" alt=""><span>Kai</span></div><div class="wheel-info"></div>`;
+    this.wheelEl.innerHTML = `<div class="wheel-backdrop"></div>
+      <div class="wheel-body">
+        <svg class="wheel-ticks" viewBox="-240 -240 480 480">${ticks}</svg>
+        <div class="wheel-cone"></div>
+        <svg class="wheel-svg" viewBox="-240 -240 480 480">
+          ${segs}
+          <circle class="wheel-hub-ring" r="${R1 - 6}"/>
+          <circle class="wheel-prism" r="${R1 - 6}" pathLength="100"/>
+        </svg>
+        <div class="wheel-needle"></div>
+        ${items}
+        <div class="wheel-item wheel-center" data-id="human" style="--x:0px; --y:0px; --c:#8fe36a; --d:0ms"><img src="${formPortrait('human')}" alt=""><span>Kai</span></div>
+      </div>
+      <div class="wheel-info"></div>`;
     hud.appendChild(this.wheelEl);
     this.wheelInfo = this.wheelEl.querySelector('.wheel-info');
     this.wheelItems = [...this.wheelEl.querySelectorAll('.wheel-item')];
+    this.wheelSegs = [...this.wheelEl.querySelectorAll('.wheel-seg')];
+    this.wheelCone = this.wheelEl.querySelector('.wheel-cone');
+    this.wheelNeedle = this.wheelEl.querySelector('.wheel-needle');
+    this.wheelPrism = this.wheelEl.querySelector('.wheel-prism');
+    this.coneAngle = 0;
+    this.coneOn = 0;
+    this.needleAngle = 0;
   }
 
   openWheel() {
     this.wheelOpen = true;
     this.wheelVec.x = this.wheelVec.y = 0;
     this.choice = null;
-    this.wheelEl.classList.remove('hidden');
+    this.coneOn = 0;
+    this.wheelT = performance.now();
+    this.wheelEl.classList.remove('hidden', 'open');
+    void this.wheelEl.offsetWidth; // replay the opening animation
+    this.wheelEl.classList.add('open');
+    document.getElementById('hud').classList.add('wheel-open');
+    this.wheelMouse(0, 0);
     this.game.audio.play('click');
   }
 
@@ -223,6 +260,7 @@ export class FluxKit {
     if (!this.wheelOpen) return;
     this.wheelOpen = false;
     this.wheelEl.classList.add('hidden');
+    document.getElementById('hud').classList.remove('wheel-open');
     if (!apply || !this.choice || this.choice === this.form) return;
     const g = this.game;
     if (this.choice === 'human') {
@@ -270,8 +308,14 @@ export class FluxKit {
     if (choice !== this.choice) {
       this.choice = choice;
       for (const el of this.wheelItems) el.classList.toggle('sel', el.dataset.id === choice);
+      for (const el of this.wheelSegs) el.classList.toggle('sel', el.dataset.id === choice);
+      this.wheelEl.classList.toggle('kai', choice === 'human');
       const f = FORMS[choice];
-      this.wheelInfo.innerHTML = `<b style="color:${f.color}">${f.name}</b><br>${f.title}<br><small>${f.abilities.join(' · ')}</small>`;
+      this.wheelEl.style.setProperty('--c', f.color);
+      this.wheelInfo.innerHTML = `<b style="color:${f.color}">${f.name}</b><span>${f.title}</span><small>${f.abilities.join(' · ')}</small>`;
+      this.wheelInfo.classList.remove('pop');
+      void this.wheelInfo.offsetWidth;
+      this.wheelInfo.classList.add('pop');
       this.game.audio.play('click');
     }
   }
@@ -401,9 +445,9 @@ export class FluxKit {
     this.fightT += dt;
     if (!this.swimming && (p.modeLabel === 'SWIMMING')) p.modeLabel = null;
 
-    // the wheel: hold G
-    if (canAct && input.isDown('carry') && !this.wheelOpen && !g.driving.active) this.openWheel();
-    if (this.wheelOpen && (!input.isDown('carry') || !canAct)) this.closeWheel(canAct);
+    // the wheel: hold Q
+    if (canAct && input.isDown('breath') && !this.wheelOpen && !g.driving.active) this.openWheel();
+    if (this.wheelOpen && (!input.isDown('breath') || !canAct)) this.closeWheel(canAct);
 
     // knocked out: the band snaps back to Kai
     if (g.koTimer > 0 && this.form !== 'human') this.setForm('human', true);
@@ -807,7 +851,32 @@ export class FluxKit {
     this.prismEl.classList.toggle('warn', this.form !== 'human' && pct < PRISM.warnAt);
     this.prismEl.classList.toggle('recharging', this.recharging);
     this.prismForm.textContent = this.recharging ? 'RECHARGING' : this.f.name.toUpperCase();
-    if (this.wheelOpen) this.wheelEl.classList.toggle('locked', this.recharging || this.prism < PRISM.minToTransform);
+    if (this.wheelOpen) {
+      this.wheelEl.classList.toggle('locked', this.recharging || this.prism < PRISM.minToTransform);
+      this.animateWheel();
+    }
+  }
+
+  /** The cone of light springs round to the chosen alien; a thin needle tracks the mouse. */
+  animateWheel() {
+    const now = performance.now();
+    const dt = Math.min(0.05, (now - this.wheelT) / 1000); // real time: the game itself is slowed down
+    this.wheelT = now;
+    const i = ALIENS.indexOf(this.choice);
+    const v = this.wheelVec;
+    const len = Math.hypot(v.x, v.y);
+    const turn = (from, to, rate) => {
+      const d = ((((to - from) % 360) + 540) % 360) - 180; // the shortest way round
+      return from + d * (1 - Math.exp(-rate * dt));
+    };
+    if (i >= 0) this.coneAngle = turn(this.coneAngle, (i / ALIENS.length) * 360, 18);
+    this.coneOn += ((i >= 0 ? 1 : 0) - this.coneOn) * (1 - Math.exp(-14 * dt));
+    if (len > 8) this.needleAngle = turn(this.needleAngle, (Math.atan2(v.y, v.x) * 180) / Math.PI + 90, 30);
+    this.wheelCone.style.transform = `translate(-50%, -50%) rotate(${this.coneAngle.toFixed(2)}deg)`;
+    this.wheelCone.style.opacity = this.coneOn.toFixed(3);
+    this.wheelNeedle.style.transform = `rotate(${this.needleAngle.toFixed(2)}deg)`;
+    this.wheelNeedle.style.opacity = Math.min(1, len / 40).toFixed(2);
+    this.wheelPrism.style.strokeDasharray = `${Math.max(0, this.prism).toFixed(1)} 100`;
   }
 
   place() {}
@@ -815,7 +884,19 @@ export class FluxKit {
   hud(hud) {
     const f = this.f;
     hud.ab.laser.classList.toggle('active', this.held || this.special < 0.4);
-    hud.ab.laser.classList.toggle('disabled', this.specialCd > 0);
+    hud.ab.breath.classList.toggle('active', this.wheelOpen);
+    hud.ab.breath.classList.toggle('disabled', false);
+  }
+
+  cooldowns() {
+    const f = this.f;
+    const shot = { fireball: 0.32, shards: 0.42, zap: 0.2 }[f.lmb];
+    return {
+      laser: f.rmb && f.rmb !== 'flamethrower' ? [this.specialCd, 1.8] : null,
+      punch: shot ? [this.shotCd, shot] : null,
+      // the band locked after a time-out: the Q button fills back up as it recharges
+      breath: this.recharging ? [PRISM.rechargeUntil - this.prism, PRISM.rechargeUntil] : null,
+    };
   }
 }
 

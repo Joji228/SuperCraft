@@ -130,6 +130,31 @@ export class HUD {
     this.chargeEl.classList.toggle('full', k >= 1);
   }
 
+  /**
+   * Cooldown haze on the ability buttons: a coloured fill that drains away as the
+   * power recharges, then a quick flash when it's ready again.
+   */
+  updateCooldowns(game) {
+    const cds = { ...(game.heroKit?.cooldowns?.() || {}) };
+    const pu = game.abilities.punch;
+    if (!cds.punch && pu.cooldownTotal >= 0.4) cds.punch = [pu.cooldown, pu.cooldownTotal];
+    this.cdState ||= {};
+    for (const [slot, el] of Object.entries(this.ab)) {
+      const c = cds[slot];
+      const k = c && c[1] > 0 ? Math.max(0, Math.min(1, c[0] / c[1])) : 0;
+      const was = this.cdState[slot] || 0;
+      if (k === was) continue;
+      this.cdState[slot] = k;
+      el.style.setProperty('--cd', k.toFixed(3));
+      el.classList.toggle('cooling', k > 0);
+      if (k === 0 && was > 0) {
+        el.classList.remove('ready');
+        void el.offsetWidth; // restart the flash
+        el.classList.add('ready');
+      }
+    }
+  }
+
   /** Ability bar, controls hint and meters for the hero in play. */
   setHeroLayout(id) {
     const LAYOUTS = {
@@ -144,33 +169,33 @@ export class HUD {
         heat: false,
       },
       'flux-human': {
-        ab: { boost: ['SHIFT', 'Run'], punch: ['LMB', 'Punch'], carry: ['G', 'Aliens'], laser: null, breath: null, senses: null, fly: null },
-        hint: 'Hold <b>G</b> and move the mouse to pick an alien<br><b>WASD</b> move &nbsp; <b>SHIFT</b> run &nbsp; <b>SPACE</b> jump &nbsp; <b>LMB</b> punch<br>Swim, and climb out at the wall ladders &nbsp; <b>R</b> next to a car to drive',
+        ab: { boost: ['SHIFT', 'Run'], punch: ['LMB', 'Punch'], breath: ['Q', 'Aliens'], carry: null, laser: null, senses: null, fly: null },
+        hint: 'Hold <b>Q</b> and move the mouse to pick an alien<br><b>WASD</b> move &nbsp; <b>SHIFT</b> run &nbsp; <b>SPACE</b> jump &nbsp; <b>LMB</b> punch<br>Swim, and climb out at the wall ladders &nbsp; <b>R</b> next to a car to drive',
         heat: false,
       },
       'flux-cinder': {
-        ab: { punch: ['LMB', 'Fireball'], laser: ['RMB', 'Flames'], fly: ['F', 'Fly'], carry: ['G', 'Aliens'], boost: null, breath: null, senses: null },
-        hint: '<b>LMB</b> fireballs &nbsp; hold <b>RMB</b> flamethrower<br><b>F</b> fly on flames (uses energy) &nbsp; fire cannot hurt him<br>Hold <b>G</b> to change',
+        ab: { punch: ['LMB', 'Fireball'], laser: ['RMB', 'Flames'], fly: ['F', 'Fly'], breath: ['Q', 'Aliens'], carry: null, boost: null, senses: null },
+        hint: '<b>LMB</b> fireballs &nbsp; hold <b>RMB</b> flamethrower<br><b>F</b> fly on flames (uses energy) &nbsp; fire cannot hurt him<br>Hold <b>Q</b> to change',
         heat: false,
       },
       'flux-brawl': {
-        ab: { boost: ['SHIFT', 'Charge'], punch: ['LMB', 'Punch'], laser: ['RMB', 'Slam'], carry: ['G', 'Aliens'], breath: null, senses: null, fly: null },
-        hint: '<b>LMB</b> four-fist punches (they smash walls) &nbsp; <b>RMB</b> shockwave slam<br><b>SPACE</b> huge jump &nbsp; <b>SHIFT</b> charge<br>Hold <b>G</b> to change',
+        ab: { boost: ['SHIFT', 'Charge'], punch: ['LMB', 'Punch'], laser: ['RMB', 'Slam'], breath: ['Q', 'Aliens'], carry: null, senses: null, fly: null },
+        hint: '<b>LMB</b> four-fist punches (they smash walls) &nbsp; <b>RMB</b> shockwave slam<br><b>SPACE</b> huge jump &nbsp; <b>SHIFT</b> charge<br>Hold <b>Q</b> to change',
         heat: false,
       },
       'flux-blitz': {
-        ab: { boost: ['SHIFT', 'Speed'], punch: ['LMB', 'Strike'], laser: ['RMB', 'Cyclone'], carry: ['G', 'Aliens'], breath: null, senses: null, fly: null },
-        hint: '<b>SHIFT</b> super speed (run through enemies) &nbsp; <b>LMB</b> rapid strikes<br><b>RMB</b> cyclone<br>Hold <b>G</b> to change',
+        ab: { boost: ['SHIFT', 'Speed'], punch: ['LMB', 'Strike'], laser: ['RMB', 'Cyclone'], breath: ['Q', 'Aliens'], carry: null, senses: null, fly: null },
+        hint: '<b>SHIFT</b> super speed (run through enemies) &nbsp; <b>LMB</b> rapid strikes<br><b>RMB</b> cyclone<br>Hold <b>Q</b> to change',
         heat: false,
       },
       'flux-shard': {
-        ab: { punch: ['LMB', 'Shards'], laser: ['RMB', 'Spikes'], carry: ['G', 'Aliens'], boost: null, breath: null, senses: null, fly: null },
-        hint: '<b>LMB</b> crystal shards &nbsp; <b>RMB</b> crystal spikes<br>Takes far less damage<br>Hold <b>G</b> to change',
+        ab: { punch: ['LMB', 'Shards'], laser: ['RMB', 'Spikes'], breath: ['Q', 'Aliens'], carry: null, boost: null, senses: null, fly: null },
+        hint: '<b>LMB</b> crystal shards &nbsp; <b>RMB</b> crystal spikes<br>Takes far less damage<br>Hold <b>Q</b> to change',
         heat: false,
       },
       'flux-glitch': {
-        ab: { punch: ['LMB', 'Zap'], laser: ['RMB', 'EMP'], carry: ['G', 'Aliens'], boost: null, breath: null, senses: null, fly: null },
-        hint: '<b>LMB</b> zap &nbsp; <b>RMB</b> EMP pulse (drones drop)<br><b>R</b> next to a car: take it over (faster, endless nitro)<br>Hold <b>G</b> to change',
+        ab: { punch: ['LMB', 'Zap'], laser: ['RMB', 'EMP'], breath: ['Q', 'Aliens'], carry: null, boost: null, senses: null, fly: null },
+        hint: '<b>LMB</b> zap &nbsp; <b>RMB</b> EMP pulse (drones drop)<br><b>R</b> next to a car: take it over (faster, endless nitro)<br>Hold <b>Q</b> to change',
         heat: false,
       },
       forge: {
@@ -404,6 +429,7 @@ export class HUD {
     this.ab.breath.classList.toggle('active', ab.breath.active);
     this.ab.breath.classList.toggle('disabled', m.energy < 1);
     game.heroKit?.hud?.(this);
+    this.updateCooldowns(game);
 
     this.hurt = Math.max(0, this.hurt - dt * 1.2);
     this.hurtEl.style.opacity = String(Math.min(0.85, this.hurt + (m.health < 30 ? 0.25 + 0.1 * Math.sin(performance.now() / 200) : 0)));

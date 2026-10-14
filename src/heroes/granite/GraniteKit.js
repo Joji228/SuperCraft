@@ -395,8 +395,13 @@ export class GraniteKit {
   hud(hud) {
     hud.ab.laser.classList.toggle('active', this.charging);
     hud.ab.breath.classList.toggle('active', this.clapT < 0.3);
-    hud.ab.breath.classList.toggle('disabled', this.clapCd > 0 || this.game.meters.energy < GRANITE.clapCost);
+    hud.ab.breath.classList.toggle('disabled', this.game.meters.energy < GRANITE.clapCost);
     hud.ab.senses.classList.toggle('active', this.smashT < 0.6 || this.diveSmash);
-    hud.ab.senses.classList.toggle('disabled', this.smashCd > 0 || this.game.meters.energy < GRANITE.smashCost);
+    hud.ab.senses.classList.toggle('disabled', this.game.meters.energy < GRANITE.smashCost);
+  }
+
+  /** Button slot -> [seconds left, full cooldown], for the haze on the ability bar. */
+  cooldowns() {
+    return { breath: [this.clapCd, GRANITE.clapCooldown], senses: [this.smashCd, GRANITE.smashCooldown] };
   }
 }

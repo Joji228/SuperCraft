@@ -415,6 +415,10 @@ export class ForgeKit {
     hud.ab.laser.classList.toggle('disabled', this.game.meters.overheated);
     hud.ab.breath.classList.toggle('active', this.uni > 0);
     hud.ab.senses.classList.toggle('active', this.podT < 0.6);
-    hud.ab.senses.classList.toggle('disabled', this.missileCd > 0);
+    hud.ab.senses.classList.toggle('disabled', this.game.meters.energy < FORGE.missileCost);
+  }
+
+  cooldowns() {
+    return { senses: [this.missileCd, FORGE.missileCooldown] };
   }
 }
