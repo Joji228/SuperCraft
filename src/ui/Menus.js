@@ -5,6 +5,8 @@ import { MISSIONS } from '../missions/missions.js';
 import { loadProgress, fmt } from '../missions/MissionManager.js';
 import { HEROES, heroPortrait } from '../player/heroes.js';
 
+export const VERSION = '0.1';
+
 const CONTROLS = [
   ['W A S D', 'Move'],
   ['Mouse', 'Look'],
@@ -133,7 +135,7 @@ export class Menus {
          <button data-action="settings">Settings</button>
          <button data-action="credits">Credits</button>
        </div>
-       <p class="small foot">Click a mode to play &middot; Esc pauses</p>`,
+       <p class="small foot">Click a mode to play &middot; Esc pauses &middot; v${VERSION}</p>`,
       'screen main',
     );
   }
@@ -161,7 +163,7 @@ export class Menus {
     }).join('');
     this.render(
       'heroes',
-      `<h2>Heroes</h2><p class="small hero-sub">Pick who you play in Free Roam (the Campaign is always Sky Guardian). More heroes are on the way.</p>
+      `<h2>Heroes</h2><p class="small hero-sub">Pick who you play in Free Roam (the Campaign is always Sky Guardian).</p>
        <div class="hero-cards">${cards}</div>
        <div class="menu"><button data-action="main">Back</button></div>`,
       'screen wide heroes',

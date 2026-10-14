@@ -3,52 +3,43 @@
 # ⚡ SuperCraft
 
 **A blocky superhero game you can play right in your browser.**
-Fly over a voxel city, break the sound barrier and save Brightport.
+Five heroes, one voxel city. Pick yours and save Brightport.
 
 <a href="https://joji228.github.io/SuperCraft/"><img src="docs/play-button.svg" alt="▶ Play SuperCraft now" width="420" height="96"></a>
 
-<img src="docs/screenshots/hero.jpg" alt="Aegis hovering in front of the Brightport skyline" width="820">
+<img src="docs/screenshots/hero.jpg" alt="Sky Guardian hovering in front of the Brightport skyline" width="820">
 
 </div>
 
-## What's in it
-
-- 🦸 **Five powers:** flight with a sonic boom, laser eyes, freezing super breath, x-ray super senses and super strength (carry and throw cars).
-- 🏙️ **An open city** with traffic, pedestrians and random emergencies: robberies, fires, crashes and drone attacks.
-- 🎬 **A five-mission campaign** ending in a fight with a giant mech, rated with up to three stars.
-- 🦸‍♂️ **Heroes menu:** Sky Guardian, plus three Free Roam heroes: Granite (charged leaps, Granite Smash, thunder clap), Tether (web-swinging, web zip, wall running) and Forge (thruster flight, repulsors, Unibeam, homing missiles). Flux is on the way. Every texture and sound is made in code.
+## Heroes
 
 <table>
 <tr>
-<td><img src="docs/screenshots/sonic-boom.jpg" alt="Breaking the sound barrier" width="400" height="225"></td>
-<td><img src="docs/screenshots/iron-tyrant.jpg" alt="Fighting the Iron Tyrant" width="400" height="225"></td>
+<td width="50%"><img src="docs/screenshots/sonic-boom.jpg" alt="Sky Guardian breaking the sound barrier"><br><b>Sky Guardian</b>: flight, sonic booms, laser eyes, freezing breath, x-ray senses</td>
+<td width="50%"><img src="docs/screenshots/granite.jpg" alt="Granite smashing the street"><br><b>Granite</b>: charged leaps, ground smash, thunder clap</td>
 </tr>
 <tr>
-<td><img src="docs/screenshots/tower-inferno.jpg" alt="Tower Inferno mission" width="400" height="225"></td>
-<td><img src="docs/screenshots/heroes.jpg" alt="The Heroes menu" width="400" height="225"></td>
+<td><img src="docs/screenshots/tether.jpg" alt="Tether swinging between towers"><br><b>Tether</b>: web-swinging, web zip, wall running</td>
+<td><img src="docs/screenshots/forge.jpg" alt="Forge flying over the city"><br><b>Forge</b>: armoured flight, repulsors, chest beam, homing missiles</td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/flux.jpg" alt="Flux's alien wheel"><br><b>Flux</b>: a wristband that turns him into five different aliens</td>
+<td><img src="docs/screenshots/heroes.jpg" alt="The Heroes menu"><br><b>Pick a hero</b> in the Heroes menu and play them in Free Roam</td>
 </tr>
 </table>
 
-## Controls
+## What's in it
 
-| Key | Action |
-| --- | --- |
-| **WASD** · **Mouse** | Move · look (click the game to capture the mouse) |
-| **Space** | Jump (double-tap in the air to fly) |
-| **F** | Toggle flight · **Space / C** up and down |
-| **Shift** | Super speed on foot · boost in the air (hold for a sonic boom) |
-| **Left click** | Punch combo · throw what you carry |
-| **Right click** (hold) | Laser eyes |
-| **Q** (hold) | Super breath |
-| **E** | Super senses |
-| **G** | Pick up / drop |
-| **Wheel click** | Lock on to a target |
-| **R** | Free Roam: steal a car and drive (Shift nitro · Space drift · H horn · R get out) |
-| **V** | Camera: close / medium / far / first person |
-| **Esc** | Pause |
+- 🏙️ **Free Roam:** an open city with traffic, people, car stealing and random emergencies to handle.
+- 🎬 **Campaign:** five missions ending in a fight with a giant mech, rated with up to three stars.
+- 🎨 Every texture and sound is made in code.
 
-## Run it locally
+## New in 0.1
 
-Run `python tools/serve.py 8080` in the project folder and open http://localhost:8080.
+Four new heroes, a Heroes menu, drivable cars, ambulance rescues, swimming with ladders out of the water, an underwater view, cooldowns on the ability bar, and faster city loading.
 
-<sub>Built with <a href="https://threejs.org">Three.js</a>. Aegis, Brightport and every villain are original creations. MIT licensed.</sub>
+## Play
+
+Open the [live game](https://joji228.github.io/SuperCraft/), or run `python tools/serve.py 8080` and visit http://localhost:8080. **WASD** moves, the **mouse** looks and **Esc** pauses. Each hero's controls are shown in game.
+
+<sub>Built with <a href="https://threejs.org">Three.js</a>. All heroes, Brightport and every villain are original creations. MIT licensed.</sub>
