@@ -76,7 +76,8 @@ export class TetherKit {
     this.balls = [];
     this.punchPower = 1.3;
     this.punchKnock = 1.25;
-    this.lunge = 9; // melee: dashes in to enemies a few metres away
+    this.lunge = 9;
+    this.shovesCars = false; // agile, not a brute: he bumps off cars (or hops onto them) // melee: dashes in to enemies a few metres away
     this.punchKnockSeq = [0.35, 0.5, 1.6]; // light hits keep them close, the last one sends them flying
     this.dash = null;
     this.flow = 0; // momentum from chained swings

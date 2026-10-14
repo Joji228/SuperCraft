@@ -290,6 +290,80 @@ export class Game {
     this.heroKit?.onSelect?.(); // Flux starts as Kai (sets his own body, HUD and models)
   }
 
+  /**
+   * Cars (and the ambulance) are solid to the hero. Strong heroes shove them out of
+   * the way, and hard enough to dent them; everyone else bumps off. You can also land
+   * on the roof.
+   */
+  collideVehicles() {
+    const p = this.player;
+    const held = this.abilities.carry.held;
+    const strong = this.heroKit ? this.heroKit.shovesCars ?? true : true; // Sky Guardian is strong
+    for (const e of this.entities.query(p.pos, 7, (x) => (x.kind === 'car' || x.kind === 'ambulance') && !x.carried && !x.removed && x !== held)) {
+      const [bx, bz, bh] = e.kind === 'ambulance' ? [1.2, 2.7, 2.55] : [1.0, 2.1, 1.62];
+      const top = e.pos.y + bh;
+      if (p.pos.y + p.height < e.pos.y + 0.2 || p.pos.y > top + 0.05) continue;
+      const dx = p.pos.x - e.pos.x, dz = p.pos.z - e.pos.z;
+      const c = Math.cos(e.yaw || 0), s = Math.sin(e.yaw || 0);
+      const lx = dx * c - dz * s, lz = dx * s + dz * c; // in the car's frame (z = its nose)
+      const hx = bx + p.halfW, hz = bz + p.halfW;
+      if (Math.abs(lx) >= hx || Math.abs(lz) >= hz) continue;
+      // coming down onto the roof: stand on it
+      if (p.pos.y > top - 0.6 && p.vel.y <= 0) {
+        p.pos.y = top;
+        p.vel.y = 0;
+        p.onGround = true;
+        continue;
+      }
+      // push out along whichever side is nearer
+      const px = hx - Math.abs(lx), pz = hz - Math.abs(lz);
+      let nx, nz, pen;
+      if (px < pz) {
+        const sx = Math.sign(lx) || 1;
+        nx = c * sx;
+        nz = -s * sx;
+        pen = px;
+      } else {
+        const sz = Math.sign(lz) || 1;
+        nx = s * sz;
+        nz = c * sz;
+        pen = pz;
+      }
+      const into = -(p.vel.x * nx + p.vel.z * nz); // speed heading into the car
+      if (strong) {
+        // shove it: the car takes most of the push (and a dent if it was a real hit)
+        e.driving = false;
+        // the car moves off at least as fast as he's walking into it
+        const vn = -(e.vel.x * nx + e.vel.z * nz);
+        const want = Math.min(Math.max(into * 1.05, 2), 16); // a hard hit still only bowls it a few metres
+        if (vn < want) {
+          e.vel.x -= nx * (want - vn);
+          e.vel.z -= nz * (want - vn);
+        }
+        if (into > 14 && e.kind === 'car' && !(e.bumpCd > performance.now())) {
+          e.bumpCd = performance.now() + 400;
+          e.damage(into * 1.2, { type: 'impact', source: p });
+          this.audio.play('crunch', e.pos);
+          this.rig.shake = Math.max(this.rig.shake, Math.min(0.5, into / 60));
+        }
+        p.pos.x += nx * pen * 0.5;
+        p.pos.z += nz * pen * 0.5;
+        if (into > 0) {
+          p.vel.x += nx * into * 0.5;
+          p.vel.z += nz * into * 0.5;
+        }
+      } else {
+        // bump off it like a wall
+        p.pos.x += nx * pen;
+        p.pos.z += nz * pen;
+        if (into > 0) {
+          p.vel.x += nx * into;
+          p.vel.z += nz * into;
+        }
+      }
+    }
+  }
+
   /** Free Roam only: swap heroes on the spot (from the pause menu), keeping your place in the city. */
   switchHero(id) {
     if (!this.mode || this.mode instanceof MissionRun || id === this.heroId) return;
@@ -657,6 +731,7 @@ export class Game {
       if (p.boosting) this.meters.drainSpeed(dt);
       else if (p.sprinting) this.meters.drainSpeed(dt * 0.6); // running is cheaper than flying
       this.heroKit?.update(dt, canAct ? input : NO_INPUT, canAct);
+      this.collideVehicles();
     }
     this.abilities.update(dt, input, canAct && !drv.active);
     this.meters.update(dt);

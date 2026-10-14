@@ -13,7 +13,7 @@
 //   Left mouse: punches. G: carry. R: steal cars.
 // No laser eyes, breath or senses.
 import * as THREE from 'three';
-import { B, SOLID, LASER_PROOF } from '../../world/Blocks.js';
+import { B, SOLID, LASER_PROOF, PUNCH_BREAKABLE } from '../../world/Blocks.js';
 import { CITY } from '../../world/CityGenerator.js';
 
 export const FORGE = {
@@ -103,7 +103,10 @@ export class ForgeKit {
     if (sp < 18) return;
     const look = Math.min(12, sp * 0.22);
     const ray = (h) => g.world.raycast(p.pos.x, p.pos.y + h, p.pos.z, v.x / sp, v.y / sp, v.z / sp, look);
-    const low = ray(0.25), mid = ray(1), high = ray(1.75);
+    // only walls steer him: the ground and rooftops below never push him back up,
+    // so he can dive down and skim along the street
+    const wall = (h) => (h && Math.abs(h.ny) < 0.5 ? h : null);
+    const low = wall(ray(0.25)), mid = wall(ray(1)), high = wall(ray(1.75));
     // only a ledge or parapet in the way (head height is clear): lift up over it
     if (low && !mid && !high) {
       v.y = Math.max(v.y, Math.min(sp * 0.6, 22));
@@ -226,7 +229,7 @@ export class ForgeKit {
       const b = this.bolts[i];
       const step = FORGE.repulsorSpeed * dt;
       // hit anything along this step?
-      const ent = g.entities.raycast(b.pos, b.dir, step, (e) => e.alive && !e.carried && e.team !== 'civ');
+      const ent = g.entities.raycast(b.pos, b.dir, step, (e) => e.alive && !e.carried);
       const blk = g.world.raycast(b.pos.x, b.pos.y, b.pos.z, b.dir.x, b.dir.y, b.dir.z, step);
       let done = false;
       if (ent && (!blk || ent.t < blk.t)) {
@@ -240,7 +243,7 @@ export class ForgeKit {
       } else if (blk) {
         const at = new THREE.Vector3(blk.x + 0.5, blk.y + 0.5, blk.z + 0.5);
         g.effects.sparks(at, 8, b.dir.clone().negate(), 0x9ff6ff);
-        if ((blk.block >= B.GLASS_BLUE && blk.block <= B.GLASS_DARK) || blk.block === B.DOOR) {
+        if (PUNCH_BREAKABLE.has(blk.block)) {
           g.world.edit(blk.x, blk.y, blk.z, B.AIR);
           g.audio.play('glass', at);
         }

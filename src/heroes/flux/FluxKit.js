@@ -7,7 +7,7 @@
 //     goes into recharge mode until it's charged enough again. As Kai it recharges.
 // The aliens (see FluxForms.js) use the energy and SPEED bars for their powers.
 import * as THREE from 'three';
-import { B } from '../../world/Blocks.js';
+import { B, SOLID, LASER_PROOF, FLAMMABLE } from '../../world/Blocks.js';
 import { CITY } from '../../world/CityGenerator.js';
 import { FORMS, ALIENS, formPortrait } from './FluxForms.js';
 import { FluxModel } from './FluxModels.js';
@@ -72,7 +72,18 @@ export class FluxKit {
   }
 
   get canCarry() {
-    return false; // G is the alien wheel
+    return true;
+  }
+
+  /** Brawl barges cars aside, and so does Blitz at full tilt; the others bump off them. */
+  get shovesCars() {
+    const p = this.game.player;
+    return this.form === 'brawl' || (this.form === 'blitz' && Math.hypot(p.vel.x, p.vel.z) > 25);
+  }
+
+  /** Only Brawl is strong enough to lift cars; everyone else can carry people and small things. */
+  canLift(e) {
+    return this.form === 'brawl' || !e.carryHeavy;
   }
 
   get disallow() {
@@ -478,14 +489,70 @@ export class FluxKit {
     }
 
     if (this.form !== 'human' && canAct && !this.wheelOpen) this.powers(dt, input);
-    if (this.form === 'cinder' && p.flying) {
+    if (this.form === 'cinder') {
       // flying on flames costs energy
-      if (!g.meters.drain(7 * dt)) p.setFlying(false);
-      if (Math.random() < dt * 30) g.particles.emit({ x: p.pos.x + (Math.random() - 0.5) * 0.4, y: p.pos.y, z: p.pos.z + (Math.random() - 0.5) * 0.4, vx: (Math.random() - 0.5), vy: -6, vz: (Math.random() - 0.5), life: 0.35, size: 0.35, grow: 1.5, alpha: 0.9, r: 1, g: 0.55, b: 0.15, drag: 2 });
+      if (p.flying && !g.meters.drain(7 * dt)) p.setFlying(false);
+      this.cinderFire(dt);
     }
     this.updateBolts(dt);
     this.updateSpikes(dt);
     this.updateUi();
+  }
+
+  /** Cinder is always burning: flames lick off his body and head, and he flies on a roaring jet of fire. */
+  cinderFire(dt) {
+    const g = this.game;
+    const p = g.player;
+    const P = g.particles;
+    const rnd = (a, b) => a + Math.random() * (b - a);
+    const count = (rate) => Math.floor(rate * dt) + (Math.random() < (rate * dt) % 1 ? 1 : 0);
+    const hs = Math.hypot(p.vel.x, p.vel.z);
+    // body: tongues of flame rising off his shoulders, arms and back (trailing as he moves)
+    for (let i = count(110 + hs * 3); i > 0; i--) {
+      const t = Math.random();
+      P.emit({
+        x: p.pos.x + rnd(-0.45, 0.45), y: p.pos.y + rnd(0.6, 1.9), z: p.pos.z + rnd(-0.45, 0.45),
+        vx: rnd(-0.5, 0.5) + p.vel.x * 0.8, vy: rnd(1.5, 3.5) + p.vel.y * 0.8, vz: rnd(-0.5, 0.5) + p.vel.z * 0.8,
+        life: rnd(0.3, 0.55), size: rnd(0.3, 0.5), grow: 0.3, alpha: 1, r: 1, g: 0.3 + t * 0.5, b: 0.04 + t * 0.1, drag: 0.4,
+      });
+    }
+    // head: a big crown of fire
+    for (let i = count(60); i > 0; i--) {
+      const t = Math.random();
+      P.emit({
+        x: p.pos.x + rnd(-0.22, 0.22), y: p.pos.y + rnd(2.0, 2.4), z: p.pos.z + rnd(-0.22, 0.22),
+        vx: rnd(-0.4, 0.4) + p.vel.x * 0.9, vy: rnd(2.5, 5) + p.vel.y * 0.9, vz: rnd(-0.4, 0.4) + p.vel.z * 0.9,
+        life: rnd(0.35, 0.6), size: rnd(0.5, 0.8), grow: 0.3, alpha: 1, r: 1, g: 0.45 + t * 0.45, b: 0.08 + t * 0.15, drag: 0.4,
+      });
+    }
+    // embers drifting up
+    for (let i = count(10); i > 0; i--) {
+      P.emit({ x: p.pos.x + rnd(-0.5, 0.5), y: p.pos.y + rnd(0.5, 2), z: p.pos.z + rnd(-0.5, 0.5), vx: rnd(-1, 1), vy: rnd(2, 5), vz: rnd(-1, 1), life: rnd(0.8, 1.4), size: 0.08, grow: 0.5, alpha: 1, r: 1, g: 0.7, b: 0.3, drag: 0.5 });
+    }
+    if (!p.flying) return;
+    // flight: a roaring exhaust out of his feet, longer and hotter the faster he goes
+    const sp = p.vel.length();
+    const fx = p.pos.x, fy = p.pos.y + 0.1, fz = p.pos.z;
+    const back = tmp.copy(p.vel).multiplyScalar(-1 / Math.max(sp, 1));
+    if (sp < 3) back.set(0, -1, 0);
+    else back.y -= 0.6;
+    back.normalize();
+    for (let i = count(300 + sp * 6); i > 0; i--) {
+      const t = Math.random();
+      const s = rnd(8, 13);
+      // most of his own speed carries into the jet, so it stays a tight cone of fire at his feet
+      P.emit({
+        x: fx + rnd(-0.25, 0.25), y: fy + rnd(-0.1, 0.2), z: fz + rnd(-0.25, 0.25),
+        vx: back.x * s + p.vel.x * 0.9 + rnd(-1.2, 1.2), vy: back.y * s + p.vel.y * 0.9 + rnd(-1, 1), vz: back.z * s + p.vel.z * 0.9 + rnd(-1.2, 1.2),
+        life: rnd(0.25, 0.45), size: rnd(0.45, 0.7), grow: 2.2, alpha: 1, r: 1, g: 0.25 + t * 0.55, b: 0.03 + t * 0.12, drag: 0.6,
+      });
+    }
+    // a white-hot core right at his feet, and smoke trailing off the end
+    for (let i = count(60); i > 0; i--) P.emit({ x: fx + rnd(-0.12, 0.12), y: fy, z: fz + rnd(-0.12, 0.12), vx: back.x * 6 + p.vel.x * 0.8, vy: back.y * 6 + p.vel.y * 0.8, vz: back.z * 6 + p.vel.z * 0.8, life: 0.15, size: 0.6, grow: 1.4, alpha: 1, r: 1, g: 0.95, b: 0.7, drag: 2 });
+    for (let i = count(14); i > 0; i--) {
+      const c = 0.25 + Math.random() * 0.15;
+      P.emit({ x: fx + back.x * 3 + rnd(-0.5, 0.5), y: fy + back.y * 3, z: fz + back.z * 3 + rnd(-0.5, 0.5), vx: rnd(-0.5, 0.5), vy: rnd(0.5, 1.5), vz: rnd(-0.5, 0.5), life: rnd(1, 1.6), size: 0.6, grow: 3, alpha: 0.35, r: c, g: c, b: c, drag: 1 });
+    }
   }
 
   // ---------- alien powers ----------
@@ -498,6 +565,7 @@ export class FluxKit {
     const g = this.game;
     const p = g.player;
     const f = this.f;
+    if (g.abilities.carry.held) return; // hands full: left mouse throws instead
     // left mouse for the ranged forms
     if (input.isDown('punch') && this.shotCd <= 0) {
       if (f.lmb === 'fireball') this.shoot('fire', 0.32, 1);
@@ -580,7 +648,7 @@ export class FluxKit {
     for (let i = this.bolts.length - 1; i >= 0; i--) {
       const b = this.bolts[i];
       const step = b.speed * dt;
-      const ent = g.entities.raycast(b.pos, b.dir, step, (e) => e.alive && !e.carried && e.team !== 'civ');
+      const ent = g.entities.raycast(b.pos, b.dir, step, (e) => e.alive && !e.carried);
       const blk = g.world.raycast(b.pos.x, b.pos.y, b.pos.z, b.dir.x, b.dir.y, b.dir.z, step);
       let done = false;
       if (ent && (!blk || ent.t < blk.t)) {
@@ -597,6 +665,7 @@ export class FluxKit {
         const at = b.pos.clone().addScaledVector(b.dir, blk.t);
         this.burst(b.kind, at);
         if ((blk.block >= B.GLASS_BLUE && blk.block <= B.GLASS_DARK) || blk.block === B.DOOR) g.world.edit(blk.x, blk.y, blk.z, B.AIR);
+        else if (b.kind === 'fire') this.burnBlock(blk);
         done = true;
       }
       b.pos.addScaledVector(b.dir, step);
@@ -640,8 +709,9 @@ export class FluxKit {
       const s = 16 + Math.random() * 8;
       g.particles.emit({ x: from.x, y: from.y, z: from.z, vx: (dir.x + (Math.random() - 0.5) * 0.35) * s, vy: (dir.y + (Math.random() - 0.5) * 0.35) * s, vz: (dir.z + (Math.random() - 0.5) * 0.35) * s, life: 0.45 + Math.random() * 0.2, size: 0.3, grow: 4, alpha: 0.9, r: 1, g: 0.45 + Math.random() * 0.4, b: 0.1, drag: 2 });
     }
+    if (aim.block && aim.point.distanceTo(from) < 11 && Math.random() < dt * 3) this.burnBlock(aim.block);
     for (const e of g.entities.query(from, 12)) {
-      if (!e.alive || e.carried || e.team === 'civ') continue;
+      if (!e.alive || e.carried) continue;
       const to = e.centerInto(tmp).sub(from);
       const d = to.length();
       if (d > 11 || to.divideScalar(d).dot(dir) < 0.85) continue;
@@ -671,6 +741,41 @@ export class FluxKit {
     g.rings?.spawn({ pos: at, r0: 0.5, r1: 8, life: 0.4, opacity: 0.8, color: 0xffd0b0, thick: true });
     g.addDanger(p.pos, 14, 1.5);
     this.radial(7, 50, 8, 12);
+    this.crater(p.pos, 2, 5);
+  }
+
+  /** Cracked, scorched street under a big impact, and windows blown out nearby. */
+  crater(pos, r, glassR) {
+    const w = this.game.world;
+    const x0 = Math.floor(pos.x), y0 = Math.floor(pos.y - 0.5), z0 = Math.floor(pos.z);
+    for (let dz = -r; dz <= r; dz++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (dx * dx + dz * dz > r * r + 1 || ((dx || dz) && Math.random() < 0.4)) continue;
+        const b = w.get(x0 + dx, y0, z0 + dz);
+        if (SOLID[b] && !LASER_PROOF.has(b) && b !== B.ICE) w.edit(x0 + dx, y0, z0 + dz, B.SCORCH);
+      }
+    }
+    for (let y = 1; y <= 4; y++) {
+      for (let dz = -glassR; dz <= glassR; dz++) {
+        for (let dx = -glassR; dx <= glassR; dx++) {
+          if (dx * dx + dz * dz > glassR * glassR || Math.random() < 0.5) continue;
+          const b = w.get(x0 + dx, y0 + y, z0 + dz);
+          if ((b >= B.GLASS_BLUE && b <= B.GLASS_DARK) || b === B.DOOR) w.edit(x0 + dx, y0 + y, z0 + dz, B.AIR);
+        }
+      }
+    }
+  }
+
+  /** Fire meeting the city: wood and plants catch light, anything else is scorched black. */
+  burnBlock(hit) {
+    const g = this.game;
+    const b = hit.block;
+    const at = new THREE.Vector3(hit.x + 0.5 + (hit.nx || 0) * 0.6, hit.y + 0.5 + (hit.ny || 0) * 0.6, hit.z + 0.5 + (hit.nz || 0) * 0.6);
+    if (FLAMMABLE.has(b)) {
+      if (g.fires.list.length < 40 && !g.fires.list.some((f) => f.pos.distanceTo(at) < 1.5)) g.fires.ignite(at, { intensity: 0.6, spread: true, burnout: 20 });
+    } else if (SOLID[b] && !LASER_PROOF.has(b) && b !== B.ICE && b !== B.SCORCH && Math.random() < 0.5) {
+      g.world.edit(hit.x, hit.y, hit.z, B.SCORCH);
+    }
   }
 
   /** Blitz: a cyclone pulling everything around him in, then flinging it out. */
@@ -682,7 +787,7 @@ export class FluxKit {
       g.particles.emit({ x: p.pos.x + Math.cos(a) * r, y: p.pos.y + Math.random() * 3, z: p.pos.z + Math.sin(a) * r, vx: -Math.sin(a) * 14, vy: 2, vz: Math.cos(a) * 14, life: 0.4, size: 0.25, grow: 2, alpha: 0.5, r: 0.75, g: 0.9, b: 1, drag: 1 });
     }
     for (const e of g.entities.query(p.pos, 10)) {
-      if (!e.alive || e.carried || e === g.driving.car || e.team === 'civ') continue;
+      if (!e.alive || e.carried || e === g.driving.car) continue;
       const to = tmp.copy(e.pos).sub(p.pos);
       const d = Math.max(1, to.length());
       // swirl around and inwards
@@ -736,8 +841,8 @@ export class FluxKit {
       if (!s.hit && rise >= 1) {
         s.hit = true;
         for (const e of g.entities.query(tmp.set(s.x, s.y + 1, s.z), 2.2)) {
-          if (!e.alive || e.carried || e.team === 'civ') continue;
-          const dealt = e.damage(30, { type: 'impact', knock: tmp2.set(0, 11 * Math.max(1, e.mass), 0), source: g.player });
+          if (!e.alive || e.carried) continue;
+          const dealt = e.damage(e.team === 'civ' ? 12 : 30, { type: 'impact', knock: tmp2.set(0, 11 * Math.max(1, e.mass), 0), source: g.player });
           if (dealt > 0) g.markers.damageNumber(e.centerInto(new THREE.Vector3()), dealt, '#bfffe6');
         }
       }
@@ -785,7 +890,7 @@ export class FluxKit {
       const dir = new THREE.Vector3(c.x - p.pos.x, 0, c.z - p.pos.z).normalize();
       const m = Math.max(1, e.mass);
       if (e.kind === 'car') e.driving = false;
-      const dealt = e.damage(e.team === 'civ' ? 2 : dmg * (0.4 + 0.6 * k), { type: 'impact', knock: dir.multiplyScalar(out * k * m).setY(up * (0.4 + 0.6 * k) * m), source: p });
+      const dealt = e.damage(e.team === 'civ' ? 6 * k + 2 : dmg * (0.4 + 0.6 * k), { type: 'impact', knock: dir.multiplyScalar(out * k * m).setY(up * (0.4 + 0.6 * k) * m), source: p });
       if (dealt > 1 && e.team !== 'civ') g.markers.damageNumber(c, dealt, '#ffd34d');
     }
   }
@@ -801,10 +906,11 @@ export class FluxKit {
     }
     if (hs < 25) return;
     for (const e of g.entities.query(tmp.set(p.pos.x, p.pos.y + 0.9, p.pos.z), 1.8)) {
-      if (!e.alive || e.carried || this.ramHits.has(e) || e.team === 'civ') continue;
+      if (!e.alive || e.carried || this.ramHits.has(e)) continue;
       this.ramHits.set(e, 0.8);
       const dir = new THREE.Vector3(p.vel.x, 0, p.vel.z).normalize();
-      const dealt = e.damage(22, { type: 'impact', knock: dir.multiplyScalar(14 * Math.max(1, e.mass)).setY(6 * Math.max(1, e.mass)), source: p });
+      if (e.kind === 'car') e.driving = false;
+      const dealt = e.damage(e.team === 'civ' ? 8 : 22, { type: 'impact', knock: dir.multiplyScalar(14 * Math.max(1, e.mass)).setY(6 * Math.max(1, e.mass)), source: p });
       if (dealt > 0) g.markers.damageNumber(e.centerInto(new THREE.Vector3()), dealt, '#9fdfff');
       g.audio.play('punchHit', e.pos);
       this.fighting();

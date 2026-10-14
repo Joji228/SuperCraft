@@ -26,6 +26,11 @@ export class Carry {
       g.hud.toast('Nothing to pick up here', 'info', 1.2);
       return;
     }
+    // some heroes (and most of Flux's forms) aren't strong enough for a car
+    if (g.heroKit?.canLift && !g.heroKit.canLift(e)) {
+      g.hud.toast(e.carryHeavy ? 'Too heavy for this form' : 'Too heavy', 'warn', 1.2);
+      return;
+    }
     this.held = e;
     e.carried = true;
     e.thrown = false;

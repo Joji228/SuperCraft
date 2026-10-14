@@ -132,11 +132,22 @@ function build(kind, pivot) {
       S.flame.add(part(0.36, 0.3, 0.34, hot, 0, 0.5, 0));
       S.flame.add(part(0.22, 0.24, 0.2, hot, 0.05, 0.75, -0.03));
       S.flame.add(part(0.12, 0.18, 0.12, lava, -0.08, 0.92, 0.02));
+      S.flame.add(part(0.3, 0.42, 0.3, lava, 0, 0.62, -0.06));
+      S.flame.add(part(0.14, 0.3, 0.14, hot, -0.1, 1.02, -0.08));
+      S.flame.add(part(0.1, 0.22, 0.1, lava, 0.12, 1.0, 0.05));
       S.head.add(S.flame);
       S.head.add(part(0.08, 0.05, 0.02, glow(0xffffff), -0.1, 0.22, 0.22));
       S.head.add(part(0.08, 0.05, 0.02, glow(0xffffff), 0.1, 0.22, 0.22));
       S.armL = armGroup(1, 0.4, 0.72, 0.6, 0.22, rock, lava);
       S.armR = armGroup(-1, 0.4, 0.72, 0.6, 0.22, rock, lava);
+      // flames licking off his shoulders and fists
+      S.fires = [];
+      for (const [arm, side] of [[S.armL, 1], [S.armR, -1]]) {
+        const f1 = part(0.16, 0.26, 0.16, hot, 0.02 * side, 0.12, 0);
+        const f2 = part(0.14, 0.2, 0.14, lava, 0, -0.62, 0);
+        arm.add(f1, f2);
+        S.fires.push(f1, f2);
+      }
       S.legL = legGroup(1, 0.15, 0.8, 0.26, rock, rock);
       S.legR = legGroup(-1, 0.15, 0.8, 0.26, rock, rock);
       break;
@@ -440,8 +451,9 @@ export class FluxModel {
     this.legR.rotation.x = damp(this.legR.rotation.x, legR, k === 'blitz' ? 30 : R, dt);
     if (this.tail) this.tail.rotation.x = damp(this.tail.rotation.x, -tilt * 0.8 + Math.sin(this.time * 3) * 0.1, 8, dt);
     if (this.flame) {
-      // Cinder's head flickers
-      this.flame.scale.set(1 + Math.random() * 0.1, 0.85 + Math.random() * 0.35, 1 + Math.random() * 0.1);
+      // Cinder's head and the flames on his arms flicker
+      this.flame.scale.set(1 + Math.random() * 0.15, 0.8 + Math.random() * 0.5, 1 + Math.random() * 0.15);
+      for (const f of this.fires || []) f.scale.set(0.8 + Math.random() * 0.4, 0.7 + Math.random() * 0.7, 0.8 + Math.random() * 0.4);
     }
     if (this.band) {
       // the Prism band glows green, or flashes red when it's about to time out / recharging
