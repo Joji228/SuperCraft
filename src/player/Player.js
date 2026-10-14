@@ -19,6 +19,8 @@ export const MOVE = {
   heroLanding: 32, // landing faster than this (m/s) is a superhero landing
 };
 
+export const DEFAULT_FLIGHT = { fly: MOVE.fly, boost: MOVE.boost, supersonic: MOVE.supersonic, boomDelay: MOVE.boomDelay, turn: 1, accel: 1 };
+
 export class Player extends Body {
   constructor(world) {
     super(world, 0.38, 1.9);
@@ -49,6 +51,9 @@ export class Player extends Body {
     this.wading = false;
     this.noTrail = false; // no super-speed running trail
     this.modeLabel = null; // HUD mode text set by a hero kit (e.g. SWINGING)
+    // flight handling (per hero: Forge flies a little slower and heavier than Aegis)
+    this.flight = { ...DEFAULT_FLIGHT };
+    this.beforeMove = null; // hook just before collision movement (Forge's wall bumpers)
     // hooks set by the game: locked powers (tutorial) and the speed bar for boosting
     this.allowed = () => true;
     this.canBoost = () => true;
@@ -103,14 +108,15 @@ export class Player extends Body {
       // Shift boosts any way you're heading: forward, or straight up/down with Space / C
       this.boosting = input.isDown('boost') && (iz > 0 || vert !== 0) && this.allowed('boost') && this.canBoost();
       this.updateSupersonic(dt);
-      const speed = this.supersonic ? MOVE.supersonic : this.boosting ? MOVE.boost : MOVE.fly;
+      const fl = this.flight;
+      const speed = this.supersonic ? fl.supersonic : this.boosting ? fl.boost : fl.fly;
       if (this.boosting) {
         // full boost speed along the combined direction (forward + climb/dive)
         const bx = dx, by = dy + vert, bz = dz;
         const bl = Math.hypot(bx, by, bz) || 1;
         this.steer((bx / bl) * speed, (by / bl) * speed, (bz / bl) * speed, dt);
       } else {
-        this.steer(dx * speed, dy * speed + vert * MOVE.fly * 0.75, dz * speed, dt);
+        this.steer(dx * speed, dy * speed + vert * fl.fly * 0.75, dz * speed, dt);
       }
     } else {
       this.boosting = false;
@@ -157,6 +163,7 @@ export class Player extends Body {
 
     const vyBefore = this.vel.y;
     const wasAir = !this.onGround;
+    this.beforeMove?.(dt);
     this.move(dt);
     this.updateFall(dt, vyBefore, wasAir);
 
@@ -195,7 +202,7 @@ export class Player extends Body {
       this.yaw = dampAngle(this.yaw, Math.atan2(this.vel.x, this.vel.z), 24, dt);
     }
 
-    const target = this.boosting ? Math.min(1.25, this.vel.length() / MOVE.boost) : this.sprinting ? Math.min(0.75, Math.hypot(this.vel.x, this.vel.z) / MOVE.sprint * 0.75) : 0;
+    const target = this.boosting ? Math.min(1.25, this.vel.length() / this.flight.boost) : this.sprinting ? Math.min(0.75, Math.hypot(this.vel.x, this.vel.z) / MOVE.sprint * 0.75) : 0;
     this.boostAmount += (target - this.boostAmount) * (1 - Math.exp(-6 * dt));
   }
 
@@ -214,12 +221,12 @@ export class Player extends Body {
       v.z += (tz - v.z) * k;
       return;
     }
-    const turn = 1 - Math.exp(-(this.supersonic ? 9 : this.boosting ? 11 : 14) * dt);
+    const turn = 1 - Math.exp(-(this.supersonic ? 9 : this.boosting ? 11 : 14) * this.flight.turn * dt);
     let dx = v.x / cur + (tx / want - v.x / cur) * turn;
     let dy = v.y / cur + (ty / want - v.y / cur) * turn;
     let dz = v.z / cur + (tz / want - v.z / cur) * turn;
     const dl = Math.hypot(dx, dy, dz) || 1;
-    const accel = want > cur ? (this.boosting ? 2.4 : 5) : 4;
+    const accel = (want > cur ? (this.boosting ? 2.4 : 5) : 4) * this.flight.accel;
     const speed = cur + (want - cur) * (1 - Math.exp(-accel * dt));
     v.set((dx / dl) * speed, (dy / dl) * speed, (dz / dl) * speed);
   }
@@ -264,11 +271,11 @@ export class Player extends Body {
     const speed = this.vel.length();
     if (this.supersonic) {
       // slammed into something: drop out of supersonic
-      if (speed < MOVE.boost * 0.55) {
+      if (speed < this.flight.boost * 0.55) {
         this.supersonic = false;
         this.boostTime = 0;
       }
-    } else if (this.boostTime >= MOVE.boomDelay && speed >= MOVE.boost * 0.85) {
+    } else if (this.boostTime >= this.flight.boomDelay && speed >= this.flight.boost * 0.85) {
       this.supersonic = true;
       this.onSonicBoom?.();
     }

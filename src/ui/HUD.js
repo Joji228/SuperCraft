@@ -143,6 +143,11 @@ export class HUD {
         hint: 'In the air, press <b>SPACE</b> for each web: hold to swing, let go near the top for a boost<br>Hold <b>SHIFT</b> while swinging for speed &nbsp; <b>Q</b> web zip &nbsp; <b>RMB</b> web shot &nbsp; <b>LMB</b> combo<br><b>SHIFT</b>+<b>W</b> runs up walls, <b>SPACE</b> kicks off them',
         heat: false,
       },
+      forge: {
+        ab: { boost: ['SHIFT', 'Boost'], punch: ['LMB', 'Punch'], laser: ['RMB', 'Repulsor'], breath: ['Q', 'Unibeam'], senses: ['E', 'Missiles'], carry: ['G', 'Carry'], fly: ['F', 'Fly'] },
+        hint: '<b>F</b> fly &nbsp; <b>SHIFT</b> boost (hold for the afterburner) &nbsp; <b>SPACE/C</b> up/down<br>Hold <b>RMB</b> repulsors &nbsp; hold <b>Q</b> Unibeam &nbsp; <b>E</b> homing missiles<br><b>LMB</b> punch &nbsp; <b>G</b> carry &nbsp; <b>V</b> camera',
+        heat: true,
+      },
       granite: {
         ab: { boost: ['SHIFT', 'Run'], punch: ['LMB', 'Punch'], laser: ['SPACE', 'Leap'], breath: ['Q', 'Clap'], senses: ['RMB', 'Smash'], carry: ['G', 'Carry'], fly: null },
         hint: '<b>WASD</b> move &nbsp; <b>SHIFT</b> run &nbsp; <b>LMB</b> punch<br>Hold <b>SPACE</b> to charge a leap, let go to jump<br><b>RMB</b> smash (in the air: dive slam) &nbsp; <b>Q</b> clap',

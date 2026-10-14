@@ -22,6 +22,7 @@ const CONTROLS = [
   ['R', 'Free Roam: steal a car / get out (W S drive, A D steer, Shift nitro, Space handbrake, H horn)'],
   ['Granite', 'Hold Space to charge a leap (release to jump) · Right mouse: Granite Smash (in the air: dive slam) · Q thunder clap'],
   ['Tether', 'In the air press Space for each web, hold to swing, let go near the top for a boost · hold Shift while swinging for speed · Q web zip · Right mouse web ball · Shift + W up walls, Space kicks off'],
+  ['Forge', 'F fly, Shift boost / afterburner · hold Right mouse: repulsors · hold Q: Unibeam · E: homing missiles'],
   ['V', 'Camera: close / medium / far / first person'],
   ['Esc', 'Pause'],
   ['F3', 'Debug info (FPS)'],

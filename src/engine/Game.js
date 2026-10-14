@@ -24,6 +24,9 @@ import { GraniteModel } from '../heroes/granite/GraniteModel.js';
 import { GraniteKit, GRANITE } from '../heroes/granite/GraniteKit.js';
 import { TetherModel } from '../heroes/tether/TetherModel.js';
 import { TetherKit, TETHER } from '../heroes/tether/TetherKit.js';
+import { ForgeModel } from '../heroes/forge/ForgeModel.js';
+import { ForgeKit, FORGE } from '../heroes/forge/ForgeKit.js';
+import { DEFAULT_FLIGHT } from '../player/Player.js';
 import { skinById } from '../player/skins.js';
 import { Meters } from '../abilities/Meters.js';
 import { Abilities } from '../abilities/Abilities.js';
@@ -110,7 +113,7 @@ export class Game {
     this.ocean = createOcean(this.scene);
     this.player = new Player(this.world);
     // one model per hero; this.hero is whichever is in play
-    this.models = { sky: new HeroModel(), granite: new GraniteModel(), tether: new TetherModel() };
+    this.models = { sky: new HeroModel(), granite: new GraniteModel(), tether: new TetherModel(), forge: new ForgeModel() };
     for (const m of Object.values(this.models)) {
       m.setVisible(false);
       this.scene.add(m.root);
@@ -126,7 +129,7 @@ export class Game {
     this.flightFX = new FlightFX(this.scene, this.particles, this.world);
     this.rings = new ShockRings(this.scene);
     this.applySkin('sky'); // Sky Guardian's colours (costume choice was retired for the Heroes menu)
-    this.player.onSonicBoom = () => this.sonicBoom();
+    this.player.onSonicBoom = () => (this.heroKit?.afterburner ? this.heroKit.afterburner() : this.sonicBoom());
     this.player.onHeroLanding = (speed) => (this.heroKit?.onLand ? this.heroKit.onLand(speed) : this.heroLanding(speed));
     this.meters = new Meters();
     this.player.allowed = (name) => this.allowed(name);
@@ -208,7 +211,7 @@ export class Game {
   setHero(id) {
     if (!this.models[id]) id = 'sky';
     const p = this.player;
-    if (!this.kits) this.kits = { granite: new GraniteKit(this), tether: new TetherKit(this) };
+    if (!this.kits) this.kits = { granite: new GraniteKit(this), tether: new TetherKit(this), forge: new ForgeKit(this) };
     this.heroKit?.reset?.();
     this.hero.setVisible(false);
     this.heroId = id;
@@ -216,6 +219,9 @@ export class Game {
     this.heroKit = this.kits[id] || null;
     const big = id === 'granite';
     const tether = id === 'tether';
+    const forge = id === 'forge';
+    p.flight = forge ? { ...FORGE.flight } : { ...DEFAULT_FLIGHT };
+    p.beforeMove = forge ? () => this.kits.forge.bumper() : null;
     p.halfW = big ? GRANITE.body.halfW : 0.38;
     p.height = big ? GRANITE.body.height : 1.9;
     p.stats = big ? { ...GRANITE.stats } : tether ? { ...TETHER.stats } : { walk: 7, run: 13, sprint: 36, jump: 12.5 };
@@ -229,7 +235,7 @@ export class Game {
     if (big || tether) p.flying = false;
     this.rig.eye = big ? GRANITE.eye : 1.72;
     this.rig.distScale = big ? GRANITE.camScale : tether ? 1.15 : 1;
-    const pal = big ? GRANITE.palette : tether ? TETHER.palette : null;
+    const pal = big ? GRANITE.palette : tether ? TETHER.palette : forge ? FORGE.palette : null;
     if (pal) {
       this.fpArms.applySkin(pal);
       this.flightFX.setPalette(pal.suit, pal.accent, pal.belt);
@@ -636,6 +642,10 @@ export class Game {
       zip: !!this.heroKit?.zip,
       climb: this.heroKit?.climbing,
       shotT: this.heroKit?.shotT ?? 9,
+      shootArm: this.heroId === 'forge' && this.heroKit.shootT < 0.22 ? (this.heroKit.shotHand > 0 ? 'L' : 'R') : null,
+      aimPitch: this.rig.pitch,
+      unibeam: this.heroId === 'forge' ? this.heroKit.uni : 0,
+      podT: this.heroId === 'forge' ? this.heroKit.podT : 9,
       wading: p.wading,
     });
 

@@ -35,9 +35,9 @@ export const HEROES = [
     name: 'Forge',
     alias: 'The armoured engineer',
     tagline: 'A flying suit of armour with thrusters on hands and feet',
-    powers: ['Thruster flight', 'Repulsor blasts from the palms', 'Shoulder micro-missiles'],
-    playable: false,
-    next: true,
+    powers: ['F: thruster flight, Shift afterburner', 'RMB: palm repulsors', 'Q: chest Unibeam', 'E: homing micro-missiles'],
+    playable: true,
+    note: 'Free Roam',
   },
   {
     id: 'flux',
@@ -46,6 +46,7 @@ export const HEROES = [
     tagline: 'A teenager whose wristband turns him into five different aliens',
     powers: ['The Prism band: five alien forms', 'Each alien has its own powers', 'Human for now: the aliens come later'],
     playable: false,
+    next: true,
   },
 ];
 
