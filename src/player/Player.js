@@ -124,7 +124,7 @@ export class Player extends Body {
       this.boostTime = 0;
       // Shift on foot: super speed (if the SPEED bar allows), otherwise a normal run
       const wantsRun = input.isDown('boost') && (ix || iz);
-      this.sprinting = wantsRun && this.onGround && this.allowed('boost') && this.canBoost(this.sprinting);
+      this.sprinting = wantsRun && this.onGround && !this.noSprint && this.allowed('boost') && this.canBoost(this.sprinting);
       const st = this.stats;
       const speed = this.charging ? 1.5 : this.sprinting ? st.sprint : wantsRun ? st.run : this.wading ? st.walk * 0.6 : st.walk;
       let wx = fx * iz + rx * ix;

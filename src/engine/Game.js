@@ -270,6 +270,7 @@ export class Game {
     p.height = big ? GRANITE.body.height : 1.9;
     p.stats = big ? { ...GRANITE.stats } : tether ? { ...TETHER.stats } : { walk: 7, run: 13, sprint: 36, jump: 12.5 };
     p.chargeJump = big;
+    p.noSprint = forge; // Forge just runs on foot; Shift only boosts his flight
     p.wades = big || tether;
     p.modeLabel = null;
     p.stepHeight = big ? 2.01 : 1.01; // he strides up two-block ledges
