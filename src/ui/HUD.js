@@ -243,6 +243,7 @@ export class HUD {
     }
     this.hint.innerHTML = L.hint;
     this.heatRow.style.display = L.heat ? '' : 'none';
+    this.onLayout?.(L.ab); // the touch buttons follow the ability bar
   }
 
   resize() {

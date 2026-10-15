@@ -412,3 +412,43 @@ body.unlocked .hud-click {
   from { filter: brightness(1); }
   to { filter: brightness(1.15); }
 }
+
+/* short screens (phones held sideways): tighter menus, main menu in two columns */
+@media (max-height: 500px) {
+  #ui {
+    padding: 8px;
+  }
+  .screen {
+    padding: 12px 14px;
+  }
+  .logo {
+    font-size: 28px;
+    margin: 2px 0 6px;
+  }
+  .tagline {
+    margin: 0 0 8px;
+    font-size: 10px;
+  }
+  h2 {
+    font-size: 16px;
+    margin: 2px 0 10px;
+  }
+  .menu {
+    gap: 6px;
+  }
+  button {
+    font-size: 11px;
+    padding: 9px 10px;
+  }
+  .screen.main .menu {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .screen.main .menu button {
+    width: min(260px, 46%);
+  }
+  .foot {
+    margin-top: 8px;
+  }
+}

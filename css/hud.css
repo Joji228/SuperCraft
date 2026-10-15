@@ -1577,3 +1577,189 @@ body.driving .crosshair {
 #hud.wheel-open .hud-click {
   opacity: 0;
 }
+
+/* ---------- phones and tablets: on-screen controls (only when body.touch) ---------- */
+
+.touch-ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  display: none;
+  --tb-size: 62px;
+  --tb-step: 70px;
+  --tb-gap: 16px;
+  font-family: 'Press Start 2P', monospace;
+}
+
+body.touch.in-play .touch-ui {
+  display: block;
+}
+
+.touch-stick {
+  position: fixed;
+  width: 124px;
+  height: 124px;
+  margin: -62px 0 0 -62px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.35);
+  background: rgba(16, 28, 56, 0.35);
+}
+
+.touch-stick.hidden {
+  display: none;
+}
+
+.touch-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(242, 182, 48, 0.75);
+  border: 3px solid rgba(255, 255, 255, 0.6);
+  transform: translate(-50%, -50%);
+}
+
+.touch-cluster {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  width: 0;
+  height: 0;
+}
+
+.touch-btn {
+  position: fixed;
+  width: var(--tb-size);
+  height: var(--tb-size);
+  border-radius: 50%;
+  border: 3px solid rgba(242, 182, 48, 0.8);
+  background: rgba(16, 28, 56, 0.55);
+  color: #fff;
+  font: inherit;
+  font-size: 7px;
+  line-height: 1.3;
+  padding: 0;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touch-btn span {
+  display: block;
+  padding: 0 4px;
+  text-shadow: 1px 1px 0 #10203a;
+}
+
+.touch-btn.on {
+  background: rgba(242, 182, 48, 0.6);
+  transform: scale(0.94);
+}
+
+/* the action grid in the bottom-right corner */
+.touch-punch { width: calc(var(--tb-size) * 1.25); height: calc(var(--tb-size) * 1.25); right: var(--tb-gap); bottom: var(--tb-gap); border-color: #f2b630; }
+.touch-laser { right: calc(var(--tb-gap) + 1.25 * var(--tb-step)); bottom: var(--tb-gap); }
+.touch-breath { right: calc(var(--tb-gap) + 2.25 * var(--tb-step)); bottom: var(--tb-gap); }
+.touch-jump { right: var(--tb-gap); bottom: calc(var(--tb-gap) + 1.25 * var(--tb-step)); border-color: #7fe0ff; }
+.touch-boost { right: calc(var(--tb-gap) + 1.25 * var(--tb-step)); bottom: calc(var(--tb-gap) + 1.1 * var(--tb-step)); }
+.touch-senses { right: calc(var(--tb-gap) + 2.25 * var(--tb-step)); bottom: calc(var(--tb-gap) + 1.1 * var(--tb-step)); }
+.touch-carry { right: var(--tb-gap); bottom: calc(var(--tb-gap) + 2.25 * var(--tb-step)); }
+.touch-fly { right: calc(var(--tb-gap) + 1.25 * var(--tb-step)); bottom: calc(var(--tb-gap) + 2.15 * var(--tb-step)); border-color: #7fe0ff; }
+.touch-down { right: calc(var(--tb-gap) + 2.25 * var(--tb-step)); bottom: calc(var(--tb-gap) + 2.15 * var(--tb-step)); width: calc(var(--tb-size) * 0.8); height: calc(var(--tb-size) * 0.8); }
+
+.touch-top {
+  position: fixed;
+  right: 8px;
+  top: 8px;
+  display: flex;
+  gap: 6px;
+}
+
+.touch-mini {
+  pointer-events: auto;
+  touch-action: none;
+  min-width: 46px;
+  padding: 8px 6px;
+  font: inherit;
+  font-size: 7px;
+  color: #fff;
+  background: rgba(16, 28, 56, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touch-mini.on {
+  background: rgba(242, 182, 48, 0.6);
+}
+
+.touch-rotate {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 18, 36, 0.92);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.8;
+  text-align: center;
+  padding: 24px;
+  pointer-events: auto;
+}
+
+@media (orientation: portrait) {
+  body.touch.in-play .touch-rotate {
+    display: flex;
+  }
+}
+
+/* keyboard-only bits of the HUD make no sense on a phone */
+body.touch .abilities,
+body.touch .hud-hint,
+body.touch .hud-click,
+body.touch .speedo-keys {
+  display: none !important;
+}
+
+/* a phone-sized HUD: small map, meters up top, out from under the thumbs */
+body.touch .hud-topleft {
+  zoom: 0.6;
+}
+
+/* (zoom scales the offsets too, so they're written in unzoomed pixels) */
+body.touch .hud-status {
+  right: auto;
+  bottom: auto;
+  top: 14px;
+  left: 172px;
+  zoom: 0.72;
+}
+
+body.touch .prism {
+  bottom: auto;
+  top: 236px;
+  left: 172px;
+  zoom: 0.72;
+}
+
+body.touch .objectives {
+  zoom: 0.72;
+  max-width: 34vw;
+  top: 56px;
+}
+
+@media (max-height: 420px) {
+  .touch-ui {
+    --tb-size: 52px;
+    --tb-step: 58px;
+    --tb-gap: 10px;
+  }
+}
+
+body.touch .speedo {
+  zoom: 0.75;
+}

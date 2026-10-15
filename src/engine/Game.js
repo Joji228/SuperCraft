@@ -31,6 +31,7 @@ import { FluxModel } from '../heroes/flux/FluxModels.js';
 import { FluxKit } from '../heroes/flux/FluxKit.js';
 import { Ladders } from '../world/Ladders.js';
 import { heroById } from '../player/heroes.js';
+import { TouchControls } from '../input/TouchControls.js';
 import { skinById } from '../player/skins.js';
 import { Meters } from '../abilities/Meters.js';
 import { Abilities } from '../abilities/Abilities.js';
@@ -90,6 +91,11 @@ export class Game {
     this.input.onLockChange = (locked) => {
       if (!locked && this.state === 'playing') this.pause();
     };
+    // phones and tablets get on-screen controls (desktop never creates them)
+    if (this.input.touch) {
+      this.touch = new TouchControls(this, this.input);
+      this.hud.onLayout = (ab) => this.touch.setLayout(ab);
+    }
     renderer.domElement.addEventListener('click', () => {
       if (this.state === 'playing' && !this.input.locked) this.input.lock();
     });
@@ -696,6 +702,7 @@ export class Game {
     this.state = 'paused';
     this.input.enabled = false;
     this.input.unlock();
+    this.touch?.release();
     this.audio.stopAll();
     this.abilities.laser.hide();
     this.abilities.breath.stop();

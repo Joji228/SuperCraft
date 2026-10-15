@@ -1,4 +1,6 @@
-// Keyboard + mouse with pointer lock, mapped to named actions.
+// Keyboard + mouse with pointer lock, mapped to named actions. On phones the on-screen
+// touch controls (TouchControls.js) press the same keys, and "lock" just means playing.
+import { isTouchDevice } from './TouchControls.js';
 
 const BINDINGS = {
   forward: ['KeyW', 'ArrowUp'],
@@ -41,6 +43,7 @@ export class Input {
     this.locked = false;
     this.enabled = false; // only gameplay reads input
     this.onLockChange = null;
+    this.touch = isTouchDevice();
 
     window.addEventListener('keydown', (e) => {
       if (this.enabled && (BLOCKED_DEFAULTS.has(e.code) || e.ctrlKey)) e.preventDefault();
@@ -82,6 +85,17 @@ export class Input {
   }
 
   lock() {
+    if (this.touch) {
+      // no pointer lock on phones: go full screen (sideways if allowed) and play
+      this.locked = true;
+      try {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().then(() => screen.orientation?.lock?.('landscape').catch(() => {})).catch(() => {});
+      } catch {
+        // not allowed here: fine, play in the browser window
+      }
+      this.onLockChange?.(true);
+      return;
+    }
     try {
       const p = this.element.requestPointerLock();
       if (p && p.catch) p.catch(() => {});
@@ -91,6 +105,11 @@ export class Input {
   }
 
   unlock() {
+    if (this.touch) {
+      this.locked = false;
+      this.held.clear();
+      return;
+    }
     if (document.pointerLockElement) document.exitPointerLock();
   }
 

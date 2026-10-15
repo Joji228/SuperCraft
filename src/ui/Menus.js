@@ -140,7 +140,7 @@ export class Menus {
          <button data-action="settings">Settings</button>
          <button data-action="credits">Credits</button>
        </div>
-       <p class="small foot">Click a mode to play &middot; Esc pauses &middot; v${VERSION}</p>`,
+       <p class="small foot">${this.game.input.touch ? 'Tap a mode to play &middot; turn your phone sideways' : 'Click a mode to play &middot; Esc pauses'} &middot; v${VERSION}</p>`,
       'screen main',
     );
   }

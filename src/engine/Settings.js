@@ -1,5 +1,7 @@
 import { load, save } from '../save/Save.js';
 
+import { isTouchDevice } from '../input/TouchControls.js';
+
 export const RENDER_DISTANCES = [
   { label: 'Low', value: 112 },
   { label: 'Medium', value: 176 },
@@ -13,6 +15,7 @@ const DEFAULTS = {
   renderDistance: 176,
   shadows: true,
   autoRes: true, // lower the render resolution a little when frames get slow (big screens)
+  phoneDefaults: false, // lighter graphics were set up for a phone
   dayNight: false,
   volume: 0.56,
   fov: 75,
@@ -31,6 +34,14 @@ export class Settings {
     if (saved.firstPerson && saved.cameraMode == null) saved.cameraMode = 3;
     delete saved.firstPerson;
     Object.assign(this, DEFAULTS, saved);
+    // first time on a phone: lighter graphics (they can be turned back up in Settings)
+    if (isTouchDevice() && !saved.phoneDefaults) {
+      this.renderDistance = 112;
+      this.shadows = false;
+      this.autoRes = true;
+      this.phoneDefaults = true;
+      this.save?.();
+    }
     this.listeners = [];
   }
 
