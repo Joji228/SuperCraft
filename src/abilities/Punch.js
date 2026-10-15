@@ -110,7 +110,7 @@ export class Punch {
     }
 
     // nothing alive in reach: try the block in front of the fist
-    const hit = g.world.raycast(this.origin.x, this.origin.y, this.origin.z, dir.x, dir.y, dir.z, big ? 3.6 : 2.8);
+    const hit = g.world.raycast(this.origin.x, this.origin.y, this.origin.z, dir.x, dir.y, dir.z, (big ? 3.6 : 2.8) * sc);
     if (hit) {
       const pos = new THREE.Vector3(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
       if (big && hit.y >= CITY.G && !LASER_PROOF.has(hit.block)) {
@@ -129,7 +129,7 @@ export class Punch {
   smashWall(hit, dir) {
     const g = this.game;
     const w = g.world;
-    const r = this.combo === 3 ? 2 : 1;
+    const r = Math.round((this.combo === 3 ? 2 : 1) * (g.heroKit?.punchScale ?? 1)); // a giant punches bigger holes
     let glass = false;
     for (let y = -r; y <= r; y++) {
       for (let a = -r; a <= r; a++) {

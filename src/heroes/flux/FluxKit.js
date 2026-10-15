@@ -200,7 +200,7 @@ export class FluxKit {
     // Cinder's Shift is a flight boost, not a run; Blitz runs across water; Cinder
     // carves round buildings in flight like Forge does
     p.noSprint = id === 'cinder';
-    p.beforeMove = id === 'cinder' ? () => g.kits.forge.bumper() : id === 'blitz' ? () => this.waterRun() : null;
+    p.beforeMove = id === 'cinder' ? () => g.kits.forge.bumper() : id === 'blitz' ? () => this.waterRun() : id === 'titanor' ? () => this.titanPlow() : null;
     p.speedShow = 1;
     g.rig.eye = f.eye;
     g.rig.distScale = f.camScale;
@@ -1035,7 +1035,12 @@ export class FluxKit {
         p.ghostFloor = CITY.G;
         if (!g.meters.drain(12 * dt) && stuck) p.unstick();
         g.meters.invulnerable = Math.max(g.meters.invulnerable, 0.1);
-        if (Math.random() < dt * 30) g.particles.emit({ x: p.pos.x + (Math.random() - 0.5) * 0.8, y: p.pos.y + Math.random() * p.height, z: p.pos.z + (Math.random() - 0.5) * 0.8, vx: 0, vy: 0.5, vz: 0, life: 0.6, size: 0.25, grow: 1.5, alpha: 0.5, r: f === 'wraith' ? 0.75 : 0.65, g: f === 'wraith' ? 0.65 : 0.9, b: 1, drag: 1 });
+        // a trail of ghostly mist (and, for Frostmoth, glittering ice) left hanging in the air
+        const n = Math.floor(dt * 70) + (Math.random() < (dt * 70) % 1 ? 1 : 0);
+        for (let q = 0; q < n; q++) {
+          const ice = f === 'frostmoth' && Math.random() < 0.4;
+          g.particles.emit({ x: p.pos.x + (Math.random() - 0.5) * 0.9, y: p.pos.y + Math.random() * p.height, z: p.pos.z + (Math.random() - 0.5) * 0.9, vx: (Math.random() - 0.5) * 0.4, vy: ice ? -0.3 : 0.5, vz: (Math.random() - 0.5) * 0.4, life: ice ? 0.9 : 0.7, size: ice ? 0.08 : 0.3, grow: ice ? 0.5 : 1.8, alpha: ice ? 1 : 0.45, r: f === 'wraith' ? 0.75 : ice ? 0.9 : 0.6, g: f === 'wraith' ? 0.62 : ice ? 1 : 0.9, b: 1, drag: 1 });
+        }
       }
     }
     // Wraith's invisibility costs energy while it lasts
@@ -1121,11 +1126,16 @@ export class FluxKit {
     p.vel.y = Math.max(p.vel.y - 32 * dt, -50);
     const vx = p.vel.x, vz = p.vel.z;
     p.move(dt);
-    // bounce off walls instead of stopping dead
+    // bounce off walls instead of stopping dead; flat out, he smashes right through them
     if (p.hitWall) {
       const hard = Math.max(Math.abs(vx), Math.abs(vz));
-      if (p.vel.x === 0 && Math.abs(vx) > 3) p.vel.x = -vx * 0.6;
-      if (p.vel.z === 0 && Math.abs(vz) > 3) p.vel.z = -vz * 0.6;
+      if (hard > 19 && this.rollBreak(vx, vz)) {
+        p.vel.x = vx * 0.7;
+        p.vel.z = vz * 0.7;
+      } else {
+        if (p.vel.x === 0 && Math.abs(vx) > 3) p.vel.x = -vx * 0.6;
+        if (p.vel.z === 0 && Math.abs(vz) > 3) p.vel.z = -vz * 0.6;
+      }
       if (hard > 12) {
         g.audio.play('thud');
         g.rig.shake = Math.max(g.rig.shake, Math.min(0.5, hard / 60));
@@ -1148,6 +1158,37 @@ export class FluxKit {
     if (hs > 6) this.rollHits(hs);
     if (p.onGround && hs > 8 && Math.random() < dt * 20) g.effects.dust(tmp.set(p.pos.x, p.pos.y + 0.1, p.pos.z), 2, 0.6);
     p.modeLabel = 'ROLLING';
+    return true;
+  }
+
+  /** At full speed the ball punches a hole through the wall he hits. Returns true if it did. */
+  rollBreak(vx, vz) {
+    const g = this.game;
+    const p = g.player;
+    const w = g.world;
+    const hs = Math.hypot(vx, vz);
+    const dx = vx / hs, dz = vz / hs;
+    let broke = 0;
+    for (let d = 0; d < 2; d++) {
+      for (let y = Math.floor(p.pos.y); y <= Math.floor(p.pos.y + 1.6); y++) {
+        if (y < CITY.G) continue;
+        for (const s of [-0.7, 0, 0.7]) {
+          const bx = Math.floor(p.pos.x + dx * (p.halfW + 0.4 + d) - dz * s), bz = Math.floor(p.pos.z + dz * (p.halfW + 0.4 + d) + dx * s);
+          const b = w.get(bx, y, bz);
+          if (!SOLID[b] || LASER_PROOF.has(b)) continue;
+          w.edit(bx, y, bz, B.AIR);
+          broke++;
+        }
+      }
+    }
+    if (!broke) return false;
+    const at = new THREE.Vector3(p.pos.x + dx * (p.halfW + 0.6), p.pos.y + 0.8, p.pos.z + dz * (p.halfW + 0.6));
+    g.effects.debris(at, 0xa8a49c, 24, 9);
+    g.effects.dust(at, 16, 1.8);
+    g.audio.play('crunch');
+    g.audio.play('punchHeavy');
+    g.rig.shake = Math.max(g.rig.shake, 0.55);
+    g.hitStop(0.05);
     return true;
   }
 
@@ -1220,6 +1261,63 @@ export class FluxKit {
     }
   }
 
+  /**
+   * Titanor at giant size plows straight through buildings: whatever's in front of
+   * him from the knees up gives way (and slows him a little), and anyone in the way
+   * gets bowled over. Runs before he moves, so walls never stop him dead.
+   */
+  titanPlow() {
+    const g = this.game;
+    const p = g.player;
+    if (this.alien.grow < 1.5) return;
+    const hs = Math.hypot(p.vel.x, p.vel.z);
+    // pushing into a wall leaves almost no speed, so go by where he's facing then
+    if (hs < 0.1 && !p.hitWall) return;
+    const dx = hs > 0.3 ? p.vel.x / hs : Math.sin(p.yaw), dz = hs > 0.3 ? p.vel.z / hs : Math.cos(p.yaw);
+    const w = g.world;
+    const reach = p.halfW + 0.7;
+    let broke = 0, glass = false;
+    const hitAt = new THREE.Vector3();
+    for (let y = Math.floor(p.pos.y); y < p.pos.y + p.height && broke < 70; y++) {
+      if (y < CITY.G) continue;
+      for (let s = -p.halfW; s <= p.halfW + 0.01; s += 0.7) {
+        const bx = Math.floor(p.pos.x + dx * reach - dz * s), bz = Math.floor(p.pos.z + dz * reach + dx * s);
+        const b = w.get(bx, y, bz);
+        if (!SOLID[b] || LASER_PROOF.has(b)) continue;
+        if ((b >= B.GLASS_BLUE && b <= B.GLASS_DARK) || b === B.DOOR) glass = true;
+        w.edit(bx, y, bz, B.AIR);
+        if (broke++ === 0) hitAt.set(bx + 0.5, y + 0.5, bz + 0.5);
+      }
+    }
+    if (broke) {
+      const now = performance.now();
+      if (!(this.plowFx > now)) {
+        this.plowFx = now + 120;
+        g.effects.debris(hitAt, 0xa8a49c, 20, 8);
+        g.effects.dust(hitAt, 14, 2);
+        g.audio.play('crunch');
+        if (glass) g.audio.play('glass');
+      }
+      g.rig.shake = Math.max(g.rig.shake, 0.3);
+      g.addDanger(p.pos, 16, 1.5);
+      // buildings put up some resistance
+      p.vel.x *= 0.93;
+      p.vel.z *= 0.93;
+    }
+    // people, enemies and props right in front of him get bowled aside
+    const now = performance.now();
+    for (const e of g.entities.query(tmp.set(p.pos.x + dx * reach * 0.6, p.pos.y + 1, p.pos.z + dz * reach * 0.6), p.halfW + 1.2)) {
+      if (!e.alive || e.carried || e.removed || e.kind === 'car' || e.kind === 'ambulance' || e.kind === 'clone' || (e.titanHit || 0) > now) continue;
+      e.titanHit = now + 700;
+      const side = new THREE.Vector3(e.pos.x - p.pos.x, 0, e.pos.z - p.pos.z).normalize();
+      const m = Math.max(1, e.mass);
+      const civ = e.team === 'civ';
+      const dealt = e.damage(civ ? 10 : 25, { type: 'impact', knock: side.multiplyScalar(12 * m).add(tmp2.set(dx, 0, dz).multiplyScalar(6 * m)).setY(7 * m), source: p });
+      if (dealt > 1 && !civ) g.markers.damageNumber(e.centerInto(new THREE.Vector3()), dealt, '#ffd34d');
+      g.audio.play('punchHeavy', e.pos);
+    }
+  }
+
   /** A giant's footstep: the ground shakes, people stumble, cars get squashed. */
   stomp(r, dmg) {
     const g = this.game;
@@ -1235,7 +1333,7 @@ export class FluxKit {
         e.driving = false;
         e.damage(40, { type: 'impact', source: p });
         g.audio.play('crunch', e.pos);
-      } else e.damage(e.team === 'civ' ? 3 : dmg, { type: 'impact', knock: tmp2.set(e.pos.x - p.pos.x, 0, e.pos.z - p.pos.z).normalize().multiplyScalar(5).setY(4), source: p });
+      } else e.damage(e.team === 'civ' ? 7 : dmg, { type: 'impact', knock: tmp2.set(e.pos.x - p.pos.x, 0, e.pos.z - p.pos.z).normalize().multiplyScalar(5).setY(4), source: p });
     }
   }
 

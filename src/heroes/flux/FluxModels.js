@@ -242,7 +242,13 @@ function build(kind, pivot) {
       const b4 = part(1.2, 1.2, 1.62, plate);
       const stripe = part(1.56, 0.18, 1.56, mat(0x2a2a2a));
       const emb = part(0.3, 0.3, 0.06, band, 0, 0, 0.82);
-      S.shell.add(b1, b2, b3, b4, stripe, emb);
+      // two cubes turned 45 degrees round the ball make it read as round, not boxy
+      const r1 = part(1.42, 1.42, 1.42, plate);
+      r1.rotation.set(0, Math.PI / 4, 0);
+      const r2 = part(1.42, 1.42, 1.42, plateD);
+      r2.rotation.set(Math.PI / 4, 0, 0);
+      const ring = part(0.18, 1.66, 1.66, mat(0x2a2a2a)); // the seam the ball rolls on
+      S.shell.add(b1, b2, b3, b4, r1, r2, stripe, ring, emb);
       S.shell.visible = false;
       break;
     }
@@ -314,58 +320,137 @@ function build(kind, pivot) {
       break;
     }
     case 'wraith': {
-      S.hip = 0.8;
-      const ghost = new THREE.MeshLambertMaterial({ color: 0xb9a7ff, emissive: 0x2a1a55, transparent: true, opacity: 0.85 });
-      const pale = new THREE.MeshLambertMaterial({ color: 0xe6e0ff, emissive: 0x3a3060, transparent: true, opacity: 0.9 });
-      const hollow = new THREE.MeshBasicMaterial({ color: 0x2a0a4a });
-      add(part(0.5, 0.8, 0.3, ghost, 0, 0.4, 0));
-      add(part(0.24, 0.12, 0.04, hollow, 0, 0.5, 0.16));
-      const em = part(0.12, 0.12, 0.03, band, 0, 0.66, 0.17);
+      // a gaunt, hunched ghost: one huge eye, dark bands wrapped round a see-through
+      // body, long clawed arms, and a tail of fading wisps instead of legs
+      S.hip = 1.0;
+      const ghost = new THREE.MeshLambertMaterial({ color: 0xd9d2ff, emissive: 0x3a2c7a, transparent: true, opacity: 0.82 });
+      const pale = new THREE.MeshLambertMaterial({ color: 0xf2eeff, emissive: 0x4a3c8a, transparent: true, opacity: 0.9 });
+      const band = new THREE.MeshLambertMaterial({ color: 0x2a1a48, emissive: 0x120828, transparent: true, opacity: 0.95 });
+      const socket = new THREE.MeshBasicMaterial({ color: 0x14062a });
+      const eyeGlow = glow(0xb06bff);
+      // torso: broad hunched shoulders tapering to a narrow waist
+      add(part(0.66, 0.42, 0.38, ghost, 0, 0.66, -0.02));
+      add(part(0.5, 0.34, 0.32, ghost, 0, 0.3, 0));
+      add(part(0.36, 0.3, 0.26, ghost, 0, 0.02, 0.01));
+      // the dark wrappings, slightly askew
+      for (const [y, w, rz] of [[0.78, 0.7, 0.12], [0.52, 0.6, -0.1], [0.26, 0.54, 0.14], [0.04, 0.4, -0.12]]) {
+        const b = part(w, 0.07, 0.42, band, 0, y, 0);
+        b.rotation.z = rz;
+        add(b);
+      }
+      const em = part(0.12, 0.12, 0.03, glow(0x8fe36a), 0.14, 0.66, 0.2);
       em.castShadow = false;
       add(em);
-      S.head = headGroup(0.8);
-      S.head.add(part(0.44, 0.46, 0.42, pale, 0, 0.23, 0));
-      S.head.add(part(0.12, 0.12, 0.02, hollow, -0.1, 0.26, 0.22));
-      S.head.add(part(0.12, 0.12, 0.02, hollow, 0.1, 0.26, 0.22));
-      S.head.add(part(0.2, 0.06, 0.02, hollow, 0, 0.1, 0.22));
-      S.armL = armGroup(1, 0.34, 0.74, 0.66, 0.15, ghost, pale);
-      S.armR = armGroup(-1, 0.34, 0.74, 0.66, 0.15, ghost, pale);
-      // no legs: a wispy tail
-      S.legL = legGroup(1, 0.1, 0.5, 0.18, ghost, ghost);
-      S.legR = legGroup(-1, 0.1, 0.5, 0.18, ghost, ghost);
-      S.tail = new THREE.Group();
-      S.tail.position.set(0, -0.05, 0);
-      S.tail.add(part(0.4, 0.4, 0.26, ghost, 0, -0.2, -0.02));
-      S.tail.add(part(0.26, 0.3, 0.2, ghost, 0, -0.52, -0.08));
-      pivot.add(S.tail);
-      S.fade = [ghost, pale];
+      // ragged shoulder spines
+      for (const side of [1, -1]) {
+        for (let k = 0; k < 3; k++) {
+          const sp = part(0.07, 0.26 - k * 0.05, 0.07, band, side * (0.24 + k * 0.08), 0.92 + k * 0.02, -0.08 - k * 0.04);
+          sp.rotation.z = -side * (0.4 + k * 0.25);
+          add(sp);
+        }
+      }
+      // head: long, pushed forward, one big glowing eye in a dark socket
+      S.head = headGroup(0.86);
+      S.head.position.z = 0.1;
+      S.head.add(part(0.4, 0.5, 0.42, pale, 0, 0.25, 0.02));
+      S.head.add(part(0.44, 0.1, 0.46, band, 0, 0.44, 0.0)); // brow band
+      S.head.add(part(0.06, 0.5, 0.46, band, 0, 0.25, -0.01)); // a stripe down the skull
+      const sock = part(0.24, 0.22, 0.03, socket, 0, 0.27, 0.235);
+      sock.castShadow = false;
+      S.head.add(sock);
+      const eye = part(0.12, 0.12, 0.02, eyeGlow, 0, 0.27, 0.25);
+      eye.castShadow = false;
+      S.head.add(eye);
+      S.eyeGlow = eye;
+      S.head.add(part(0.22, 0.04, 0.02, socket, 0, 0.08, 0.235)); // a thin grin
+      for (const x of [-0.07, 0, 0.07]) S.head.add(part(0.02, 0.06, 0.02, pale, x, 0.08, 0.245));
+      // long thin arms ending in three hooked claws
+      S.armL = armGroup(1, 0.42, 0.82, 0.78, 0.13, ghost, pale);
+      S.armR = armGroup(-1, 0.42, 0.82, 0.78, 0.13, ghost, pale);
+      for (const arm of [S.armL, S.armR]) {
+        for (const [x, z] of [[-0.05, 0.05], [0.05, 0.05], [0, -0.05]]) {
+          const c = part(0.035, 0.22, 0.035, band, x, -0.98, z + 0.03);
+          c.rotation.x = 0.35;
+          arm.add(c);
+        }
+        arm.add(part(0.15, 0.07, 0.15, band, 0, -0.42, 0)); // a band at the wrist
+      }
+      // no legs (kept tiny and hidden so the shared poses still work)
+      S.legL = legGroup(1, 0.1, 0.1, 0.05, ghost, ghost);
+      S.legR = legGroup(-1, 0.1, 0.1, 0.05, ghost, ghost);
+      S.legL.visible = S.legR.visible = false;
+      // the wispy tail: a chain of fading segments that sways behind him
+      S.wisp = [];
+      let parent = pivot;
+      let y = -0.12;
+      for (let k = 0; k < 5; k++) {
+        const seg = new THREE.Group();
+        seg.position.set(0, y, k === 0 ? 0 : -0.04);
+        const m = new THREE.MeshLambertMaterial({ color: 0xd9d2ff, emissive: 0x3a2c7a, transparent: true, opacity: 0.8 - k * 0.13 });
+        const w = 0.34 - k * 0.06;
+        seg.add(part(w, 0.26, w * 0.8, m, 0, -0.13, 0));
+        if (k % 2 === 0) seg.add(part(w + 0.04, 0.05, w * 0.8 + 0.04, band, 0, -0.04, 0));
+        parent.add(seg);
+        S.wisp.push(seg);
+        parent = seg;
+        y = -0.24;
+      }
+      // little lights orbiting him
+      S.orbs = [];
+      for (let k = 0; k < 3; k++) {
+        const o = part(0.07, 0.07, 0.07, eyeGlow);
+        o.castShadow = false;
+        pivot.add(o);
+        S.orbs.push(o);
+      }
+      S.fade = [ghost, pale, band];
       break;
     }
     case 'feral': {
-      // on all fours: the torso runs front to back, front legs are the "arms"
-      S.hip = 0.78;
-      const fur = mat(0xff9a4d), dark = mat(0xd8662a), white = mat(0xf4f4f4), black = mat(0x1d1d1d);
-      add(part(0.62, 0.52, 1.3, fur, 0, 0.12, 0));
-      add(part(0.5, 0.16, 1.1, dark, 0, 0.42, -0.05)); // spine ridge
-      const em = part(0.14, 0.14, 0.03, band, 0.32, 0.12, 0);
+      // a big-jawed, eyeless beast on all fours: heavy shoulders, quills down the back
+      S.hip = 0.8;
+      const fur = mat(0xff8f3a), dark = mat(0xc85a1e), belly = mat(0xffc07a), white = mat(0xf4f0e6), black = mat(0x24140c), gum = mat(0x8a2a22);
+      // body: deep chest at the front, slimmer haunches at the back, sloping spine
+      add(part(0.74, 0.64, 0.7, fur, 0, 0.16, 0.26));
+      add(part(0.56, 0.48, 0.7, fur, 0, 0.08, -0.4));
+      add(part(0.6, 0.12, 1.1, belly, 0, -0.17, -0.05));
+      for (const [z, w] of [[0.4, 0.64], [0.05, 0.56], [-0.3, 0.5]]) add(part(w, 0.06, 0.12, dark, 0, 0.44 - (0.4 - z) * 0.1, z)); // stripes
+      // quills raked back along the spine
+      for (let k = 0; k < 6; k++) {
+        const q = part(0.08, 0.32 - k * 0.03, 0.08, dark, (k % 2 ? 0.08 : -0.08), 0.56 - k * 0.04, 0.42 - k * 0.17);
+        q.rotation.x = -0.7;
+        add(q);
+      }
+      const em = part(0.03, 0.14, 0.14, glow(0x8fe36a), 0.38, 0.2, 0.3);
       em.castShadow = false;
-      em.rotation.y = Math.PI / 2;
       add(em);
-      S.head = headGroup(0.18);
-      S.head.position.z = 0.75;
-      S.head.add(part(0.5, 0.42, 0.5, fur, 0, 0.06, 0.18));
-      S.head.add(part(0.36, 0.08, 0.04, white, 0, -0.09, 0.44)); // fangs
-      for (const x of [-0.2, 0.2]) S.head.add(part(0.06, 0.2, 0.1, dark, x, 0.22, 0.3)); // gill slits instead of eyes
+      // head: broad and low, a huge mouth, gill slits where the eyes should be
+      S.head = headGroup(0.26);
+      S.head.position.z = 0.66;
+      S.head.add(part(0.56, 0.3, 0.46, fur, 0, 0.12, 0.2));
+      S.head.add(part(0.5, 0.1, 0.2, dark, 0, 0.28, 0.12)); // heavy brow
+      for (const x of [-0.18, -0.09, 0.09, 0.18]) S.head.add(part(0.04, 0.03, 0.14, black, x, 0.27, 0.32)); // gill slits
+      S.head.add(part(0.5, 0.05, 0.36, gum, 0, -0.04, 0.26));
+      for (let k = 0; k < 5; k++) S.head.add(part(0.05, 0.08, 0.04, white, -0.2 + k * 0.1, -0.05, 0.44)); // upper fangs
+      S.jaw = new THREE.Group();
+      S.jaw.position.set(0, -0.06, 0.04);
+      S.jaw.add(part(0.48, 0.12, 0.42, fur, 0, -0.06, 0.2));
+      for (let k = 0; k < 4; k++) S.jaw.add(part(0.05, 0.07, 0.04, white, -0.15 + k * 0.1, 0.03, 0.38));
+      S.head.add(S.jaw);
+      // tail with a dark tuft
       S.tail = new THREE.Group();
-      S.tail.position.set(0, 0.25, -0.65);
-      S.tail.add(part(0.14, 0.14, 0.6, dark, 0, 0.1, -0.3));
+      S.tail.position.set(0, 0.24, -0.76);
+      S.tail.add(part(0.13, 0.13, 0.55, fur, 0, 0.08, -0.26));
+      S.tail.add(part(0.2, 0.2, 0.2, dark, 0, 0.14, -0.58));
       pivot.add(S.tail);
-      S.armL = armGroup(1, 0.24, 0.0, 0.72, 0.18, fur, black);
-      S.armR = armGroup(-1, 0.24, 0.0, 0.72, 0.18, fur, black);
-      S.armL.position.z = S.armR.position.z = 0.48;
-      S.legL = legGroup(1, 0.24, 0.72, 0.2, fur, black);
-      S.legR = legGroup(-1, 0.24, 0.72, 0.2, fur, black);
-      S.legL.position.z = S.legR.position.z = -0.48;
+      // thick front legs with big paws, leaner hind legs
+      S.armL = armGroup(1, 0.3, 0.05, 0.74, 0.22, fur, black, 1.25);
+      S.armR = armGroup(-1, 0.3, 0.05, 0.74, 0.22, fur, black, 1.25);
+      S.armL.position.z = S.armR.position.z = 0.44;
+      S.legL = legGroup(1, 0.22, 0.74, 0.18, dark, black);
+      S.legR = legGroup(-1, 0.22, 0.74, 0.18, dark, black);
+      S.legL.position.z = S.legR.position.z = -0.52;
+      for (const arm of [S.armL, S.armR]) for (const x of [-0.08, 0, 0.08]) arm.add(part(0.04, 0.05, 0.1, white, x, -0.94, 0.16)); // claws
       break;
     }
     case 'reverb': {
@@ -545,10 +630,15 @@ export class FluxModel {
       }
     }
     if (k === 'wraith') {
-      // floating: no walking, the tail sways
+      // floating, hunched, claws reaching out and drifting, the tail sways
       legL = legR = 0.3;
       crouch = -0.25 + Math.sin(this.time * 2.2) * 0.08;
-      if (s.mode !== 'fly') tilt = Math.min(0.35, (s.hSpeed || 0) * 0.04);
+      tilt = 0.22 + (s.mode !== 'fly' ? Math.min(0.35, (s.hSpeed || 0) * 0.04) : 0);
+      if (!s.carrying) {
+        armL = -0.6 + Math.sin(this.time * 1.7) * 0.15;
+        armR = -0.6 - Math.sin(this.time * 1.7) * 0.15;
+        spreadL = spreadR = 0.38 + Math.sin(this.time * 1.3) * 0.06;
+      }
     }
     if (k === 'titanor' && (s.hSpeed || 0) < 0.3) spreadL = spreadR = 0.28;
 
@@ -647,6 +737,25 @@ export class FluxModel {
     this.legL.rotation.x = damp(this.legL.rotation.x, legL, k === 'blitz' ? 30 : R, dt);
     this.legR.rotation.x = damp(this.legR.rotation.x, legR, k === 'blitz' ? 30 : R, dt);
     if (this.tail) this.tail.rotation.x = damp(this.tail.rotation.x, -tilt * 0.8 + Math.sin(this.time * 3) * 0.1, 8, dt);
+    if (this.wisp) {
+      // the ghost tail ripples, trailing further back the faster he goes
+      const drag = Math.min(1, (s.hSpeed || 0) / 10);
+      this.wisp.forEach((seg, k) => {
+        seg.rotation.x = 0.18 + drag * 0.35 + Math.sin(this.time * 2.6 - k * 0.8) * 0.16;
+        seg.rotation.z = Math.sin(this.time * 2.1 - k * 0.9) * 0.18;
+      });
+      this.orbs.forEach((o, k) => {
+        const a = this.time * 1.6 + (k * Math.PI * 2) / 3;
+        o.position.set(Math.cos(a) * 0.62, 0.55 + Math.sin(this.time * 2 + k) * 0.25, Math.sin(a) * 0.62);
+      });
+      const pulse = 0.85 + Math.sin(this.time * 5) * 0.15;
+      this.eyeGlow.scale.set(pulse, pulse, 1);
+    }
+    if (this.jaw) {
+      // jaws snap open on a bite, and pant a little otherwise
+      const bite = this.punchT < 0.24 ? Math.sin((this.punchT / 0.24) * Math.PI) : 0;
+      this.jaw.rotation.x = damp(this.jaw.rotation.x, 0.08 + Math.sin(this.time * 6) * 0.04 + bite * 0.7, 25, dt);
+    }
     if (this.flame) {
       // Cinder's head and the flames on his arms flicker
       this.flame.scale.set(1 + Math.random() * 0.15, 0.8 + Math.random() * 0.5, 1 + Math.random() * 0.15);
@@ -657,6 +766,9 @@ export class FluxModel {
       const rolling = !!A.rolling;
       this.shell.visible = rolling;
       this.pivot.visible = !rolling;
+      // curling up pops the ball out from small to full size
+      this.shellK = rolling ? damp(this.shellK ?? 0.4, 1, 18, dt) : 0.4;
+      this.shell.scale.setScalar(this.shellK);
       if (rolling) this.shell.rotation.x += (A.rollSpeed || 0) * dt / 0.78;
     }
     // Titanor grows (and shrinks) smoothly
@@ -675,19 +787,28 @@ export class FluxModel {
         w.rotation.z = side * 0.15;
       }
     }
-    // see-through while phasing; nearly gone while invisible
-    if (this.fade || A.phasing) {
+    // see-through while phasing (a glowing, ethereal shimmer); nearly gone while invisible
+    if (this.fade || A.phasing || this.fadeMats) {
       if (!this.fadeMats) {
         this.fadeMats = new Set();
         this.root.traverse((o) => o.material && !o.material.isMeshBasicMaterial && this.fadeMats.add(o.material));
         for (const m of this.fadeMats) {
           m.transparent = true;
           m.userData.baseOpacity = m.opacity;
+          m.userData.baseEmissive = m.emissive ? m.emissive.clone() : null;
         }
+        this.spirit = new THREE.Color(k === 'frostmoth' ? 0x7fe8ff : 0xb48cff);
       }
-      const want = A.invisible ? 0.12 : A.phasing ? 0.35 : 1;
+      const want = A.invisible ? 0.12 : A.phasing ? 0.3 : 1;
       this.opacity = damp(this.opacity ?? 1, want, 10, dt);
-      for (const m of this.fadeMats) m.opacity = m.userData.baseOpacity * this.opacity;
+      // how far into the spirit form he is (0 solid .. 1 fully phased)
+      const ph = Math.max(0, Math.min(1, (1 - this.opacity) / 0.7));
+      const shimmer = ph * (0.75 + Math.sin(this.time * 9) * 0.25);
+      for (const m of this.fadeMats) {
+        m.opacity = m.userData.baseOpacity * this.opacity;
+        m.depthWrite = this.opacity > 0.95;
+        if (m.userData.baseEmissive) m.emissive.copy(m.userData.baseEmissive).lerp(this.spirit, shimmer);
+      }
     }
 
     if (this.band) {
