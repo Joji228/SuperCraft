@@ -139,17 +139,24 @@ const solid = new Buffers();
 const water = new Buffers();
 let grid = new Uint8Array(0);
 
+/** Mesh a chunk straight away (used while loading). */
 export function meshChunk(world, cx, cz) {
+  const { grid: g, maxY } = copyChunk(world, cx, cz, false);
+  return meshGrid(g, maxY);
+}
+
+/**
+ * Copy a chunk and its one-block border into a padded grid (y from -1 to maxY + 1).
+ * `fresh` gives a new array (to hand to the meshing worker); otherwise a shared one is reused.
+ */
+export function copyChunk(world, cx, cz, fresh) {
   const data = world.data;
   const x0 = cx * CS;
   const z0 = cz * CS;
   const maxY = Math.min(SY - 1, world.chunkMaxY[cx + cz * (SX / CS)] + 1);
-  solid.reset();
-  water.reset();
-
-  // copy the chunk and its border into the padded grid (y from -1 to maxY + 1)
   const PY = maxY + 3;
-  if (grid.length < PXZ * PY) grid = new Uint8Array(PXZ * PY);
+  if (fresh) grid = new Uint8Array(PXZ * PY);
+  else if (grid.length < PXZ * PY) grid = new Uint8Array(PXZ * PY);
   for (let py = 0; py < PY; py++) {
     const y = py - 1;
     for (let pz = 0; pz < PZ; pz++) {
@@ -165,6 +172,13 @@ export function meshChunk(world, cx, cz) {
     }
   }
 
+  return { grid, maxY };
+}
+
+/** Turn a padded grid (from copyChunk) into mesh data. Pure, so it also runs in a worker. */
+export function meshGrid(grid, maxY) {
+  solid.reset();
+  water.reset();
   // locals keep the hot loop free of module-binding and property lookups
   const g = grid;
   const OP = OPAQUE, TILES = BLOCK_TILES, UVS = TILE_UV, GL = GLOW;

@@ -1,6 +1,6 @@
 // Owns the chunk meshes: builds them, remeshes edited chunks and hides far ones.
 import * as THREE from 'three';
-import { meshChunk } from './ChunkMesher.js';
+import { meshChunk, copyChunk } from './ChunkMesher.js';
 import { CX, CZ, CS } from './World.js';
 
 function toGeometry(d, top) {
@@ -42,6 +42,22 @@ export class ChunkRenderer {
     });
     this.chunks = new Array(CX * CZ).fill(null);
     this.shadows = true;
+    // edited chunks are remeshed by a worker; finished meshes are swapped in a few per frame
+    this.inflight = new Set();
+    this.done = [];
+    try {
+      this.worker = new Worker(new URL('./meshWorker.js', import.meta.url), { type: 'module' });
+      this.worker.onmessage = (e) => {
+        this.inflight.delete(e.data.i);
+        this.done.push(e.data);
+      };
+      this.worker.onerror = () => {
+        this.worker = null; // fall back to meshing on the main thread
+        this.inflight.clear();
+      };
+    } catch {
+      this.worker = null;
+    }
     this.visibleCount = 0;
   }
 
@@ -63,6 +79,12 @@ export class ChunkRenderer {
 
   build(cx, cz) {
     const i = cx + cz * CX;
+    this.place(i, meshChunk(this.world, cx, cz), this.world.chunkMaxY[i] + 2);
+  }
+
+  /** Swap in new meshes for chunk i. */
+  place(i, data, top) {
+    const cx = i % CX, cz = Math.floor(i / CX);
     const old = this.chunks[i];
     if (old) {
       for (const m of [old.solid, old.water]) {
@@ -71,8 +93,6 @@ export class ChunkRenderer {
         m.geometry.dispose();
       }
     }
-    const data = meshChunk(this.world, cx, cz);
-    const top = this.world.chunkMaxY[i] + 2;
     const entry = { solid: null, water: null, cx: (cx + 0.5) * CS, cz: (cz + 0.5) * CS };
     if (data.solid) {
       const m = new THREE.Mesh(toGeometry(data.solid, top), this.material);
@@ -110,8 +130,22 @@ export class ChunkRenderer {
   update(camPos, renderDistance) {
     // at least one chunk a frame, more while there's time left (lots more after a big reset)
     const start = performance.now();
-    const budgetMs = this.world.dirty.size > 8 ? 12 : 3;
+    const budgetMs = this.world.dirty.size + this.done.length > 8 ? 12 : 3;
+    // meshes the worker has finished
+    while (this.done.length && performance.now() - start < budgetMs) {
+      const d = this.done.shift();
+      this.place(d.i, { solid: d.solid, water: d.water }, d.top);
+    }
     for (const i of this.world.dirty) {
+      if (this.worker) {
+        // one job per chunk at a time; if it's edited again meanwhile it goes again after
+        if (this.inflight.has(i)) continue;
+        this.world.dirty.delete(i);
+        const { grid, maxY } = copyChunk(this.world, i % CX, Math.floor(i / CX), true);
+        this.inflight.add(i);
+        this.worker.postMessage({ i, grid, maxY, top: this.world.chunkMaxY[i] + 2 }, [grid.buffer]);
+        continue;
+      }
       this.world.dirty.delete(i);
       this.build(i % CX, Math.floor(i / CX));
       if (performance.now() - start > budgetMs) break;

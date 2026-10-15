@@ -73,7 +73,11 @@ export class Minimap {
     ctx.rotate(yaw); // camera forward points up
     ctx.scale(scale, scale);
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(this.map, -px, -pz);
+    // only the part of the city map that can show (much cheaper than the whole 512x512)
+    const S = Math.ceil(this.range * 1.5);
+    const sx = Math.max(0, Math.floor(px - S)), sz = Math.max(0, Math.floor(pz - S));
+    const sw = Math.min(SX, Math.floor(px + S)) - sx, sh = Math.min(SZ, Math.floor(pz + S)) - sz;
+    if (sw > 0 && sh > 0) ctx.drawImage(this.map, sx, sz, sw, sh, sx - px, sz - pz, sw, sh);
     ctx.restore();
 
     // markers

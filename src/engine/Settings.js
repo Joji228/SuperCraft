@@ -12,6 +12,7 @@ const DEFAULTS = {
   invertY: false,
   renderDistance: 176,
   shadows: true,
+  autoRes: true, // lower the render resolution a little when frames get slow (big screens)
   dayNight: false,
   volume: 0.56,
   fov: 75,

@@ -161,6 +161,7 @@ export class Game {
 
     for (const k of ['renderDistance', 'shadows', 'dayNight']) this.applySetting(k, this.settings[k]);
 
+    this.prewarm();
     this.state = 'menu';
     this.menus.showMain();
     document.body.classList.remove('booting'); // full-screen button appears once loading is done
@@ -250,13 +251,77 @@ export class Game {
   }
 
   /**
+   * Auto resolution: if frames stay slow (usually a big, high-DPI screen filling the
+   * GPU), render at a slightly lower resolution; creep back up once there's headroom.
+   */
+  autoResolution(dt) {
+    this.basePR ??= this.renderer.getPixelRatio();
+    this.resScale ??= 1;
+    if (!this.settings.autoRes) {
+      if (this.resScale !== 1) this.setResScale(1);
+      return;
+    }
+    this.resT = (this.resT || 0) + dt;
+    this.resN = (this.resN || 0) + 1;
+    if (this.resT < 2) return;
+    const avg = this.resT / this.resN;
+    this.resT = this.resN = 0;
+    // two slow stretches in a row (not just one busy moment) before giving up any sharpness
+    this.resBad = avg > 1 / 48 ? (this.resBad || 0) + 1 : 0;
+    if (this.resBad >= 2 && this.resScale > 0.71) {
+      this.setResScale(Math.max(0.7, this.resScale * 0.88));
+      this.resBad = 0;
+      this.resGood = 0;
+    } else if (avg < 1 / 57 && this.resScale < 1) {
+      this.resGood = (this.resGood || 0) + 1;
+      if (this.resGood >= 3) {
+        this.setResScale(Math.min(1, this.resScale * 1.12));
+        this.resGood = 0;
+      }
+    } else this.resGood = 0;
+  }
+
+  setResScale(s) {
+    this.resScale = s;
+    this.renderer.setPixelRatio(this.basePR * s);
+  }
+
+  ensureKits() {
+    if (!this.kits) this.kits = { granite: new GraniteKit(this), tether: new TetherKit(this), forge: new ForgeKit(this), flux: new FluxKit(this) };
+  }
+
+  /**
+   * Compile every hero's and alien's shaders while loading, so switching hero or
+   * transforming for the first time doesn't stutter.
+   */
+  prewarm() {
+    this.ensureKits();
+    const shown = [];
+    const reveal = (root) =>
+      root.traverse((o) => {
+        if (!o.visible) {
+          o.visible = true;
+          shown.push(o);
+        }
+      });
+    for (const m of Object.values(this.models)) reveal(m.root);
+    for (const k of Object.values(this.kits)) for (const m of Object.values(k.models || {})) reveal(m.root);
+    try {
+      this.renderer.compile(this.scene, this.camera);
+    } catch (e) {
+      console.warn('[SuperCraft] shader prewarm skipped', e);
+    }
+    for (const o of shown) o.visible = false;
+  }
+
+  /**
    * Switch the playable hero: model, body size, movement, camera height and HUD.
    * The campaign is always Sky Guardian; Free Roam uses the hero picked in the Heroes menu.
    */
   setHero(id) {
     if (!this.models[id]) id = 'sky';
     const p = this.player;
-    if (!this.kits) this.kits = { granite: new GraniteKit(this), tether: new TetherKit(this), forge: new ForgeKit(this), flux: new FluxKit(this) };
+    this.ensureKits();
     this.heroKit?.reset?.();
     this.hero.setVisible(false);
     this.heroId = id;
@@ -660,6 +725,7 @@ export class Game {
 
   frame(dt) {
     const cam = this.camera;
+    if (this.state === 'playing') this.autoResolution(dt);
     document.body.classList.toggle('in-play', this.state === 'playing');
     let focus;
 

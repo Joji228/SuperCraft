@@ -352,6 +352,7 @@ export class Menus {
          <label>Volume <span id="vol-val">${Math.round(s.volume * 100)}</span>
            <input type="range" id="volume" min="0" max="1" step="0.05" value="${s.volume}"></label>
          <label class="check"><input type="checkbox" id="shadows" ${s.shadows ? 'checked' : ''}> Shadows</label>
+         <label class="check"><input type="checkbox" id="autoRes" ${s.autoRes ? 'checked' : ''}> Auto resolution (smoother on big screens)</label>
          <label class="check"><input type="checkbox" id="invertY" ${s.invertY ? 'checked' : ''}> Invert mouse Y</label>
          <label class="check"><input type="checkbox" id="dayNight" ${s.dayNight ? 'checked' : ''}> Day/night cycle</label>
          <label>Camera (V cycles) <select id="cameraMode">${['Close', 'Medium', 'Far', 'First person'].map((l, i) => `<option value="${i}" ${s.cameraMode === i ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
@@ -378,6 +379,6 @@ export class Menus {
     });
     q('renderDistance').addEventListener('change', (e) => s.set('renderDistance', parseInt(e.target.value, 10)));
     q('cameraMode').addEventListener('change', (e) => s.set('cameraMode', parseInt(e.target.value, 10)));
-    for (const id of ['shadows', 'invertY', 'dayNight', 'unlockAll']) q(id).addEventListener('change', (e) => s.set(id, e.target.checked));
+    for (const id of ['shadows', 'autoRes', 'invertY', 'dayNight', 'unlockAll']) q(id).addEventListener('change', (e) => s.set(id, e.target.checked));
   }
 }
